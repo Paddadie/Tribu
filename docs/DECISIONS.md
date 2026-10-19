@@ -49,3 +49,18 @@
 2026-10-19 | Tri de la liste : les lettres suivent le critère ; en tri par nom, les noms s'écrivent « Dupont Alice » (`nomListe`). Le tri et l'écriture « Nom Prénom » valent aussi pour les listes de choix d'ajout de conjoint, de parent et d'enfant ; les sections de la fiche gardent leur ordre logique (âge) | demande de Paul : le tri s'applique à toute l'appli
 2026-10-19 | Thème clair/sombre/auto : palette sombre en variables CSS (`data-theme` sur `<html>`, `auto` suit le téléphone) ; nouveaux jetons `--sur-accent`, `--sur-danger`, `--erreur-fond`, `--succes-fond`, `--voile` | ajouté avec le réglage de thème
 2026-10-19 | Import : le fichier est validé (`importerJson`) avant toute écriture ; la confirmation d'écrasement n'apparaît que si l'appli contient déjà des personnes, et annonce les deux effectifs. Effacement des données avec confirmation, grisé de fait si rien à effacer | exigence du plan (confirmation avant écrasement)
+2026-10-19 | V2 en 6 sessions (S1 robustesse, S2a socle, S2b parcours, S3a parenté, S3b mémo, S4 visuel), dans l'ordre robustesse → fluidité → valeur → visuel ; une session par `/clear`, suivi dans PLAN.md (section V2) et ETAT.md | réponses de Paul à l'audit (ROAD-01, ROAD-02) : https://claude.ai/artifact/QWtk4ZfLDfefgCLjRteU9r
+2026-10-19 | Positionnement : mémo familial (liens, anniversaires, notes) ; 100 à 200 fiches visées ; iPhone et Android ; partage probable d'ici un an | VIS-01, CTX-01 à 03
+2026-10-19 | Architecture sans framework conservée ; mises à jour majeures (TypeScript 7, vite-plugin-pwa 2) seulement sur raison concrète | ARCH-01, CODE-05
+2026-10-19 | Données : chargement non destructeur (copie de secours + écran d'alerte), copie avant import ou effacement avec « Annuler », stockage persistant, date du dernier export dans Réglages seulement (pas de bandeau de rappel), export par la feuille de partage | DATA-01 à 05 ; perte silencieuse possible aujourd'hui
+2026-10-19 | Import en remplacement seul, la fusion viendra avec le partage ; fonction de migration créée au premier changement de format (date de décès), pas avant | DATA-06, DATA-07
+2026-10-19 | Ni chiffrement ni verrouillage (usage perso, à revoir avec le partage) ; CSP ajoutée | SEC-01, SEC-02
+2026-10-19 | Pas de lot accessibilité pour l'instant ; seul l'anneau de focus uniforme (UI-06) est fait | A11Y-01, demande de Paul
+2026-10-19 | Nom prérempli à la création : enfant = nom du père (nom de la mère au choix, sinon nom de la fiche ouverte) ; parent, frère ou sœur = nom de la fiche ouverte ; toujours modifiable | UX-05, demande de Paul
+2026-10-19 | Ajout direct d'un frère ou d'une sœur = raccourci qui en fait l'enfant des parents connus ; impossible sans parent connu ; aucun lien de fratrie stocké | FEAT-03 option A, cohérent avec la décision 9
+2026-10-19 | Étiquette « Biologique » retirée : le code redevient conforme à la décision 23 | UX-11
+2026-10-19 | Index alphabétique latéral sur la liste | UX-12, 100 à 200 fiches visées
+2026-10-19 | Direction visuelle A « sobre affiné », teinte d'avatar par nom de famille, Figtree seule, glissement latéral entre écrans | UI-01, UI-02, UI-08, ANIM-01
+2026-10-19 | « Moi » et lien de parenté ; famille élargie affichée : grands-parents, petits-enfants, oncles, tantes, neveux, nièces, cousins, belle-famille | FEAT-01, FEAT-02
+2026-10-19 | Date de décès, âge et prochains anniversaires ajoutés ; aucun autre champ (surnom, nom de naissance, lieu, recherche dans la note) | FEAT-04, FEAT-05, FEAT-07
+2026-10-19 | Anciennes unions : question en attente, à trancher avant S3b ; mini-arbre, photos et GEDCOM restent « Plus tard » | FEAT-06, FEAT-09, FEAT-10
