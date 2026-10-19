@@ -107,7 +107,8 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
 ## Plus tard
 - Import en fusion (DATA-06), avec le partage
 - Partage avec des proches ; revoir alors le chiffrement de l'export (SEC-01)
-- Mini-arbre sur la fiche (FEAT-09), puis vue arbre graphique
+- [x] Mini-arbre sur la fiche (FEAT-09), avec le lien « ami » : maquette validée le 19/10 (claude.ai/artifact/CUp7N1VAn5HCNvLvHvJxiy, version 5), codé le 19/10 ; reste le test sur téléphone
+- Arbre global (après FEAT-09) : bouton sur l'accueil, « Moi » au centre, toutes les personnes et leurs liens (amis compris) ; zoom au pincement, défilement libre, toucher une personne ouvre sa fiche
 - Photos (IndexedDB nécessaire)
 - Import et export GEDCOM
 - Autres critères de tri de la liste (date de naissance…)

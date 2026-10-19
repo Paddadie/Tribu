@@ -2,7 +2,8 @@
 // accordés selon le sexe de la personne désignée. Un lien sans nom usuel testé
 // (cousin issu de germain, conjoint d'un beau-frère…) n'a pas de libellé.
 
-import { relation, type Relation, type Sang } from './deductions';
+import { chemin, relation, type Etape, type Relation, type Sang } from './deductions';
+import { accorder, avecDe } from './liste';
 import type { Donnees, Sexe } from './types';
 
 /** Formes d'un nom : masculin, féminin, et forme neutre quand le français en a une. */
@@ -43,7 +44,7 @@ function formesSang(s: Sang): Formes | undefined {
 
 function formes(r: Relation): Formes | undefined {
   if (r.type === 'soi') return undefined;
-  if (r.type === 'conjoint') return r.marie ? { m: 'mari', f: 'femme', neutre: 'conjoint' } : { m: 'compagnon', f: 'compagne', neutre: 'conjoint' };
+  if (r.type === 'conjoint') return r.marie ? { m: 'époux', f: 'épouse', neutre: 'conjoint' } : { m: 'compagnon', f: 'compagne', neutre: 'conjoint' };
   if (r.type === 'sang') return formesSang(r);
   const { montee, descente } = r.base;
   // Noms propres à la belle-famille ; sinon « … par alliance ».
@@ -84,4 +85,51 @@ export function lienAvecMoi(d: Donnees, moi: string, vers: string): string | und
   const choisi = choisir(f, sexe);
   const nom = choisi !== undefined ? avec(choisi, sexe === 'F') : `${avec(f.m, false)} ou ${avec(f.f, true)}`;
   return nom + (f.suffixe ?? '');
+}
+
+// --- Étiquettes courtes et chemin depuis « Moi » (FEAT-09) --------------------
+
+const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const appel = (e: Etape) => e.personne.prenom || e.personne.nom;
+
+/** Ce qu'est la personne de l'étape pour la précédente : « mère », « époux », « amie », « enfant » sans sexe connu. */
+function nomPas(e: Etape): string {
+  const s = e.personne.sexe;
+  if (e.par === 'parent') return accorder(s, 'père', 'mère', 'parent');
+  if (e.par === 'enfant') return accorder(s, 'fils', 'fille', 'enfant');
+  if (e.par === 'ami') return accorder(s, 'ami', 'amie', 'ami(e)');
+  return e.marie ? accorder(s, 'époux', 'épouse', 'conjoint') : accorder(s, 'compagnon', 'compagne', 'conjoint');
+}
+
+/**
+ * Étiquette courte, sans possessif, de `vers` vue depuis « Moi » : « Toi », « Cousine », « Épouse » ; pour qui n'est pas
+ * de la famille, nommée depuis l'ami le plus proche : « Ami », « Amie d’Inès », « Compagne de Karim », « Proche de Karim ».
+ * La famille l'emporte sur l'amitié. Undefined sans lien, ou pour un lien de famille sans nom usuel.
+ */
+export function etiquette(d: Donnees, moi: string, vers: string): string | undefined {
+  if (moi === vers) return 'Toi';
+  const r = relation(d, moi, vers);
+  if (r) {
+    const libelle = libelleRelation(r, d.personnes.find((p) => p.id === vers)?.sexe);
+    return libelle && majuscule(libelle);
+  }
+  const etapes = chemin(d, moi, vers);
+  if (!etapes) return undefined;
+  const k = etapes.map((e) => e.par).lastIndexOf('ami');
+  const ami = etapes[k];
+  if (k === etapes.length - 1) {
+    const avant = etapes[k - 1];
+    return majuscule(nomPas(ami)) + (k === 1 ? '' : ` ${avecDe(appel(avant))}`);
+  }
+  const reste = etapes.slice(k + 1);
+  return reste.length === 1 ? `${majuscule(nomPas(reste[0]))} ${avecDe(appel(ami))}` : `Proche ${avecDe(appel(ami))}`;
+}
+
+/** Mots du chemin après « Toi » : « ton épouse », « son père » (« ta » et « sa » deviennent « ton » et « son » devant une voyelle). */
+export function motsChemin(etapes: Etape[]): string[] {
+  return etapes.slice(1).map((e, i) => {
+    const nom = nomPas(e);
+    const ta = determinant(nom, e.personne.sexe === 'F');
+    return `${i === 0 ? ta : ta === 'ta' ? 'sa' : 'son'} ${nom}`;
+  });
 }

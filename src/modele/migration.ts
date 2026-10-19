@@ -27,7 +27,14 @@ function v1versV2(v: Record<string, unknown>): Record<string, unknown> {
   return { ...v, version: 2, unions: migrees };
 }
 
+/** v2 → v3 : apparition des amitiés, aucune au départ. */
+function v2versV3(v: Record<string, unknown>): Record<string, unknown> {
+  return { ...v, version: 3, amities: [] };
+}
+
 export function migrer(brut: unknown): unknown {
-  if (estObjet(brut) && brut.version === 1) return v1versV2(brut);
-  return brut;
+  let v = brut;
+  if (estObjet(v) && v.version === 1) v = v1versV2(v);
+  if (estObjet(v) && v.version === 2) v = v2versV3(v);
+  return v;
 }

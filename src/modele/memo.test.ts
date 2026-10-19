@@ -32,7 +32,7 @@ function avec(...noms: string[]): { d: Donnees; ids: string[] } {
 /** Date locale, comme `new Date()` sur le téléphone. */
 const le = (annee: number, mois: number, jour: number) => new Date(annee, mois - 1, jour);
 
-describe('migration v1 → v2', () => {
+describe('migration v1 → v2 → v3', () => {
   const v1 = {
     version: 1,
     personnes: [
@@ -44,13 +44,22 @@ describe('migration v1 → v2', () => {
     filiations: [{ id: 'f1', parent: 'a', enfant: 'c', type: 'biologique' }],
   };
 
-  it('donne le statut « actuelle » aux unions et passe en version 2, sans rien perdre', () => {
-    const v2 = migrer(v1) as Donnees;
+  it('donne le statut « actuelle » aux unions, aucune amitié, et passe en version 3, sans rien perdre', () => {
+    const v3 = migrer(v1) as Donnees;
+    expect(v3.version).toBe(3);
+    expect(v3.unions).toEqual([{ id: 'u1', personneA: 'a', personneB: 'b', marie: true, statut: 'actuelle' }]);
+    expect(v3.personnes).toEqual(v1.personnes);
+    expect(v3.filiations).toEqual(v1.filiations);
+    expect(v3.amities).toEqual([]);
+    expect(estDonneesValides(v3)).toBe(true);
+  });
+
+  it('un contenu v2 reçoit une liste d’amitiés vide, sans rien perdre', () => {
+    const v2 = { version: 2, personnes: v1.personnes, unions: [], filiations: v1.filiations };
+    const v3 = migrer(v2) as Donnees;
+    expect(v3).toEqual({ ...v2, version: 3, amities: [] });
+    expect(estDonneesValides(v3)).toBe(true);
     expect(v2.version).toBe(2);
-    expect(v2.unions).toEqual([{ id: 'u1', personneA: 'a', personneB: 'b', marie: true, statut: 'actuelle' }]);
-    expect(v2.personnes).toEqual(v1.personnes);
-    expect(v2.filiations).toEqual(v1.filiations);
-    expect(estDonneesValides(v2)).toBe(true);
   });
 
   it('ne modifie pas l’objet reçu', () => {
@@ -59,12 +68,12 @@ describe('migration v1 → v2', () => {
     expect(v1.unions[0]).not.toHaveProperty('statut');
   });
 
-  it('laisse un contenu v2 ou inconnu tel quel', () => {
-    const v2 = donneesVides();
-    expect(migrer(v2)).toBe(v2);
+  it('laisse un contenu v3 ou inconnu tel quel', () => {
+    const v3 = donneesVides();
+    expect(migrer(v3)).toBe(v3);
     expect(migrer(null)).toBeNull();
     expect(migrer('x')).toBe('x');
-    expect(migrer({ version: 3 })).toEqual({ version: 3 });
+    expect(migrer({ version: 4 })).toEqual({ version: 4 });
   });
 
   it('un v1 qui avait deux unions pour une personne reste lisible : la seconde devient séparée', () => {
@@ -76,7 +85,7 @@ describe('migration v1 → v2', () => {
 
   it('un ancien export s’importe', () => {
     const d = importerJson(JSON.stringify(v1, null, 2));
-    expect(d.version).toBe(2);
+    expect(d.version).toBe(3);
     expect(d.unions[0].statut).toBe('actuelle');
   });
 

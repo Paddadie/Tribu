@@ -17,12 +17,12 @@ function estObjet(v: unknown): v is Record<string, unknown> {
 
 /**
  * Vérifie la forme et la cohérence des données : types des champs, ids uniques,
- * liens pointant vers des personnes existantes, règles de filiation.
+ * liens pointant vers des personnes existantes, règles de filiation, amitiés sans doublon.
  */
 export function estDonneesValides(v: unknown): v is Donnees {
-  if (!estObjet(v) || v.version !== 2) return false;
-  const { personnes, unions, filiations } = v;
-  if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations)) return false;
+  if (!estObjet(v) || v.version !== 3) return false;
+  const { personnes, unions, filiations, amities } = v;
+  if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations) || !Array.isArray(amities)) return false;
 
   const ids = new Set<string>();
   for (const p of personnes) {
@@ -65,6 +65,18 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (n > MAX_PARENTS_PAR_TYPE) return false;
     parentsParType.set(cle, n);
     idsLiens.add(f.id);
+  }
+
+  // Une seule amitié par paire, dans un sens ou dans l'autre.
+  const amis = new Set<string>();
+  for (const a of amities) {
+    if (!estObjet(a) || typeof a.id !== 'string' || idsLiens.has(a.id)) return false;
+    if (typeof a.personneA !== 'string' || typeof a.personneB !== 'string') return false;
+    if (!ids.has(a.personneA) || !ids.has(a.personneB) || a.personneA === a.personneB) return false;
+    const paire = [a.personneA, a.personneB].sort().join('|');
+    if (amis.has(paire)) return false;
+    amis.add(paire);
+    idsLiens.add(a.id);
   }
   return true;
 }

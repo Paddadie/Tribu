@@ -64,8 +64,8 @@ const f = famille();
 describe('lien avec moi', () => {
   it('nomme soi-même, le conjoint, les parents et les enfants', () => {
     expect(f.lien('Moi', 'Moi')).toBe('c’est toi');
-    expect(f.lien('Moi', 'Sarah')).toBe('ta femme');
-    expect(f.lien('Sarah', 'Moi')).toBe('ton mari');
+    expect(f.lien('Moi', 'Sarah')).toBe('ton épouse');
+    expect(f.lien('Sarah', 'Moi')).toBe('ton époux');
     expect(f.lien('Zoé', 'Karim')).toBe('ton compagnon');
     expect(f.lien('Moi', 'Eva')).toBe('ta mère');
     expect(f.lien('Moi', 'Xavier')).toBe('ton fils');
@@ -142,7 +142,7 @@ describe('relation', () => {
 
   it('se termine sur une boucle de filiations venue d’un import', () => {
     const d: Donnees = {
-      version: 2,
+      version: 3,
       personnes: [
         { id: 'a', prenom: 'A', nom: 'X', note: '' },
         { id: 'b', prenom: 'B', nom: 'X', note: '' },
@@ -152,6 +152,7 @@ describe('relation', () => {
         { id: 'f1', parent: 'a', enfant: 'b', type: 'biologique' },
         { id: 'f2', parent: 'b', enfant: 'a', type: 'biologique' },
       ],
+      amities: [],
     };
     expect(relation(d, 'a', 'b')).toBeDefined();
   });

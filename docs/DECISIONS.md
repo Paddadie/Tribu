@@ -111,3 +111,14 @@
 2026-10-19 | Glissement entre écrans : View Transitions, sens déduit de la profondeur d'historique (avant, arrière ; rien pour un remplacement) ; repli sans animation si l'API manque ou si moins de mouvement est demandé | ANIM-01
 2026-10-19 | Surbrillance : l'écran qui enregistre appelle `signaler(idAutrePersonne)` ; la fiche éclaire cette ligne une seule fois (`surbrillance.ts`) | ANIM-03
 2026-10-19 | Icône définitive : « Les anneaux » (choix de Paul) ; PNG générés depuis le SVG avec Edge headless, maskable avec anneaux à 80 % | UI-07
+2026-10-19 | Lien « ami » possible entre deux personnes quelconques, pas seulement avec « Moi » ; il ne crée aucune parenté | FEAT-09 ; choix de Paul
+2026-10-19 | Étiquettes sans possessif (« Oncle », « Ami », « Compagne de Karim ») ; conjoint marié = « Époux » / « Épouse » (« Femme » seul se lit comme le sexe) | FEAT-09 ; choix de Paul
+2026-10-19 | Enfants trop nombreux pour la largeur : le rang défile de côté, du plus âgé (tout à gauche, position de départ) au plus jeune | FEAT-09 ; choix de Paul, pas de bulle « +N »
+2026-10-19 | Grand écran (tablette) : la fiche reste une colonne de 600 px centrée ; le dessin du foyer garde ses proportions de téléphone, seuls les enfants s'étalent sur la largeur | FEAT-09 ; demande de Paul
+2026-10-19 | Rang d'enfants qui défile : le trait horizontal va du premier au dernier enfant, jamais au-delà ; le trait vertical du couple reste fixe et tombe toujours dessus | FEAT-09 ; remarque de Paul sur la maquette
+2026-10-19 | Format v3 : liste `amities` (`{ id, personneA, personneB }`), une par paire quel que soit l'ordre ; `migrer()` enchaîne v1 → v2 → v3 | FEAT-09
+2026-10-19 | Ajout d'un ami par la route `#/ami/<personne>` (même sélecteur que le conjoint) ; retrait par une croix dans la section « Amis », sans confirmation, annulable par le bandeau | FEAT-09 ; le retrait n'était pas dans la maquette, à valider par Paul
+2026-10-19 | Pastille sous le nom = étiquette sans possessif (« Cousine », « Toi », « Compagne de Karim ») ; la phrase du chemin garde « ton / ta » | FEAT-09 ; remplace « Ta cousine », « C'est toi »
+2026-10-19 | Dessins placés après la note, avant « Conjoint » ; section « Amis » après la famille élargie ; le libellé « Ajouter un proche » et la place des boutons ne changent pas (différences fortuites de la maquette) | FEAT-09
+2026-10-19 | « Famille proche » : deux parents dessinés au plus, les premiers de `liensParents` (biologiques d'abord) ; case « + Parent » seulement pour la famille de « Moi » (ou sans « Moi ») ; trait vers les parents en pointillé si aucun n'est biologique | FEAT-09 ; déduction `foyer()` testée
+2026-10-19 | Dessin calculé en pixels après insertion dans la page : un ResizeObserver sur une sonde de hauteur nulle redessine quand la largeur change (rien à largeur nulle, donc rien dans les tests happy-dom) | FEAT-09 ; `fiche()` renvoie un élément détaché

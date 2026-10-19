@@ -22,8 +22,8 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Date de décès (facultative), partielle comme la naissance, sous la naissance dans le formulaire ; elle ne peut pas précéder la naissance. La fiche affiche « Décédé(e) le … » et l'âge : « 34 ans » pour un vivant, « Mort(e) à 82 ans » pour un décédé. Si les dates sont trop partielles pour trancher, l'âge le plus probable est précédé de « environ ».
 - Dans les listes, un décédé s'affiche « 1941 – 2024 » (« décédé(e) en 2024 » sans naissance) ; un vivant, sa naissance et son âge.
 - Note libre.
-- Ordre de la fiche : identité, note, puis les proches (conjoint, enfants, frères et sœurs, demi-frères et demi-sœurs, parents), le bouton « Ajouter un proche » (style secondaire), et enfin la suppression.
-- Une section vide n'est pas affichée. « Ajouter un proche » ouvre une feuille : un conjoint (grisé s'il y en a déjà un), un parent, un enfant, un frère ou une sœur (grisé avec « Ajoutez d'abord un parent » tant qu'aucun parent n'est connu).
+- Ordre de la fiche : identité, note, les dessins « Lien avec toi » et « Famille proche », puis les proches (conjoint, enfants, frères et sœurs, demi-frères et demi-sœurs, parents), la famille élargie, les amis, le bouton « Ajouter un proche », et enfin la suppression.
+- Une section vide n'est pas affichée. « Ajouter un proche » ouvre une feuille : un conjoint (grisé s'il y en a déjà un), un parent, un enfant, un frère ou une sœur (grisé avec « Ajoutez d'abord un parent » tant qu'aucun parent n'est connu), un ami.
 - Sous le conjoint, le nombre d'enfants du couple : « 1 enfant ensemble », « 3 enfants ensemble ».
 - Chaque proche affiché est touchable et ouvre sa fiche.
 - Étiquettes sur les proches, accordées selon le proche affiché : « Marié / Mariée » (conjoint), « Adoptif / Adoptive » (parent ou enfant) ; « Marié(e) » et « Adoptif(ve) » si son sexe n'est pas renseigné. Le lien biologique n'est pas étiqueté.
@@ -57,11 +57,24 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Rien n'est stocké : tout se recalcule depuis les unions et filiations. Biologique et adoptif comptent pareil.
 - Sections de la fiche, après Parents, vides masquées : grands-parents, petits-enfants, oncles et tantes, neveux et nièces, cousins et cousines, belle-famille (parents du conjoint, puis enfants du conjoint qui ne sont pas les siens). Chacune du plus âgé au plus jeune.
 - Les oncles, tantes, neveux et nièces par alliance (conjoint d'un oncle, oncle du conjoint…) sont dans leur section avec l'étiquette « Par alliance ». L'alliance passe seulement par le conjoint actuel, sur un pas.
-- Sous le nom, une pastille donne le lien de la personne avec « Moi » : « Ta cousine », « Ton oncle par alliance », « C'est toi ». Accord selon le sexe ; sexe non précisé : forme neutre (« Ton beau-parent ») ou les deux formes (« Ton oncle ou ta tante »). Un lien sans nom usuel (cousin d'un parent, cousin issu de germain) n'affiche rien.
+- Sous le nom, une pastille donne le lien de la personne avec « Moi », sans possessif : « Cousine », « Oncle par alliance », « Épouse », « Toi ». Accord selon le sexe ; sexe non précisé : forme neutre (« Beau-parent ») ou les deux formes (« Oncle ou tante »). Un lien sans nom usuel (cousin d'un parent, cousin issu de germain) n'affiche rien. Hors famille, voir « Amis ».
 - Sur la fiche des autres, la ligne de « Moi » porte l'étiquette « Toi ».
 - « Moi » se choisit dans les Réglages (section MOI, feuille avec recherche, « Ne plus choisir de fiche »). Si la fiche n'existe plus, c'est comme si rien n'était choisi, sans message.
 
-## Écrans d'ajout (conjoint, parent, enfant, frère ou sœur)
+## Amis
+- Une amitié relie deux personnes quelconques, de la famille ou non ; elle ne crée aucune parenté et n'entre dans aucune section de famille.
+- Ajouter un ami : « Ajouter un proche » → « Un ami » (`#/ami/<personne>`), personne existante ou nouvelle ; les amis actuels sont grisés (« Déjà ami / Déjà amie »).
+- Section « Amis » en fin de fiche, triée par prénom ; une croix retire l'amitié, sans confirmation, annulable par le bandeau.
+- Pastille d'une personne hors de la famille de « Moi », nommée depuis l'ami le plus proche du chemin : « Ami », « Amie d'Inès » (amie d'un proche), « Compagne de Karim », « Fils de Karim » (un pas après l'ami), « Proche de Karim » (plus loin). La famille l'emporte toujours ; le chemin ne passe que par les parents, enfants, conjoints actuels et amis (jamais un ex).
+
+## Dessins de la fiche
+- « Lien avec toi » : le chemin le plus court de « Moi » à la personne, l'ancêtre commun en haut ; coude pour parent et enfant, trait double pour un couple, simple pour une amitié. Sous le dessin, la phrase « Toi → ta mère → sa mère → son fils ». Masqué quand le lien est direct (une seule étape) ou sans « Moi ». Par la famille d'abord ; sinon par une amitié.
+- « Famille proche » (s'il y a un parent, un conjoint ou un enfant) : deux parents au plus (biologiques d'abord), la personne avec son conjoint actuel, ses frères et sœurs en pile (un toucher descend à leur section), ses enfants sous le couple ou sous la personne seule s'ils viennent d'une autre union. Années sous chaque nom, décédés grisés, lien adoptif en pointillé, légende seulement si besoin.
+- Case « + Parent » s'il manque un parent, seulement pour la famille de « Moi » (ou si « Moi » n'est pas choisi) ; elle ouvre l'ajout d'un parent.
+- Trop d'enfants pour la largeur : leur rang défile de côté, l'aîné à gauche au départ, du plus âgé au plus jeune toutes unions confondues, avec un fondu sur le bord.
+- Chaque personne dessinée ouvre sa fiche. Sur tablette, la fiche reste une colonne de 600 px et le foyer garde ses proportions de téléphone, centré.
+
+## Écrans d'ajout (conjoint, parent, enfant, frère ou sœur, ami)
 - Deux onglets : « Nouvelle personne » (ouvert d'abord, curseur dans le prénom) et « Personne existante ».
 - Nom prérempli, toujours modifiable. Enfant d'un couple homme-femme : nom du père, avec un bouton pour prendre celui de la mère ; sinon nom de la fiche ouverte, avec un bouton pour celui de l'autre parent coché. Parent, frère ou sœur : nom de la fiche ouverte.
 - Liste des personnes existantes : suggestions en tête avec leur raison (le conjoint d'un parent déjà saisi, les enfants du conjoint, l'autre parent de ses enfants), puis les autres, puis les personnes indisponibles grisées avec la raison (« Déjà en couple », « Déjà enfant »…).
@@ -78,7 +91,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
 
 ## Identité visuelle
-- Vert calmé (#2F6F5E, aussi `theme_color`), Figtree seule, thèmes clair et sombre. Le vert ne marque que ce qui se touche (retour, boutons, +, choix, focus) ; les titres de section sont en gris chaud, capitales posées en CSS ; pastilles (« Ta cousine », « Marié(e) », « Adoptif(ve) ») neutres.
+- Vert calmé (#2F6F5E, aussi `theme_color`), Figtree seule, thèmes clair et sombre. Le vert ne marque que ce qui se touche (retour, boutons, +, choix, focus) ; les titres de section sont en gris chaud, capitales posées en CSS ; pastilles (« Cousine », « Marié(e) », « Adoptif(ve) ») neutres.
 - Cinq tailles de texte : 12, 14, 16, 20, 28 px (jetons `--t1` à `--t5`). Nom de la fiche en 28 px sous un avatar de 88 px.
 - Avatar : initiales sur une teinte tirée du nom de famille (stable, insensible à la casse et aux accents) ; vert par défaut si le nom est vide.
 - Un seul bouton plein par écran (fiche : « Ajouter un proche » ; accueil : le +) ; « Supprimer » est un texte rouge. Appui (léger rétrécissement ou voile vert) et anneau de focus identiques partout.
@@ -92,7 +105,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 
 ## Suppression
 - Confirmation obligatoire.
-- Supprimer une personne retire aussi ses unions et filiations.
+- Supprimer une personne retire aussi ses unions, filiations et amitiés.
 - Un échec s'affiche sous le bouton, dans l'écran.
 
 ## Réglages (écran ouvert par l'écrou)
@@ -110,12 +123,13 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Cet écran propose d'exporter le contenu brut (`tribu-secours-AAAA-MM-JJ.txt`) et de « Repartir à vide… », sur confirmation ; la copie de secours reste sur le téléphone.
 - Aucune modification n'est enregistrée tant que Paul n'a pas choisi.
 
-## Format des données (version 2)
+## Format des données (version 3)
 - `Personne.deces` facultatif ; `Union.statut` « actuelle » ou « separee » ; une seule union actuelle par personne.
-- Un export v1 s'importe : `migrer()` le convertit avant la validation (unions v1 → actuelles ; si une personne en avait deux, la seconde devient séparée). Rien n'est perdu.
+- `amities` : `{ id, personneA, personneB }`, deux personnes connues et distinctes, une seule amitié par paire (dans un sens ou dans l'autre).
+- Un export v1 ou v2 s'importe : `migrer()` le convertit avant la validation (unions v1 → actuelles ; si une personne en avait deux, la seconde devient séparée ; v2 → v3 ajoute une liste d'amitiés vide). Rien n'est perdu.
 
 ## Hors V1 (plus tard)
-- Vue arbre graphique.
+- Arbre global de toute la famille (le mini-arbre de la fiche existe).
 - Photos.
 - Partage avec des proches.
 - Import et export GEDCOM.

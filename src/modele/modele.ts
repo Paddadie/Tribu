@@ -2,12 +2,12 @@
 // elles renvoient de nouvelles données sans modifier les anciennes, et lèvent
 // une Error (message en français) quand une règle du modèle est violée.
 
-import type { Donnees, Filiation, Personne, Sexe, TypeFiliation, Union } from './types';
+import type { Amitie, Donnees, Filiation, Personne, Sexe, TypeFiliation, Union } from './types';
 
 export const MAX_PARENTS_PAR_TYPE = 2;
 
 export function donneesVides(): Donnees {
-  return { version: 2, personnes: [], unions: [], filiations: [] };
+  return { version: 3, personnes: [], unions: [], filiations: [], amities: [] };
 }
 
 function nouvelId(): string {
@@ -103,12 +103,16 @@ export function enCouple(d: Donnees, id: string): boolean {
   return d.unions.some((u) => u.statut === 'actuelle' && (u.personneA === id || u.personneB === id));
 }
 
-/** La personne a au moins une union (même séparée) ou une filiation (parent ou enfant). */
+/** La personne a au moins une union (même séparée), une filiation (parent ou enfant) ou une amitié. */
 export function aDesLiens(d: Donnees, id: string): boolean {
-  return d.unions.some((u) => u.personneA === id || u.personneB === id) || d.filiations.some((f) => f.parent === id || f.enfant === id);
+  return (
+    d.unions.some((u) => u.personneA === id || u.personneB === id) ||
+    d.filiations.some((f) => f.parent === id || f.enfant === id) ||
+    d.amities.some((a) => a.personneA === id || a.personneB === id)
+  );
 }
 
-/** Retire la personne ainsi que toutes ses unions et filiations. */
+/** Retire la personne ainsi que toutes ses unions, filiations et amitiés. */
 export function supprimerPersonne(d: Donnees, id: string): Donnees {
   exigerPersonne(d, id);
   return {
@@ -116,6 +120,7 @@ export function supprimerPersonne(d: Donnees, id: string): Donnees {
     personnes: d.personnes.filter((p) => p.id !== id),
     unions: d.unions.filter((u) => u.personneA !== id && u.personneB !== id),
     filiations: d.filiations.filter((f) => f.parent !== id && f.enfant !== id),
+    amities: d.amities.filter((a) => a.personneA !== id && a.personneB !== id),
   };
 }
 
@@ -239,4 +244,24 @@ function estDescendant(d: Donnees, id: string, ancetre: string): boolean {
 export function supprimerFiliation(d: Donnees, id: string): Donnees {
   if (!d.filiations.some((f) => f.id === id)) throw new Error(`Filiation introuvable : ${id}`);
   return { ...d, filiations: d.filiations.filter((f) => f.id !== id) };
+}
+
+/** Deux personnes sont-elles amies (dans un sens ou dans l'autre) ? */
+export function sontAmis(d: Donnees, idA: string, idB: string): boolean {
+  return d.amities.some((a) => (a.personneA === idA && a.personneB === idB) || (a.personneA === idB && a.personneB === idA));
+}
+
+/** Amitié entre deux personnes quelconques, de la famille ou non ; une seule par paire. */
+export function ajouterAmitie(d: Donnees, personneA: string, personneB: string): { donnees: Donnees; amitie: Amitie } {
+  exigerPersonne(d, personneA);
+  exigerPersonne(d, personneB);
+  if (personneA === personneB) throw new Error('Une personne ne peut pas être sa propre amie');
+  if (sontAmis(d, personneA, personneB)) throw new Error('Ces deux personnes sont déjà amies');
+  const amitie: Amitie = { id: nouvelId(), personneA, personneB };
+  return { donnees: { ...d, amities: [...d.amities, amitie] }, amitie };
+}
+
+export function supprimerAmitie(d: Donnees, id: string): Donnees {
+  if (!d.amities.some((a) => a.id === id)) throw new Error(`Amitié introuvable : ${id}`);
+  return { ...d, amities: d.amities.filter((a) => a.id !== id) };
 }

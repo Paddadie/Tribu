@@ -2,7 +2,7 @@
 // recalcule depuis les données.
 
 import { comparateur } from './liste';
-import type { Donnees, Filiation, Personne, Union } from './types';
+import type { Amitie, Donnees, Filiation, Personne, Union } from './types';
 
 /** Ordre alphabétique « prénom nom », le même que la liste triée par prénom. */
 const parPrenom = comparateur('prenom');
@@ -262,4 +262,99 @@ export function familleElargie(d: Donnees, id: string): FamilleElargie {
   }
   f.belleFamille = [...beauxParents, ...enfantsConjoint];
   return f;
+}
+
+// --- Amis et chemin depuis « Moi » (FEAT-09) ----------------------------------
+
+/** Amis de la personne, dans l'ordre alphabétique. Une amitié ne crée aucune parenté. */
+export function amis(d: Donnees, id: string): { amitie: Amitie; personne: Personne }[] {
+  return d.amities
+    .filter((a) => a.personneA === id || a.personneB === id)
+    .flatMap((amitie) => {
+      const autre = amitie.personneA === id ? amitie.personneB : amitie.personneA;
+      const personne = d.personnes.find((p) => p.id === autre);
+      return personne ? [{ amitie, personne }] : [];
+    })
+    .sort((a, b) => parPrenom(a.personne, b.personne));
+}
+
+/** Comment on passe d'une étape à la suivante : la personne est le parent, l'enfant, le conjoint ou l'ami de la précédente. */
+export type Pas = 'parent' | 'enfant' | 'conjoint' | 'ami';
+
+export interface Etape {
+  personne: Personne;
+  /** Absent pour la première étape (« Moi »). */
+  par?: Pas;
+  /** Union mariée, pour une étape `conjoint`. */
+  marie?: boolean;
+}
+
+/** Plus court chemin de `de` à `vers` (parcours en largeur), par les parents, enfants, conjoint actuel et, au besoin, les amis. */
+function parcours(d: Donnees, de: string, vers: string, avecAmis: boolean): Etape[] | undefined {
+  const precedent = new Map<string, { de: string; etape: Etape } | null>([[de, null]]);
+  const file = [de];
+  for (let i = 0; i < file.length && !precedent.has(vers); i++) {
+    const courant = file[i];
+    const voisins: Etape[] = [
+      ...liensParents(d, courant).map(({ personne }) => ({ personne, par: 'parent' as const })),
+      ...liensEnfants(d, courant).map(({ personne }) => ({ personne, par: 'enfant' as const })),
+    ];
+    const c = conjoint(d, courant);
+    if (c) voisins.push({ personne: c.personne, par: 'conjoint', marie: c.union.marie });
+    if (avecAmis) voisins.push(...amis(d, courant).map(({ personne }) => ({ personne, par: 'ami' as const })));
+    for (const v of voisins) {
+      if (precedent.has(v.personne.id)) continue;
+      precedent.set(v.personne.id, { de: courant, etape: v });
+      file.push(v.personne.id);
+    }
+  }
+  if (!precedent.has(vers)) return undefined;
+  const etapes: Etape[] = [];
+  for (let x = precedent.get(vers); x; x = precedent.get(x.de)) etapes.unshift(x.etape);
+  const depart = d.personnes.find((p) => p.id === de);
+  return depart && [{ personne: depart }, ...etapes];
+}
+
+/**
+ * Chemin de « Moi » (`moi`) jusqu'à `vers`, première étape comprise. Pour la famille (`relation` trouve un lien),
+ * le chemin ne passe que par la famille ; sinon, il passe par au moins une amitié. Undefined pour soi-même,
+ * ou sans chemin (personne sans lien, ou reliée seulement par des unions qui ne font pas de parenté).
+ */
+export function chemin(d: Donnees, moi: string, vers: string): Etape[] | undefined {
+  if (moi === vers) return undefined;
+  if (relation(d, moi, vers)) return parcours(d, moi, vers, false);
+  const etapes = parcours(d, moi, vers, true);
+  return etapes?.some((e) => e.par === 'ami') ? etapes : undefined;
+}
+
+/** Contenu du dessin « Famille proche » d'une fiche. */
+export interface Foyer {
+  /** Deux parents au plus : les premiers de `liensParents` (biologiques d'abord). */
+  parents: { personne: Personne; adoptif: boolean }[];
+  /** Case « + Parent » à montrer (0 ou 1) : seulement pour la famille, quand il manque un parent. */
+  manque: number;
+  conjoint?: { personne: Personne; marie: boolean };
+  /** Frères et sœurs (mêmes parents), du plus âgé au plus jeune. */
+  fratrie: Personne[];
+  /** Enfants : ceux d'une autre union d'abord, puis ceux du couple ; du plus âgé au plus jeune dans chaque groupe. */
+  enfants: { personne: Personne; adoptif: boolean; duCouple: boolean }[];
+}
+
+/** Famille proche de `id`. `moi` absent : tout le monde compte comme de la famille (case « + Parent » comprise). */
+export function foyer(d: Donnees, id: string, moi?: string): Foyer {
+  const tousParents = liensParents(d, id);
+  const famille = !moi || moi === id || relation(d, moi, id) !== undefined;
+  const c = conjoint(d, id);
+  const enfants = liensEnfants(d, id).map(({ filiation, personne }) => ({
+    personne,
+    adoptif: filiation.type === 'adoptif',
+    duCouple: !!c && d.filiations.some((f) => f.parent === c.personne.id && f.enfant === personne.id),
+  }));
+  return {
+    parents: tousParents.slice(0, 2).map(({ filiation, personne }) => ({ personne, adoptif: filiation.type === 'adoptif' })),
+    manque: famille && tousParents.length < 2 ? 1 : 0,
+    conjoint: c && { personne: c.personne, marie: c.union.marie },
+    fratrie: fratrie(d, id).freresSoeurs,
+    enfants: [...enfants.filter((e) => !e.duCouple), ...enfants.filter((e) => e.duCouple)],
+  };
 }

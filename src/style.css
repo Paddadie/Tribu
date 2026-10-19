@@ -20,6 +20,7 @@
   --carte: #ffffff;
   --bord: #e1e8e4;
   --bord-champ: #c9d3cf;
+  --trait: #aebcb7;
   --danger: #a32a2a;
   --danger-bord: #e3bdbd;
   --erreur-fond: #fbeaea;
@@ -49,6 +50,7 @@
   --carte: #1b2622;
   --bord: #2a3833;
   --bord-champ: #3d4d47;
+  --trait: #4d605a;
   --danger: #ef8a8a;
   --danger-bord: #6b3535;
   --erreur-fond: #3a2020;
@@ -1109,6 +1111,249 @@ fieldset.champ legend {
 .feuille-liste {
   max-height: 45dvh;
   overflow-y: auto;
+}
+
+/* ——— Dessins de la fiche : « Lien avec toi » et « Famille proche » (FEAT-09) ——— */
+.dessin {
+  gap: 10px;
+  padding: 16px 10px 12px;
+}
+
+/* Sonde de hauteur nulle : sa largeur déclenche le dessin (arbre.ts). */
+.sonde {
+  height: 0;
+}
+
+.arbre {
+  position: relative;
+}
+
+.arbre svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trait {
+  fill: none;
+  stroke: var(--trait);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trait.pointille {
+  stroke-dasharray: 3 4;
+}
+
+.noeud,
+.pile {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.noeud .avatar {
+  width: 38px;
+  height: 38px;
+  font-size: var(--t2);
+}
+
+.noeud .avatar.decede {
+  filter: grayscale(1);
+  opacity: 0.72;
+}
+
+.noeud .nom {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t1);
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--encre);
+}
+
+.noeud .an {
+  margin-top: -4px;
+  font-size: var(--t1);
+  line-height: 14px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondaire);
+}
+
+.noeud.ici .avatar {
+  width: 52px;
+  height: 52px;
+  font-size: var(--t3);
+  font-weight: 700;
+}
+
+.noeud.ici .nom {
+  font-size: var(--t2);
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.chemin .noeud .avatar,
+.chemin .noeud.ici .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: var(--t1);
+  font-weight: 700;
+}
+
+.chemin .noeud.ici .nom {
+  font-size: var(--t1);
+}
+
+.noeud .toi {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--pastille);
+  font-weight: 700;
+}
+
+.noeud.manque .avatar {
+  background: transparent;
+  border: 1.5px dashed var(--accent);
+  color: var(--accent);
+  font-size: var(--t4);
+  font-weight: 400;
+}
+
+.noeud.manque .nom {
+  color: var(--accent);
+}
+
+.pile {
+  cursor: pointer;
+}
+
+.pile .avatars {
+  display: flex;
+}
+
+.pile .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: var(--t1);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--carte);
+}
+
+.pile .avatar + .avatar {
+  margin-left: -9px;
+}
+
+.pile .nom {
+  font-size: var(--t1);
+  line-height: 14px;
+  text-align: center;
+  color: var(--secondaire);
+}
+
+/* Rang d'enfants trop nombreux : il défile de côté, avec un fondu sur le bord qui cache encore quelqu'un. */
+.defile {
+  position: absolute;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.defile::-webkit-scrollbar {
+  display: none;
+}
+
+.defile > div {
+  position: relative;
+  height: 100%;
+}
+
+.defile.fondu-d {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+
+.defile.fondu-g {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px);
+  mask-image: linear-gradient(to right, transparent, #000 36px);
+}
+
+.defile.fondu-g.fondu-d {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+}
+
+.dessin .legende {
+  padding: 10px 4px 0;
+  border-top: 1px solid var(--bord);
+  text-align: center;
+  font-size: var(--t2);
+  color: var(--secondaire);
+}
+
+.dessin .legende b {
+  font-weight: 600;
+  color: var(--encre);
+}
+
+a.noeud .avatar,
+.pile .avatars {
+  transition: transform 90ms ease-out;
+}
+
+a.noeud:active .avatar,
+.pile:active .avatars {
+  transform: scale(0.94);
+}
+
+.cles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 4px 0;
+  border-top: 1px solid var(--bord);
+  font-size: var(--t1);
+  color: var(--secondaire);
+}
+
+.cles[hidden] {
+  display: none;
+}
+
+.cles span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cle-pointille {
+  width: 18px;
+  border-top: 1.5px dashed var(--trait);
+}
+
+.cle-decede {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--trait);
 }
 
 /* ——— États communs : appui et focus identiques partout (UI-06, ANIM-04) ——— */

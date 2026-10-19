@@ -197,6 +197,32 @@ describe('ajout d’un lien', () => {
     expect(trouver('section', 'Conjoint').textContent).toContain('Fanny Roux');
   });
 
+  it('ami choisi parmi les fiches, puis retiré depuis la fiche et rétabli par le bandeau', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Denis}`);
+    await toucher(trouver('button', 'Ajouter un proche'));
+    expect(trouver('dialog.feuille a', 'Un ami').getAttribute('href')).toBe(`#/ami/${ids.Denis}`);
+
+    await demarrer(donnees, `#/ami/${ids.Denis}`);
+    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    await toucher(trouver('button.ligne-choix', 'Chloé'));
+    await toucher(trouver('button', 'Ajouter comme ami'));
+    expect(enregistrees().amities).toContainEqual(expect.objectContaining({ personneA: ids.Denis, personneB: ids.Chloé }));
+
+    await demarrer(enregistrees(), `#/personne/${ids.Denis}`, { moi: ids.Chloé });
+    expect(trouver('section', 'Amis', ecran()).textContent).toContain('Chloé Martin');
+    expect(ecran().querySelector('.lien-moi')?.textContent).toBe('Ami');
+
+    await toucher(ecran().querySelector<HTMLElement>('button[aria-label="Retirer Chloé des amis"]')!);
+    expect(enregistrees().amities).toHaveLength(0);
+    expect(bandeau()!.textContent).toContain('Denis et Chloé ne sont plus amis.');
+    expect(ecran().textContent).not.toContain('Amis');
+
+    await toucher(trouver('.bandeau button', 'Annuler'));
+    expect(enregistrees().amities).toHaveLength(1);
+    expect(trouver('section', 'Amis', ecran()).textContent).toContain('Chloé Martin');
+  });
+
   it('parent créé depuis l’écran d’ajout', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/parent/${ids.Denis}`);
@@ -444,7 +470,7 @@ describe('suppression d’une personne', () => {
     await demarrer(donnees, `#/personne/${ids.Anne}`);
 
     await toucher(trouver('button', 'Supprimer cette personne'));
-    expect(dialogue()!.textContent).toContain('Supprimer Anne Martin ? Ses liens familiaux seront aussi supprimés.');
+    expect(dialogue()!.textContent).toContain('Supprimer Anne Martin ? Ses liens seront aussi supprimés.');
     await toucher(trouver('dialog.confirmation button', 'Annuler'));
     expect(enregistrees()).toEqual(donnees);
     expect(titre()).toBe('Anne Martin');
@@ -591,11 +617,11 @@ describe('« Moi » et parenté', () => {
   it('affiche sur chaque fiche son lien avec moi, accordé', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/personne/${ids.Anne}`, { moi: ids.Chloé });
-    expect(lienMoi()).toBe('Ta mère');
+    expect(lienMoi()).toBe('Mère');
     await demarrer(donnees, `#/personne/${ids.Bruno}`, { moi: ids.Chloé });
-    expect(lienMoi()).toBe('Ton père');
+    expect(lienMoi()).toBe('Père');
     await demarrer(donnees, `#/personne/${ids.Chloé}`, { moi: ids.Chloé });
-    expect(lienMoi()).toBe('C’est toi');
+    expect(lienMoi()).toBe('Toi');
     await demarrer(donnees, `#/personne/${ids.Denis}`, { moi: ids.Chloé });
     expect(lienMoi()).toBeUndefined();
   });
@@ -624,13 +650,13 @@ describe('« Moi » et parenté', () => {
 
     await demarrer(d, `#/personne/${ids.Chloé}`, { moi: ids.Chloé });
     const titres = [...ecran().querySelectorAll('h2.titre-section')].map((e) => e.textContent);
-    expect(titres).toEqual(['Parents', 'Grands-parents', 'Oncles et tantes']);
+    expect(titres).toEqual(['Famille proche', 'Parents', 'Grands-parents', 'Oncles et tantes']);
     expect(trouver('section', 'Grands-parents', ecran()).textContent).toContain('Eva Martin');
     expect(trouver('section', 'Oncles et tantes', ecran()).textContent).toContain('Hugo Martin');
 
     // Depuis Hugo, Chloé est une nièce, et c'est moi : étiquette « Toi ».
     await demarrer(d, `#/personne/${ids.Hugo}`, { moi: ids.Chloé });
-    expect(lienMoi()).toBe('Ton oncle');
+    expect(lienMoi()).toBe('Oncle');
     expect(trouver('section', 'Neveux et nièces', ecran()).textContent).toContain('Toi');
 
     // Chez Denis, sans lien : aucune section déduite.

@@ -38,9 +38,17 @@ export interface Filiation {
   type: TypeFiliation;
 }
 
+/** Amitié entre deux personnes distinctes quelconques ; elle ne crée aucune parenté. */
+export interface Amitie {
+  id: string;
+  personneA: string;
+  personneB: string;
+}
+
 export interface Donnees {
-  version: 2;
+  version: 3;
   personnes: Personne[];
   unions: Union[];
   filiations: Filiation[];
+  amities: Amitie[];
 }

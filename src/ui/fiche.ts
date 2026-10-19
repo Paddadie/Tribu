@@ -2,12 +2,14 @@
 // famille élargie déduite, ajout d'un proche, modification, suppression avec confirmation.
 
 import { detailPersonne, libelleAge, libelleAgeDeces } from '../modele/age';
-import { conjoint, enfantsDuCouple, exConjoints, familleElargie, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
+import { amis, chemin, conjoint, enfantsDuCouple, exConjoints, familleElargie, foyer, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
 import { avecDe, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
-import { aDesLiens, enCouple, supprimerPersonne } from '../modele/modele';
-import { libelleRelation, lienAvecMoi } from '../modele/parente';
+import { aDesLiens, enCouple, supprimerAmitie, supprimerPersonne } from '../modele/modele';
+import { etiquette as etiquetteMoi, libelleRelation } from '../modele/parente';
 import { ficheMoi } from '../modele/reglages';
 import type { Personne, Union } from '../modele/types';
+import { changerAvecAnnulation, rafraichirEcran } from './annulation';
+import { dessinChemin, dessinFoyer } from './arbre';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
@@ -37,8 +39,11 @@ function ligneFratrie(c: Personne, via: Personne[] = []): HTMLElement {
 function sectionsFratrie(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
   const { freresSoeurs, demis } = fratrie(d, p.id);
+  const freres = freresSoeurs.length > 0 ? section('Frères et sœurs', ...freresSoeurs.map((f) => ligneFratrie(f))) : null;
+  // Cible de la pile de la fratrie dans le dessin « Famille proche ».
+  if (freres) freres.id = 'section-fratrie';
   return [
-    freresSoeurs.length > 0 ? section('Frères et sœurs', ...freresSoeurs.map((f) => ligneFratrie(f))) : null,
+    freres,
     demis.length > 0 ? section('Demi-frères et demi-sœurs', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null,
   ];
 }
@@ -49,11 +54,54 @@ function section(titre: string, ...lignes: HTMLElement[]): HTMLElement {
 
 const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-/** Lien de la fiche avec ma fiche (« Ta cousine ») ; rien si « Moi » n'est pas choisi ou si le lien n'a pas de nom. */
+/** Lien de la fiche avec ma fiche, sans possessif (« Cousine », « Toi », « Compagne de Karim ») ; rien si « Moi » n'est pas choisi ou sans lien nommé. */
 function lienMoi(p: Personne): string | undefined {
   const moi = ficheMoi(lireReglages(), lireDonnees());
-  const lien = moi && lienAvecMoi(lireDonnees(), moi.id, p.id);
-  return lien ? majuscule(lien) : undefined;
+  return moi && etiquetteMoi(lireDonnees(), moi.id, p.id);
+}
+
+/** Dessins « Lien avec toi » (seulement à partir de deux étapes) et « Famille proche » (s'il y a un parent, un conjoint ou un enfant). */
+function sectionsDessins(p: Personne): (HTMLElement | null)[] {
+  const d = lireDonnees();
+  const moi = ficheMoi(lireReglages(), d)?.id;
+  const etapes = moi ? chemin(d, moi, p.id) : undefined;
+  const f = foyer(d, p.id, moi);
+  const dessin = (titre: string, contenu: HTMLElement) => h('section', {}, h('h2', { class: 'titre-section' }, titre), contenu);
+  return [
+    etapes && moi && etapes.length > 2 ? dessin('Lien avec toi', dessinChemin(etapes, moi)) : null,
+    f.parents.length > 0 || f.conjoint || f.enfants.length > 0 ? dessin('Famille proche', dessinFoyer(p, f, moi)) : null,
+  ];
+}
+
+/** Amis de la personne, chacun avec une croix pour retirer l'amitié (annulable) ; rien s'il n'y en a pas. Un échec s'affiche dans `erreur`. */
+function sectionAmis(p: Personne, erreur: HTMLElement): HTMLElement | null {
+  const liste = amis(lireDonnees(), p.id);
+  if (liste.length === 0) return null;
+  const retirer = (id: string, ami: Personne) => {
+    try {
+      changerAvecAnnulation((x) => supprimerAmitie(x, id), `${p.prenom || p.nom} et ${ami.prenom || ami.nom} ne sont plus amis.`, 'Amitié rétablie.');
+    } catch (e) {
+      erreur.textContent = e instanceof Error ? e.message : 'Retrait impossible';
+      erreur.hidden = false;
+      return;
+    }
+    rafraichirEcran();
+  };
+  return section(
+    'Amis',
+    ...liste.map(({ amitie, personne }) =>
+      h(
+        'div',
+        { class: 'ligne ligne-union' },
+        h('a', { class: 'ligne-lien', href: `#/personne/${personne.id}` }, ...contenuLigne(personne)),
+        h(
+          'button',
+          { type: 'button', class: 'bouton-icone', 'aria-label': `Retirer ${personne.prenom || personne.nom} des amis`, onclick: () => retirer(amitie.id, personne) },
+          icone('croix', 20),
+        ),
+      ),
+    ),
+  );
 }
 
 /** Ligne touchable d'une personne de la famille élargie : déduite, donc sans crayon. */
@@ -118,7 +166,7 @@ function sectionsConjoint(p: Personne): (HTMLElement | null)[] {
 }
 
 /**
- * Feuille « Ajouter un proche » : conjoint, parent, enfant, frère ou sœur.
+ * Feuille « Ajouter un proche » : conjoint, parent, enfant, frère ou sœur, ami.
  * Le conjoint est grisé s'il y en a déjà un ; le frère ou la sœur tant qu'aucun parent n'est connu.
  */
 function ouvrirChoixProche(p: Personne): void {
@@ -146,6 +194,7 @@ function ouvrirChoixProche(p: Personne): void {
     option('Un parent', 'Biologique ou adoptif', 'haut', `#/parent/${p.id}`),
     option('Un enfant', 'Biologique ou adoptif', 'bas', `#/enfant/${p.id}`),
     option('Un frère ou une sœur', parents.length > 0 ? `Enfant ${avecDe(enumerer(parents))}` : 'Ajoutez d’abord un parent', 'cote', `#/frere/${p.id}`, parents.length === 0),
+    option('Un ami', 'Déjà dans la liste ou nouveau', 'ami', `#/ami/${p.id}`),
     h('button', { type: 'button', class: 'bouton', onclick: fermer }, 'Annuler'),
   );
   // Un toucher sur le fond (hors de la feuille) ferme aussi.
@@ -169,7 +218,7 @@ export function fiche(p: Personne): HTMLElement {
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
   const supprimer = async () => {
-    const message = `Supprimer ${nomComplet(p)} ?` + (aDesLiens(lireDonnees(), p.id) ? ' Ses liens familiaux seront aussi supprimés.' : '');
+    const message = `Supprimer ${nomComplet(p)} ?` + (aDesLiens(lireDonnees(), p.id) ? ' Ses liens seront aussi supprimés.' : '');
     if (!(await confirmer(message, 'Supprimer'))) return;
     erreur.hidden = true;
     try {
@@ -203,11 +252,13 @@ export function fiche(p: Personne): HTMLElement {
       'div',
       { class: 'contenu' },
       p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'Note'), h('p', {}, p.note)),
+      ...sectionsDessins(p),
       ...sectionsConjoint(p),
       sectionFiliation('Enfants', liensEnfants(lireDonnees(), p.id), p),
       ...sectionsFratrie(p),
       sectionFiliation('Parents', liensParents(lireDonnees(), p.id), p),
       ...sectionsElargies(p),
+      sectionAmis(p, erreur),
       h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
       erreur,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
+import { ajouterAmitie, ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import {
   CLE_SECOURS,
   CLE_STOCKAGE,
@@ -31,6 +31,7 @@ function exemple(): Donnees {
   d = c.donnees;
   d = ajouterUnion(d, a.personne.id, b.personne.id, true).donnees;
   d = ajouterFiliation(d, a.personne.id, c.personne.id, 'adoptif').donnees;
+  d = ajouterAmitie(d, b.personne.id, c.personne.id).donnees;
   return d;
 }
 
@@ -103,8 +104,8 @@ describe('validation des données', () => {
   });
 
   it('refuse une mauvaise version', () => {
-    expect(estDonneesValides({ ...donneesVides(), version: 3 })).toBe(false);
-    expect(estDonneesValides({ ...donneesVides(), version: 1 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 2 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 4 })).toBe(false);
   });
 
   it('refuse un lien vers une personne inexistante', () => {
@@ -135,6 +136,16 @@ describe('validation des données', () => {
     expect(
       estDonneesValides({ ...extra.donnees, filiations: [...trois, fil(3, extra.personne.id)] }),
     ).toBe(false);
+  });
+
+  it('refuse une amitié invalide : personne inconnue, avec soi-même, en double dans un sens ou dans l’autre, id déjà pris', () => {
+    const d = exemple();
+    const a = d.amities[0];
+    expect(estDonneesValides({ ...d, amities: [{ ...a, personneB: 'fantôme' }] })).toBe(false);
+    expect(estDonneesValides({ ...d, amities: [{ ...a, personneB: a.personneA }] })).toBe(false);
+    expect(estDonneesValides({ ...d, amities: [a, { id: 'x', personneA: a.personneB, personneB: a.personneA }] })).toBe(false);
+    expect(estDonneesValides({ ...d, amities: [{ ...a, id: d.unions[0].id }] })).toBe(false);
+    expect(estDonneesValides({ ...d, amities: undefined })).toBe(false);
   });
 });
 

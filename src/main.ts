@@ -2,6 +2,7 @@ import "@fontsource-variable/figtree";
 import "./style.css";
 import { initPwa } from "./pwa";
 import { accueil } from "./ui/accueil";
+import { ajoutAmi } from "./ui/ajoutAmi";
 import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
 import { EVENEMENT_RAFRAICHIR } from "./ui/annulation";
@@ -18,7 +19,7 @@ import { ecranUnion } from "./ui/union";
 //   #/                 liste          #/personne/<id>   fiche
 //   #/reglages         réglages (tri, thème, sauvegarde)
 //   #/nouveau          création       #/modifier/<id>   modification
-//   #/conjoint/<id>    ajout d'un conjoint à la personne
+//   #/conjoint/<id>    ajout d'un conjoint à la personne      #/ami/<id>   ajout d'un ami
 //   #/union/<union>/<id>      union (marié, séparation, rétablissement), ouverte depuis la fiche de <id>
 //   #/parent/<id>      ajout d'un parent à la personne    #/enfant/<id>   ajout d'un enfant
 //   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
@@ -36,6 +37,7 @@ function vue(route: string): HTMLElement {
   if (section === "personne" && personne) return fiche(personne);
   if (section === "modifier" && personne) return formulaire(personne);
   if (section === "conjoint" && personne) return ajoutConjoint(personne);
+  if (section === "ami" && personne) return ajoutAmi(personne);
   if (section === "union") {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
     if (origine) return ecranUnion(origine, id);

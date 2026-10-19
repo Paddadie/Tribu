@@ -13,7 +13,7 @@ export function eclairer(racine: HTMLElement): void {
   const id = attente;
   attente = undefined;
   if (!id) return;
-  const ligne = racine.querySelector(`a[href="#/personne/${id}"]`)?.closest('.ligne');
+  const ligne = racine.querySelector(`a.ligne-lien[href="#/personne/${id}"]`)?.closest('.ligne');
   if (!ligne) return;
   ligne.classList.add('nouvelle');
   // La fiche n'est pas encore dans la page : on attend l'affichage pour amener la ligne à l'écran.
