@@ -40,6 +40,9 @@ const TRACES = {
   crayon: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/>',
   coche: '<path d="M5 12l5 5 9-10"/>',
   corbeille: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  coeur: '<path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/>',
+  haut: '<path d="M12 19V6M6 11l6-6 6 6"/>',
+  bas: '<path d="M12 5v13M6 13l6 6 6-6"/>',
 } as const;
 
 export function icone(nom: keyof typeof TRACES, taille = 20): SVGSVGElement {

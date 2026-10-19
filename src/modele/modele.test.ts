@@ -5,6 +5,7 @@ import {
   creerPersonne,
   donneesVides,
   estDateValide,
+  modifierFiliation,
   modifierPersonne,
   modifierUnion,
   supprimerFiliation,
@@ -122,6 +123,29 @@ describe('filiations', () => {
     cur = ajouterFiliation(cur, ids[2], enfant, 'adoptif').donnees;
     cur = ajouterFiliation(cur, ids[3], enfant, 'adoptif').donnees;
     expect(cur.filiations).toHaveLength(4);
+  });
+
+  it('refuse une boucle : un parent ne peut pas descendre de son enfant', () => {
+    const { d, ids } = avec('Grand-parent', 'Parent', 'Enfant');
+    let cur = ajouterFiliation(d, ids[0], ids[1], 'biologique').donnees;
+    cur = ajouterFiliation(cur, ids[1], ids[2], 'biologique').donnees;
+    expect(() => ajouterFiliation(cur, ids[1], ids[0], 'biologique')).toThrow(/boucle/);
+    expect(() => ajouterFiliation(cur, ids[2], ids[0], 'adoptif')).toThrow(/boucle/);
+    expect(ajouterFiliation(cur, ids[0], ids[2], 'adoptif').donnees.filiations).toHaveLength(3);
+  });
+
+  it('change le type d’un lien sous la limite de deux par type', () => {
+    const { d, ids } = avec('P1', 'P2', 'P3', 'Enfant');
+    const enfant = ids[3];
+    let cur = ajouterFiliation(d, ids[0], enfant, 'biologique').donnees;
+    cur = ajouterFiliation(cur, ids[1], enfant, 'biologique').donnees;
+    const adoptif = ajouterFiliation(cur, ids[2], enfant, 'adoptif');
+    expect(() => modifierFiliation(adoptif.donnees, adoptif.filiation.id, 'biologique')).toThrow();
+    const bio = cur.filiations[0];
+    const change = modifierFiliation(cur, bio.id, 'adoptif');
+    expect(change.filiations.find((f) => f.id === bio.id)?.type).toBe('adoptif');
+    expect(modifierFiliation(cur, bio.id, 'biologique')).toBe(cur);
+    expect(() => modifierFiliation(cur, 'inconnu', 'adoptif')).toThrow();
   });
 
   it('supprime une filiation', () => {

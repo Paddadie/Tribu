@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conjoint, enfants, enfantsDuCouple, fratrie, parents } from './deductions';
+import { conjoint, enfants, enfantsDuCouple, fratrie, liensEnfants, liensParents, parents } from './deductions';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, TypeFiliation } from './types';
 
@@ -185,5 +185,27 @@ describe('tri avec dates partielles', () => {
     m.pers('Mois', '1990-03');
     for (const e of ['Sans', 'Complet', 'Annee', 'Mois']) m.filiation('Parent', e);
     expect(enfants(m.d, m.id.Parent).map((p) => p.prenom)).toEqual(['Annee', 'Mois', 'Complet', 'Sans']);
+  });
+});
+
+describe("liens avec type de filiation", () => {
+  it("liste les parents (biologiques puis adoptifs) et les enfants (du plus âgé au plus jeune) avec leur lien", () => {
+    const w = monde();
+    w.pers("Zoé", "1960");
+    w.pers("Adam", "1958");
+    w.pers("Bea", "2010");
+    w.pers("Cid", "2005");
+    w.pers("Moi", "1985");
+    w.filiation("Adam", "Moi", "adoptif");
+    w.filiation("Zoé", "Moi", "biologique");
+    w.filiation("Moi", "Bea", "biologique");
+    w.filiation("Moi", "Cid", "adoptif");
+    const p = liensParents(w.d, w.id.Moi);
+    expect(prenoms(p.map((l) => l.personne))).toEqual(["Zoé", "Adam"]);
+    expect(p.map((l) => l.filiation.type)).toEqual(["biologique", "adoptif"]);
+    const e = liensEnfants(w.d, w.id.Moi);
+    expect(prenoms(e.map((l) => l.personne))).toEqual(["Cid", "Bea"]);
+    expect(e.map((l) => l.filiation.type)).toEqual(["adoptif", "biologique"]);
+    expect(liensParents(w.d, w.id.Zoé)).toEqual([]);
   });
 });

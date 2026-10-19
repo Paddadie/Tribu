@@ -1,7 +1,7 @@
 // Liens déduits à partir des unions et filiations. Rien n'est stocké : tout se
 // recalcule depuis les données.
 
-import type { Donnees, Personne, Union } from './types';
+import type { Donnees, Filiation, Personne, Union } from './types';
 
 function parId(d: Donnees, ids: Iterable<string>): Personne[] {
   const voulus = new Set(ids);
@@ -31,6 +31,36 @@ export function conjoint(d: Donnees, id: string): { union: Union; personne: Pers
 
 export function parents(d: Donnees, id: string): Personne[] {
   return parId(d, d.filiations.filter((f) => f.enfant === id).map((f) => f.parent));
+}
+
+export interface Lien {
+  filiation: Filiation;
+  personne: Personne;
+}
+
+/** Parents avec leur lien : biologiques d'abord, puis adoptifs ; ordre alphabétique dans chaque groupe. */
+export function liensParents(d: Donnees, id: string): Lien[] {
+  return d.filiations
+    .filter((f) => f.enfant === id)
+    .flatMap((filiation) => {
+      const personne = d.personnes.find((p) => p.id === filiation.parent);
+      return personne ? [{ filiation, personne }] : [];
+    })
+    .sort((a, b) => {
+      if (a.filiation.type !== b.filiation.type) return a.filiation.type === 'biologique' ? -1 : 1;
+      return `${a.personne.prenom} ${a.personne.nom}`.localeCompare(`${b.personne.prenom} ${b.personne.nom}`, 'fr');
+    });
+}
+
+/** Enfants avec leur lien, du plus âgé au plus jeune. */
+export function liensEnfants(d: Donnees, id: string): Lien[] {
+  return d.filiations
+    .filter((f) => f.parent === id)
+    .flatMap((filiation) => {
+      const personne = d.personnes.find((p) => p.id === filiation.enfant);
+      return personne ? [{ filiation, personne }] : [];
+    })
+    .sort((a, b) => comparerParNaissance(a.personne, b.personne));
 }
 
 /** Enfants de la personne, du plus âgé au plus jeune. */

@@ -136,12 +136,44 @@ export function ajouterFiliation(
   if (d.filiations.some((f) => f.parent === parent && f.enfant === enfant)) {
     throw new Error('Ce lien parent-enfant existe déjà');
   }
+  exigerPlaceParent(d, enfant, type);
+  if (estDescendant(d, parent, enfant)) {
+    throw new Error('Ce lien créerait une boucle : le parent descend déjà de cet enfant');
+  }
+  const filiation: Filiation = { id: nouvelId(), parent, enfant, type };
+  return { donnees: { ...d, filiations: [...d.filiations, filiation] }, filiation };
+}
+
+/** Change le type (biologique/adoptif) d'un lien existant, sous la même limite de deux parents par type. */
+export function modifierFiliation(d: Donnees, id: string, type: TypeFiliation): Donnees {
+  const lien = d.filiations.find((f) => f.id === id);
+  if (!lien) throw new Error(`Filiation introuvable : ${id}`);
+  if (lien.type === type) return d;
+  exigerPlaceParent(d, lien.enfant, type);
+  return { ...d, filiations: d.filiations.map((f) => (f.id === id ? { ...f, type } : f)) };
+}
+
+function exigerPlaceParent(d: Donnees, enfant: string, type: TypeFiliation): void {
   const memeType = d.filiations.filter((f) => f.enfant === enfant && f.type === type);
   if (memeType.length >= MAX_PARENTS_PAR_TYPE) {
     throw new Error(`Un enfant a au plus ${MAX_PARENTS_PAR_TYPE} parents ${type === 'biologique' ? 'biologiques' : 'adoptifs'}`);
   }
-  const filiation: Filiation = { id: nouvelId(), parent, enfant, type };
-  return { donnees: { ...d, filiations: [...d.filiations, filiation] }, filiation };
+}
+
+/** Vrai si `id` descend (à n'importe quel degré) de `ancetre`. */
+function estDescendant(d: Donnees, id: string, ancetre: string): boolean {
+  const vus = new Set<string>();
+  const pile = [id];
+  while (pile.length > 0) {
+    const courant = pile.pop() as string;
+    for (const f of d.filiations) {
+      if (f.enfant !== courant || vus.has(f.parent)) continue;
+      if (f.parent === ancetre) return true;
+      vus.add(f.parent);
+      pile.push(f.parent);
+    }
+  }
+  return false;
 }
 
 export function supprimerFiliation(d: Donnees, id: string): Donnees {

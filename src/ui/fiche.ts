@@ -1,43 +1,91 @@
-// Fiche d'une personne : identité, conjoint, note, modification, suppression avec confirmation.
-// Les sections enfants, fratrie et parents arrivent aux étapes 6 et 7.
+// Fiche d'une personne : identité, parents, conjoint, enfants, note, modification, suppression avec confirmation.
+// La section fratrie arrive à l'étape 7.
 
-import { conjoint } from '../modele/deductions';
+import { conjoint, liensEnfants, liensParents, type Lien } from '../modele/deductions';
 import { initiales, libelleNaissance, nomComplet } from '../modele/liste';
 import { supprimerPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { confirmer } from './confirmer';
-import { h, icone } from './dom';
+import { h, icone, type Enfant } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
 
-/** Conjoint actuel (un seul) touchable, avec accès à l'union ; sinon bouton d'ajout. */
-function sectionConjoint(p: Personne): HTMLElement {
-  const lien = conjoint(lireDonnees(), p.id);
-  if (!lien) {
-    return h('a', { class: 'bouton', href: `#/conjoint/${p.id}` }, icone('plus', 18), 'Ajouter un conjoint');
-  }
-  const { union, personne: c } = lien;
+/** Ligne touchable vers la fiche d'une personne, avec une étiquette et un crayon vers l'écran de gestion du lien. */
+function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libelleModifier: string): HTMLElement {
   const detail = libelleNaissance(c.naissance, c.sexe);
   return h(
-    'section',
-    {},
-    h('h2', { class: 'titre-section' }, 'CONJOINT'),
+    'div',
+    { class: 'ligne ligne-union' },
     h(
-      'div',
-      { class: 'carte' },
-      h(
-        'div',
-        { class: 'ligne ligne-union' },
-        h(
-          'a',
-          { class: 'ligne-lien', href: `#/personne/${c.id}` },
-          h('span', { class: 'avatar' }, initiales(c)),
-          h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
-          union.marie && h('span', { class: 'etiquette' }, 'Marié'),
-        ),
-        h('a', { class: 'bouton-icone', href: `#/union/${p.id}`, 'aria-label': 'Modifier l’union' }, icone('crayon', 20)),
+      'a',
+      { class: 'ligne-lien', href: `#/personne/${c.id}` },
+      h('span', { class: 'avatar' }, initiales(c)),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
+      etiquette,
+    ),
+    h('a', { class: 'bouton-icone', href: hrefModifier, 'aria-label': libelleModifier }, icone('crayon', 20)),
+  );
+}
+
+function section(titre: string, ...lignes: HTMLElement[]): HTMLElement {
+  return h('section', {}, h('h2', { class: 'titre-section' }, titre), h('div', { class: 'carte' }, ...lignes));
+}
+
+/** Parents ou enfants d'un côté de la fiche ; rien n'est affiché s'il n'y en a pas. */
+function sectionFiliation(titre: string, liens: Lien[], p: Personne): HTMLElement | null {
+  if (liens.length === 0) return null;
+  return section(
+    titre,
+    ...liens.map(({ filiation, personne }) =>
+      ligneProche(
+        personne,
+        h('span', { class: `etiquette${filiation.type === 'adoptif' ? ' etiquette-adoptif' : ''}` }, filiation.type === 'adoptif' ? 'Adoptif' : 'Biologique'),
+        `#/lien/${filiation.id}/${p.id}`,
+        'Modifier le lien',
       ),
     ),
   );
+}
+
+/** Conjoint actuel (un seul) touchable, avec accès à l'union ; rien s'il n'y en a pas. */
+function sectionConjoint(p: Personne): HTMLElement | null {
+  const lien = conjoint(lireDonnees(), p.id);
+  if (!lien) return null;
+  const { union, personne: c } = lien;
+  return section('CONJOINT', ligneProche(c, union.marie && h('span', { class: 'etiquette' }, 'Marié'), `#/union/${p.id}`, 'Modifier l’union'));
+}
+
+/** Feuille « Ajouter un proche » : conjoint, parent ou enfant. Le conjoint est grisé s'il y en a déjà un. */
+function ouvrirChoixProche(p: Personne): void {
+  const aConjoint = conjoint(lireDonnees(), p.id) !== undefined;
+  const fermer = () => {
+    dialogue.close();
+    dialogue.remove();
+  };
+  const option = (libelle: string, aide: string, trace: Parameters<typeof icone>[0], href: string, inactive = false) => {
+    const contenu = [
+      h('span', { class: 'pastille' }, icone(trace, 20)),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, libelle), h('span', { class: 'secondaire' }, aide)),
+    ];
+    return inactive
+      ? h('div', { class: 'option inactive', 'aria-disabled': 'true' }, ...contenu)
+      : h('a', { class: 'option', href, onclick: fermer }, ...contenu);
+  };
+  const dialogue = h(
+    'dialog',
+    { class: 'feuille', 'aria-label': 'Ajouter un proche', oncancel: fermer },
+    h('h2', { class: 'feuille-titre' }, `Qui ajouter pour ${p.prenom || p.nom} ?`),
+    option('Un conjoint', aConjoint ? 'Un seul conjoint à la fois' : 'Déjà dans la liste ou nouveau', 'coeur', `#/conjoint/${p.id}`, aConjoint),
+    option('Un parent', 'Biologique ou adoptif', 'haut', `#/parent/${p.id}`),
+    option('Un enfant', 'Biologique ou adoptif', 'bas', `#/enfant/${p.id}`),
+    h('button', { type: 'button', class: 'bouton', onclick: fermer }, 'Annuler'),
+  );
+  // Un toucher sur le fond (hors de la feuille) ferme aussi.
+  dialogue.addEventListener('click', (e) => {
+    const r = dialogue.getBoundingClientRect();
+    if (e.clientY < r.top || e.clientY > r.bottom || e.clientX < r.left || e.clientX > r.right) fermer();
+  });
+  document.body.append(dialogue);
+  dialogue.showModal();
 }
 
 export function fiche(p: Personne, naviguer: (route: string) => void): HTMLElement {
@@ -78,8 +126,11 @@ export function fiche(p: Personne, naviguer: (route: string) => void): HTMLEleme
     h(
       'div',
       { class: 'contenu' },
+      sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
       sectionConjoint(p),
-      p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
+      sectionFiliation('ENFANTS', liensEnfants(lireDonnees(), p.id), p),
+      h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
+      p.note &&h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
     ),
   );
