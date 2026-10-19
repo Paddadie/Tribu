@@ -6,6 +6,8 @@ import {
   creerPersonne,
   donneesVides,
   enCouple,
+  anneeDe,
+  decesAvantNaissance,
   estDateValide,
   modifierFiliation,
   modifierPersonne,
@@ -221,6 +223,23 @@ describe('dates de naissance partielles', () => {
   });
   it('refuse les formats incomplets ou non numériques', () => {
     for (const d of ['19', '1961-5', '1961-05-1', '1961--14', 'abcd', '0000']) expect(estDateValide(d)).toBe(false);
+  });
+  it('accepte jour et mois sans année, 29 février compris', () => {
+    expect(creer('--10-24').naissance).toBe('--10-24');
+    expect(creer('--02-29').naissance).toBe('--02-29');
+  });
+  it('refuse un jour sans année impossible ou mal formé', () => {
+    for (const d of ['--02-30', '--13-01', '--04-31', '--00-10', '--10-00', '--10', '--1-24', '-10-24']) expect(() => creer(d)).toThrow();
+  });
+  it('refuse une date de décès sans année', () => {
+    expect(() => creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', deces: '--10-24' })).toThrow('décès');
+  });
+  it('ne compare pas le décès à une naissance sans année', () => {
+    expect(decesAvantNaissance('--10-24', '1990')).toBe(false);
+    expect(creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', naissance: '--12-31', deces: '1900-01-01' }).personne.deces).toBe('1900-01-01');
+  });
+  it('anneeDe ne lit que les dates avec année', () => {
+    expect([anneeDe('1961-05-14'), anneeDe('1938'), anneeDe('--10-24'), anneeDe(undefined)]).toEqual(['1961', '1938', undefined, undefined]);
   });
 });
 

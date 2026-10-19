@@ -48,13 +48,33 @@ export function estDateValide(date: string): boolean {
   return jour >= 1 && jour <= joursDuMois(annee, mois);
 }
 
+/** Jour et mois sans année, « --MM-JJ » (notation ISO 8601) : un anniversaire connu sans la naissance (groupes : mois, jour). */
+export const MOTIF_SANS_ANNEE = /^--(\d{2})-(\d{2})$/;
+
+/** « --MM-JJ » existant au calendrier ; le 29 février est admis. */
+export function estDateSansAnneeValide(date: string): boolean {
+  const m = date.match(MOTIF_SANS_ANNEE);
+  if (!m) return false;
+  const [mois, jour] = [Number(m[1]), Number(m[2])];
+  return mois >= 1 && mois <= 12 && jour >= 1 && jour <= joursDuMois(2000, mois);
+}
+
+/** Année d'une date partielle (« 1961 ») ; undefined pour une date sans année ou absente. */
+export function anneeDe(date: string | undefined): string | undefined {
+  return date?.match(MOTIF_DATE)?.[1];
+}
+
 export function joursDuMois(annee: number, mois: number): number {
   if (mois === 2) return (annee % 4 === 0 && annee % 100 !== 0) || annee % 400 === 0 ? 29 : 28;
   return [4, 6, 9, 11].includes(mois) ? 30 : 31;
 }
 
-/** Le décès ne précède pas la naissance ; deux dates partielles se comparent sur ce qu'elles ont en commun. */
+/**
+ * Le décès ne précède pas la naissance ; deux dates partielles se comparent sur ce qu'elles ont en commun.
+ * Une naissance sans année ne permet pas de trancher : jamais en défaut.
+ */
 export function decesAvantNaissance(naissance: string, deces: string): boolean {
+  if (!anneeDe(naissance)) return false;
   const n = Math.min(naissance.length, deces.length);
   return deces.slice(0, n) < naissance.slice(0, n);
 }
@@ -64,8 +84,8 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
   const nom = champs.nom.trim();
   if (!prenom && !nom) throw new Error('Un prénom ou un nom est requis');
   const naissance = champs.naissance?.trim();
-  if (naissance && !estDateValide(naissance)) {
-    throw new Error('Date de naissance invalide (attendu : année, mois et année, ou date complète)');
+  if (naissance && !estDateValide(naissance) && !estDateSansAnneeValide(naissance)) {
+    throw new Error('Date de naissance invalide (attendu : année, mois et année, date complète, ou jour et mois)');
   }
   const deces = champs.deces?.trim();
   if (deces && !estDateValide(deces)) {

@@ -772,6 +772,31 @@ describe('mémo : décès, âge et anniversaires', () => {
     await toucher(trouver('button', 'Enregistrer'));
     expect(ecran().textContent).toContain('de décès');
   });
+
+  it('le formulaire enregistre une naissance sans année, que la fiche affiche sans âge', async () => {
+    const { donnees, ids } = avec({ prenom: 'Anne' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    ecran().querySelector<HTMLSelectElement>('#mois')!.value = '10';
+    saisir('jour', '24');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(enregistrees().personnes[0].naissance).toBe('--10-24');
+    const dates = [...ecran().querySelectorAll('.dates span')].map((s) => s.textContent);
+    expect(dates).toEqual(['Née le 24 octobre']);
+
+    await demarrer(enregistrees(), `#/modifier/${ids.Anne}`);
+    expect(ecran().querySelector<HTMLInputElement>('#jour')!.value).toBe('24');
+    // Le mois prérempli n'est pas vérifié : happy-dom ignore `selected` posé avant l'insertion (le navigateur, non).
+    expect(ecran().querySelector<HTMLInputElement>('#annee')!.value).toBe('');
+  });
+
+  it('l’accueil montre l’anniversaire d’une naissance sans année, sans âge', async () => {
+    const date = dans(3, 0).slice(4);
+    const { donnees } = avec({ prenom: 'Anniv', naissance: `-${date}` });
+    await demarrer(donnees);
+    const ligne = ecran().querySelector<HTMLElement>('.anniversaires .ligne')!;
+    expect(ligne.textContent).toContain('Dans 3 jours');
+    expect(ligne.querySelector('.etiquette')).toBeNull();
+  });
 });
 
 describe('arbre global', () => {

@@ -2,6 +2,7 @@
 // recalcule depuis les données.
 
 import { comparateur } from './liste';
+import { anneeDe } from './modele';
 import type { Amitie, Donnees, Filiation, Personne, Union } from './types';
 
 /** Ordre alphabétique « prénom nom », le même que la liste triée par prénom. */
@@ -12,13 +13,14 @@ function parId(d: Donnees, ids: Iterable<string>): Personne[] {
   return d.personnes.filter((p) => voulus.has(p.id));
 }
 
-/** Date croissante, sans date en fin de liste ; à égalité, ordre alphabétique. */
+/** Date croissante, sans date (ou sans année) en fin de liste ; à égalité, ordre alphabétique. */
 export function comparerParNaissance(a: Personne, b: Personne): number {
-  if (a.naissance && b.naissance) {
-    if (a.naissance !== b.naissance) return a.naissance < b.naissance ? -1 : 1;
-  } else if (a.naissance) {
+  const [na, nb] = [anneeDe(a.naissance) && a.naissance, anneeDe(b.naissance) && b.naissance];
+  if (na && nb) {
+    if (na !== nb) return na < nb ? -1 : 1;
+  } else if (na) {
     return -1;
-  } else if (b.naissance) {
+  } else if (nb) {
     return 1;
   }
   return parPrenom(a, b);

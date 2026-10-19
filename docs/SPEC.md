@@ -18,7 +18,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 ## Fiche personne
 - Prénom, nom.
 - Sexe : homme (par défaut à la création) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas : elles s'affichent « né(e) » et rien n'est présélectionné en modification.
-- Date de naissance (facultative), éventuellement partielle : année seule, mois et année, ou date complète.
+- Date de naissance (facultative), éventuellement partielle : année seule, mois et année, date complète, ou jour et mois sans année (anniversaire connu sans la naissance). Sans année : « Née le 24 octobre », pas d'âge, rien sous le nom dans les arbres, rangée avec les sans date dans les tris.
 - Date de décès (facultative), partielle comme la naissance, sous la naissance dans le formulaire ; elle ne peut pas précéder la naissance. La fiche affiche « Décédé(e) le … » et l'âge : « 34 ans » pour un vivant, « Mort(e) à 82 ans » pour un décédé. Si les dates sont trop partielles pour trancher, l'âge le plus probable est précédé de « environ ».
 - Dans les listes, un décédé s'affiche « 1941 – 2024 » (« décédé(e) en 2024 » sans naissance) ; un vivant, sa naissance et son âge.
 - Note libre.
@@ -94,7 +94,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Liste de toutes les personnes, regroupée par lettre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
 - Un écrou en haut à droite ouvre les Réglages ; à sa gauche, l'icône d'arbre ouvre l'arbre global.
 - Champ de filtre par nom (prénom ou nom).
-- En haut, « Prochains anniversaires » : les 3 prochains dans les 30 jours (aujourd'hui compris), avec « Aujourd'hui », « Demain » ou « Dans N jours » et l'âge atteint. Il faut une naissance complète ; pas pour les décédés ni pour un âge de 0 an. Un 29 février tombe le 28 les années non bissextiles. Bloc absent s'il n'y en a pas, masqué pendant un filtrage.
+- En haut, « Prochains anniversaires » : les 3 prochains dans les 30 jours (aujourd'hui compris), avec « Aujourd'hui », « Demain » ou « Dans N jours » et l'âge atteint. Il faut une naissance complète, ou jour et mois sans année (alors sans âge) ; pas pour les décédés ni pour un âge de 0 an. Un 29 février tombe le 28 les années non bissextiles. Bloc absent s'il n'y en a pas, masqué pendant un filtrage.
 - Index alphabétique sur le bord droit : les 26 lettres, les absentes estompées. Toucher ou glisser fait défiler jusqu'à la lettre (sinon la suivante présente), affichée en grand pendant le geste. Masqué pendant un filtrage.
 - Bouton « + » pour créer une personne.
 - Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).

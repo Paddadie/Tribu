@@ -196,6 +196,15 @@ describe('tri avec dates partielles', () => {
     for (const e of ['Sans', 'Complet', 'Annee', 'Mois']) m.filiation('Parent', e);
     expect(enfants(m.d, m.id.Parent).map((p) => p.prenom)).toEqual(['Annee', 'Mois', 'Complet', 'Sans']);
   });
+  it('range une naissance sans année avec les sans date', () => {
+    const m = monde();
+    m.pers('Parent');
+    m.pers('Zoé');
+    m.pers('Anniv', '--10-24');
+    m.pers('Complet', '1990-06-01');
+    for (const e of ['Zoé', 'Anniv', 'Complet']) m.filiation('Parent', e);
+    expect(enfants(m.d, m.id.Parent).map((p) => p.prenom)).toEqual(['Complet', 'Anniv', 'Zoé']);
+  });
 });
 
 describe("liens avec type de filiation", () => {

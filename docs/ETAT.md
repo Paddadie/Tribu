@@ -1,9 +1,12 @@
 # État en cours
 
-**Arbre global (`#/arbre`) codé**, non commité. FEAT-09 est commité (ab0063b). 276 tests verts, `tsc` et build propres. Rendu vérifié sur captures Edge headless (clair, sombre, large, dézoomé, accueil), pas sur téléphone. Coché dans PLAN.md « Plus tard » ; décisions en fin de DECISIONS.md ; SPEC.md a la section « Arbre global ».
+**Arbre global (`#/arbre`) codé**, commité (ef1b898), comme FEAT-09 (ab0063b). Rendu vérifié sur captures Edge headless (clair, sombre, large, dézoomé, accueil), pas sur téléphone. Coché dans PLAN.md « Plus tard » ; décisions en fin de DECISIONS.md ; SPEC.md a la section « Arbre global ».
+
+**Naissance sans année codée, non commitée** : jour + mois sans année, stockée « --MM-JJ » (`MOTIF_SANS_ANNEE`, `anneeDe` dans modele.ts). 289 tests verts, `tsc` et build propres. SPEC et DECISIONS à jour.
 
 ## Avant la suite
-- Paul : vérifier la branche (le dépôt était en HEAD détachée), commiter, déployer, puis tester sur iPhone et Android.
+- Paul : déployer, puis tester sur iPhone et Android.
+  - Naissance sans année : saisie jour + mois, fiche « Née le 24 octobre » sans âge, accueil « Prochains anniversaires » sans pastille d'âge, réouverture du formulaire (mois prérempli : non vérifiable sous happy-dom).
   - Arbre global :
     - glisser, pincer, molette, + et −, « Toi », « Tout » ; pas de zoom de la page sur iOS ;
     - toucher une personne ouvre sa fiche, mais pas après un glissement ; double toucher sur le fond zoome une seule fois (Android) ;

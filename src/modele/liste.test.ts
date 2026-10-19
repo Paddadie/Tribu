@@ -161,6 +161,10 @@ describe('libelleNaissance : sexe et dates partielles', () => {
   it('ignore un mois impossible', () => {
     expect(libelleNaissance('1961-13')).toBe('');
   });
+  it('formule une date sans année', () => {
+    expect(libelleNaissance('--10-24', 'F')).toBe('née le 24 octobre');
+    expect(libelleNaissance('--05-01')).toBe('né(e) le 1er mai');
+  });
 });
 
 describe('decouperDate / assemblerDate', () => {
@@ -187,6 +191,16 @@ describe('decouperDate / assemblerDate', () => {
   it('refuse les saisies non numériques', () => {
     expect(() => assemblerDate({ jour: '', mois: '', annee: '19a1' })).toThrow();
     expect(() => assemblerDate({ jour: 'x', mois: '5', annee: '1961' })).toThrow();
+  });
+  it('avec sansAnnee, assemble jour et mois en « --MM-JJ » et découpe en retour', () => {
+    expect(assemblerDate({ jour: '4', mois: '5', annee: '' }, 'de naissance', true)).toBe('--05-04');
+    expect(decouperDate('--05-04')).toEqual({ jour: '4', mois: '5', annee: '' });
+    expect(assemblerDate({ jour: '4', mois: '5', annee: '1961' }, 'de naissance', true)).toBe('1961-05-04');
+  });
+  it('avec sansAnnee, refuse encore un mois seul ou un jour seul', () => {
+    expect(() => assemblerDate({ jour: '', mois: '5', annee: '' }, 'de naissance', true)).toThrow('année ou le jour');
+    expect(() => assemblerDate({ jour: '4', mois: '', annee: '' }, 'de naissance', true)).toThrow('mois');
+    expect(() => assemblerDate({ jour: 'x', mois: '5', annee: '' }, 'de naissance', true)).toThrow('Jour');
   });
 });
 

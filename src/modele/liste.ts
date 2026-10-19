@@ -1,7 +1,7 @@
 // Logique d'affichage de la liste : noms, initiales, tri, regroupement par
 // lettre et filtre. Fonctions pures, testables sans navigateur.
 
-import { MOTIF_DATE } from './modele';
+import { MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
 import type { Personne, Sexe } from './types';
 
 export interface Groupe {
@@ -148,16 +148,25 @@ export function libelleAdoptif(sexe?: Sexe): string {
   return accorder(sexe, 'Adoptif', 'Adoptive', 'Adoptif(ve)');
 }
 
-/** « le 14 mai 1961 », « en mai 1961 » ou « en 1961 » ; chaîne vide sans date exploitable. */
+/** « le 14 » ou « le 1er ». */
+function leJour(jour: number): string {
+  return `le ${jour === 1 ? '1er' : jour}`;
+}
+
+/** « le 14 mai 1961 », « en mai 1961 », « en 1961 » ou, sans année, « le 14 mai » ; chaîne vide sans date exploitable. */
 function formulerDate(date: string | undefined): string {
+  const sansAnnee = date?.match(MOTIF_SANS_ANNEE);
+  if (sansAnnee) {
+    const mois = MOIS[Number(sansAnnee[1]) - 1];
+    return mois ? `${leJour(Number(sansAnnee[2]))} ${mois}` : '';
+  }
   const m = date?.match(MOTIF_DATE);
   if (!m) return '';
   if (m[2] === undefined) return `en ${m[1]}`;
   const mois = MOIS[Number(m[2]) - 1];
   if (!mois) return '';
   if (m[3] === undefined) return `en ${mois} ${m[1]}`;
-  const jour = Number(m[3]);
-  return `le ${jour === 1 ? '1er' : jour} ${mois} ${m[1]}`;
+  return `${leJour(Number(m[3]))} ${mois} ${m[1]}`;
 }
 
 export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
@@ -178,8 +187,10 @@ export interface ChampsDate {
   annee: string;
 }
 
-/** Découpe « AAAA », « AAAA-MM » ou « AAAA-MM-JJ » en champs de saisie (jour et mois sans zéro initial). */
+/** Découpe « AAAA », « AAAA-MM », « AAAA-MM-JJ » ou « --MM-JJ » en champs de saisie (jour et mois sans zéro initial). */
 export function decouperDate(naissance: string | undefined): ChampsDate {
+  const sansAnnee = naissance?.match(MOTIF_SANS_ANNEE);
+  if (sansAnnee) return { annee: '', mois: String(Number(sansAnnee[1])), jour: String(Number(sansAnnee[2])) };
   const m = naissance?.match(MOTIF_DATE);
   if (!m) return { jour: '', mois: '', annee: '' };
   return { annee: m[1], mois: m[2] ? String(Number(m[2])) : '', jour: m[3] ? String(Number(m[3])) : '' };
@@ -188,12 +199,20 @@ export function decouperDate(naissance: string | undefined): ChampsDate {
 /**
  * Assemble les champs de saisie en date partielle (chaîne vide si tout est vide).
  * Lève une Error si l'année manque alors qu'un jour ou un mois est saisi, ou si le jour est sans mois.
+ * Avec `sansAnnee`, jour et mois sans année donnent « --MM-JJ ».
  * La validité calendaire (30 février…) est vérifiée ensuite par le modèle.
  * `de` complète les messages d'erreur (« de naissance », « de décès »).
  */
-export function assemblerDate({ jour, mois, annee }: ChampsDate, de = 'de naissance'): string {
+export function assemblerDate({ jour, mois, annee }: ChampsDate, de = 'de naissance', sansAnnee = false): string {
   const [j, m, a] = [jour.trim(), mois.trim(), annee.trim()];
   if (!j && !m && !a) return '';
+  if (!a && sansAnnee) {
+    if (!m) throw new Error(`Indiquez le mois ${de}`);
+    if (!j) throw new Error(`Indiquez l'année ou le jour ${de}`);
+    if (!/^\d{1,2}$/.test(m)) throw new Error(`Mois ${de} invalide`);
+    if (!/^\d{1,2}$/.test(j)) throw new Error(`Jour ${de} invalide`);
+    return `--${m.padStart(2, '0')}-${j.padStart(2, '0')}`;
+  }
   if (!a) throw new Error(`Indiquez l'année ${de}`);
   if (!/^\d{1,4}$/.test(a) || Number(a) < 1) throw new Error(`Année ${de} invalide`);
   if (j && !m) throw new Error(`Indiquez le mois ${de}`);

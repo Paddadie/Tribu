@@ -1,7 +1,7 @@
 // Âge, libellés de décès et prochains anniversaires. Fonctions pures : la date du jour est toujours passée en paramètre.
 
 import { accorder, libelleNaissance, MOIS } from './liste';
-import { joursDuMois, MOTIF_DATE } from './modele';
+import { anneeDe, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
 import type { Personne } from './types';
 
 /** « 2026-10-19 », date locale. */
@@ -45,9 +45,9 @@ export function ageEntre(naissance: string, jusqua: string): Age | undefined {
   return { annees: Math.min(plus, Math.max(moins, milieu)), approximatif: true };
 }
 
-/** Âge actuel, ou à la mort ; undefined sans date de naissance. */
+/** Âge actuel, ou à la mort ; undefined sans année de naissance. */
 export function agePersonne(p: Pick<Personne, 'naissance' | 'deces'>, aujourdhui: Date): Age | undefined {
-  return p.naissance ? ageEntre(p.naissance, p.deces ?? iso(aujourdhui)) : undefined;
+  return p.naissance && anneeDe(p.naissance) ? ageEntre(p.naissance, p.deces ?? iso(aujourdhui)) : undefined;
 }
 
 function enAnnees({ annees, approximatif }: Age): string {
@@ -72,9 +72,9 @@ export function libelleAgeDeces(p: Pick<Personne, 'naissance' | 'deces' | 'sexe'
 /** Seconde ligne d'une personne dans une liste : « 1941 – 2024 » si elle est décédée, sinon naissance et âge. */
 export function detailPersonne(p: Personne, aujourdhui: Date): string {
   if (p.deces) {
-    const annee = (d?: string) => d?.slice(0, 4);
-    if (p.naissance) return `${annee(p.naissance)} – ${annee(p.deces)}`;
-    return `décédé${p.sexe === 'F' ? 'e' : p.sexe === 'M' ? '' : '(e)'} en ${annee(p.deces)}`;
+    const naissance = anneeDe(p.naissance);
+    if (naissance) return `${naissance} – ${anneeDe(p.deces)}`;
+    return `décédé${p.sexe === 'F' ? 'e' : p.sexe === 'M' ? '' : '(e)'} en ${anneeDe(p.deces)}`;
   }
   return [libelleNaissance(p.naissance, p.sexe), libelleAge(p, aujourdhui)].filter(Boolean).join(' · ');
 }
@@ -83,8 +83,8 @@ export interface Anniversaire {
   personne: Personne;
   /** Jours restants : 0 = aujourd'hui. */
   dans: number;
-  /** Âge atteint ce jour-là. */
-  age: number;
+  /** Âge atteint ce jour-là ; undefined pour une naissance sans année. */
+  age?: number;
   /** « 24 octobre ». */
   date: string;
 }
@@ -93,20 +93,26 @@ const MS_PAR_JOUR = 86_400_000;
 
 /**
  * Les `max` prochains anniversaires dans les `horizon` jours, aujourd'hui compris, du plus proche au plus lointain.
- * Il faut une date de naissance complète ; les personnes décédées sont ignorées. Un 29 février tombe le 28 les années non bissextiles.
+ * Il faut le jour et le mois de naissance (complète, ou sans année : alors sans âge) ; les personnes décédées sont ignorées.
+ * Un 29 février tombe le 28 les années non bissextiles.
  */
 export function prochainsAnniversaires(personnes: Personne[], aujourdhui: Date, horizon = 30, max = 3): Anniversaire[] {
   const base = Date.UTC(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
   const trouves: Anniversaire[] = [];
   for (const personne of personnes) {
-    const m = personne.naissance?.match(MOTIF_DATE);
-    if (personne.deces || !m || m[3] === undefined) continue;
-    const [naissance, mois, jour] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    if (personne.deces || !personne.naissance) continue;
+    const complete = personne.naissance.match(MOTIF_DATE);
+    const sansAnnee = personne.naissance.match(MOTIF_SANS_ANNEE);
+    let naissance: number | undefined, mois: number, jour: number;
+    if (complete && complete[3] !== undefined) [naissance, mois, jour] = [Number(complete[1]), Number(complete[2]), Number(complete[3])];
+    else if (sansAnnee) [mois, jour] = [Number(sansAnnee[1]), Number(sansAnnee[2])];
+    else continue;
     for (const annee of [aujourdhui.getFullYear(), aujourdhui.getFullYear() + 1]) {
       const j = mois === 2 && jour === 29 ? Math.min(jour, joursDuMois(annee, 2)) : jour;
       const dans = Math.round((Date.UTC(annee, mois - 1, j) - base) / MS_PAR_JOUR);
       if (dans < 0) continue;
-      if (dans <= horizon && annee - naissance >= 1) trouves.push({ personne, dans, age: annee - naissance, date: `${j === 1 ? '1er' : j} ${MOIS[mois - 1]}` });
+      const age = naissance === undefined ? undefined : annee - naissance;
+      if (dans <= horizon && (age === undefined || age >= 1)) trouves.push({ personne, dans, ...(age === undefined ? {} : { age }), date: `${j === 1 ? '1er' : j} ${MOIS[mois - 1]}` });
       break;
     }
   }

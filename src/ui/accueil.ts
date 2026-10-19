@@ -114,7 +114,7 @@ function ligneAnniversaire({ personne, dans, age, date }: Anniversaire): HTMLEle
     { class: dans === 0 ? 'ligne aujourdhui' : 'ligne', href: `#/personne/${personne.id}` },
     avatarPersonne(personne),
     h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(personne)), h('span', { class: 'secondaire' }, date)),
-    h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), h('span', { class: 'etiquette' }, `${age} ans`)),
+    h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), age !== undefined && h('span', { class: 'etiquette' }, `${age} ans`)),
   );
 }
 

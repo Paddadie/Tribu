@@ -306,6 +306,24 @@ describe('prochains anniversaires', () => {
     expect(prochainsAnniversaires(l, le(2028, 2, 20))[0]).toMatchObject({ dans: 9, age: 28, date: '29 février' });
   });
 
+  it('compte une naissance sans année, sans âge', () => {
+    const l = [p('Anniv', '--10-24'), p('Théo', '1991-11-12')];
+    expect(prochainsAnniversaires(l, auj)).toEqual([
+      { personne: l[0], dans: 5, date: '24 octobre' },
+      { personne: l[1], dans: 24, age: 35, date: '12 novembre' },
+    ]);
+    expect(prochainsAnniversaires([p('Bissextile', '--02-29')], le(2027, 2, 20))[0]).toMatchObject({ dans: 8, date: '28 février' });
+    expect(noms([p('Anniv mort', '--10-24', '2020')])).toEqual([]);
+  });
+
+  it('sans année : pas d’âge, et la ligne de liste se contente de la date', () => {
+    const anniv = p('Anniv', '--10-24');
+    expect(libelleAge(anniv, auj)).toBe('');
+    expect(detailPersonne(anniv, auj)).toBe('né(e) le 24 octobre');
+    expect(detailPersonne(p('Anniv mort', '--10-24', '2020-03'), auj)).toBe('décédé(e) en 2020');
+    expect(libelleAgeDeces(p('Anniv mort', '--10-24', '2020-03'), auj)).toBe('');
+  });
+
   it('à égalité de date, l’ordre est alphabétique', () => {
     expect(noms([p('Zoé', '1990-10-25'), p('Anne', '1991-10-25')])).toEqual(['Anne', 'Zoé']);
   });

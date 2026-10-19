@@ -3,6 +3,7 @@
 // le dessin se fait une fois l'écran inséré dans la page, puis à chaque changement de largeur.
 
 import type { Etape, Foyer } from '../modele/deductions';
+import { anneeDe } from '../modele/modele';
 import { motsChemin } from '../modele/parente';
 import type { Personne } from '../modele/types';
 import { h } from './dom';
@@ -26,12 +27,14 @@ interface OptionsNoeud {
 
 /** « 1990 », « 1938–2019 », « ?–2019 » ; vide sans date connue. */
 function annees(p: Personne): string {
-  const n = p.naissance?.slice(0, 4);
-  const d = p.deces?.slice(0, 4);
+  const n = anneeDe(p.naissance);
+  const d = anneeDe(p.deces);
   return d ? `${n ?? '?'}–${d}` : (n ?? '');
 }
 
-const parNaissance = (a: Personne, b: Personne) => (a.naissance ?? '9999').localeCompare(b.naissance ?? '9999');
+/** Naissance comparable ; sans date ou sans année : en dernier. */
+const datee = (p: Personne) => (anneeDe(p.naissance) && p.naissance) || '9999';
+const parNaissance = (a: Personne, b: Personne) => datee(a).localeCompare(datee(b));
 
 export function noeud(p: Personne | undefined, moi: string | undefined, x: number, y: number, r: number, o: OptionsNoeud = {}): HTMLElement {
   const larg = o.larg ?? 64;
