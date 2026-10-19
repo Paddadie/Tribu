@@ -42,7 +42,8 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Affichés séparément sur la fiche.
 
 ## Écran d'accueil
-- Liste de toutes les personnes, triée par défaut par nom de famille (regroupée par lettre). Le critère de tri sera paramétrable plus tard, dans une page de paramètres.
+- Liste de toutes les personnes, regroupée par lettre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
+- Un écrou en haut à droite ouvre les Réglages.
 - Champ de filtre par nom (prénom ou nom).
 - Bouton « + » pour créer une personne.
 
@@ -50,9 +51,11 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Confirmation obligatoire.
 - Supprimer une personne retire aussi ses unions et filiations.
 
-## Sauvegarde
-- Export de toutes les données dans un fichier JSON.
-- Import d'un fichier JSON, avec confirmation avant d'écraser.
+## Réglages (écran ouvert par l'écrou)
+- Affichage : tri de la liste (prénom ou nom), thème (auto, clair, sombre). Mémorisés sur l'appareil, hors des données exportées.
+- Sauvegarde : export de toutes les données dans un fichier JSON `tribu-AAAA-MM-JJ.json` ; import d'un fichier JSON, validé avant toute écriture, avec confirmation avant d'écraser des données existantes.
+- Données : effacement de toutes les données, avec confirmation.
+- Version de l'appli et date du build.
 
 ## Hors V1 (plus tard)
 - Vue arbre graphique.

@@ -4,14 +4,16 @@ import { initPwa } from "./pwa";
 import { accueil } from "./ui/accueil";
 import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
-import { lireDonnees } from "./ui/etat";
+import { appliquerTheme, lireDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
 import { ecranLien } from "./ui/lien";
+import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
 
 // Routage par hash (compatible GitHub Pages) :
 //   #/                 liste          #/personne/<id>   fiche
+//   #/reglages         réglages (tri, thème, sauvegarde)
 //   #/nouveau          création       #/modifier/<id>   modification
 //   #/conjoint/<id>    ajout d'un conjoint à la personne
 //   #/union/<id>       union de la personne (marié, fin d'union)
@@ -25,6 +27,7 @@ const remplacer = (route: string) => location.replace(route);
 function vue(route: string): HTMLElement {
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
+  if (section === "reglages") return ecranReglages();
   if (section === "nouveau") return formulaire(undefined, remplacer);
   if (section === "personne" && personne) return fiche(personne, remplacer);
   if (section === "modifier" && personne) return formulaire(personne, remplacer);
@@ -46,6 +49,7 @@ function afficher() {
   window.scrollTo(0, 0);
 }
 
+appliquerTheme();
 window.addEventListener("hashchange", afficher);
 afficher();
 

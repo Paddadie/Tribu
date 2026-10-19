@@ -6,6 +6,7 @@ import {
   estDonneesValides,
   exporterJson,
   importerJson,
+  nomFichierExport,
   sauvegarder,
 } from './stockage';
 import type { Donnees } from './types';
@@ -129,5 +130,22 @@ describe('sexe et date partielle', () => {
   it('refuse un sexe inconnu', () => {
     const d = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B' }).donnees;
     expect(estDonneesValides({ ...d, personnes: [{ ...d.personnes[0], sexe: 'X' }] })).toBe(false);
+  });
+});
+
+describe('nomFichierExport', () => {
+  it('contient la date locale, mois et jour sur deux chiffres', () => {
+    expect(nomFichierExport(new Date(2026, 0, 5, 23, 59))).toBe('tribu-2026-01-05.json');
+    expect(nomFichierExport(new Date(2026, 9, 19))).toBe('tribu-2026-10-19.json');
+  });
+});
+
+describe('aller-retour export / import', () => {
+  it('restitue toute la famille sur une appli vide', () => {
+    const d = exemple();
+    const texte = exporterJson(d);
+    const vide = faux();
+    sauvegarder(vide, importerJson(texte));
+    expect(charger(vide)).toEqual(d);
   });
 });

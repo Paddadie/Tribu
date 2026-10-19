@@ -1,12 +1,12 @@
 // Ajout d'un conjoint à une personne : choisir une personne existante ou en créer une.
 // Une personne n'a qu'un conjoint à la fois ; les personnes déjà en couple ne sont pas choisissables.
 
-import { comparerParNom, filtrerParNom, initiales, libelleNaissance, nomComplet } from '../modele/liste';
+import { comparateur, filtrerParNom, initiales, libelleNaissance, nomListe } from '../modele/liste';
 import { ajouterUnion, creerPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { champsIdentite } from './champsPersonne';
 import { h, icone } from './dom';
-import { lireDonnees, modifierDonnees } from './etat';
+import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 
 type Mode = 'existante' | 'nouvelle';
 
@@ -54,13 +54,13 @@ export function ajoutConjoint(p: Personne, naviguer: (route: string) => void): H
         },
       },
       h('span', { class: 'avatar' }, initiales(c)),
-      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomListe(c, lireReglages().tri)), detail && h('span', { class: 'secondaire' }, detail)),
       choisie === c.id && icone('coche', 22),
     );
   };
 
   const lignes = (liste: HTMLElement): HTMLElement[] => {
-    const autres = lireDonnees().personnes.filter((c) => c.id !== p.id).sort(comparerParNom);
+    const autres = lireDonnees().personnes.filter((c) => c.id !== p.id).sort(comparateur(lireReglages().tri));
     const trouvees = filtrerParNom(autres, filtre);
     if (autres.length === 0) return [h('p', { class: 'vide' }, 'Aucune autre personne. Créez-en une avec « Nouvelle personne ».')];
     if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];

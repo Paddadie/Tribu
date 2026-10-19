@@ -10,6 +10,57 @@
   --bord-champ: #c9d3cf;
   --danger: #a32a2a;
   --danger-bord: #e3bdbd;
+  --erreur-fond: #fbeaea;
+  --succes-fond: #e4f2ea;
+  --sur-accent: #fff;
+  --sur-danger: #fff;
+  --ombre-bouton: rgba(20, 60, 50, 0.3);
+  --voile: rgba(20, 30, 26, 0.5);
+}
+
+/* Thème sombre : suit le téléphone en mode « auto », ou forcé par data-theme="sombre". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) {
+    color-scheme: dark;
+    --fond: #121a17;
+    --encre: #e6eeea;
+    --secondaire: #9aaba5;
+    --accent: #4cc0a0;
+    --accent-clair: #1f3b33;
+    --accent-texte: #8fdcc4;
+    --carte: #1b2622;
+    --bord: #2a3833;
+    --bord-champ: #3d4d47;
+    --danger: #ef8a8a;
+    --danger-bord: #6b3535;
+    --erreur-fond: #3a2020;
+    --succes-fond: #1d3a2d;
+    --sur-accent: #0c1f19;
+    --sur-danger: #2a0d0d;
+    --ombre-bouton: rgba(0, 0, 0, 0.5);
+    --voile: rgba(0, 0, 0, 0.65);
+  }
+}
+
+:root[data-theme="sombre"] {
+  color-scheme: dark;
+  --fond: #121a17;
+  --encre: #e6eeea;
+  --secondaire: #9aaba5;
+  --accent: #4cc0a0;
+  --accent-clair: #1f3b33;
+  --accent-texte: #8fdcc4;
+  --carte: #1b2622;
+  --bord: #2a3833;
+  --bord-champ: #3d4d47;
+  --danger: #ef8a8a;
+  --danger-bord: #6b3535;
+  --erreur-fond: #3a2020;
+  --succes-fond: #1d3a2d;
+  --sur-accent: #0c1f19;
+  --sur-danger: #2a0d0d;
+  --ombre-bouton: rgba(0, 0, 0, 0.5);
+  --voile: rgba(0, 0, 0, 0.65);
 }
 
 * {
@@ -70,8 +121,18 @@ a {
 
 .entete-ligne {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+}
+
+.entete-droite {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bouton-reglages {
+  margin-right: -12px;
 }
 
 .entete-ligne h1 {
@@ -201,11 +262,11 @@ a {
   height: 60px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--sur-accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 16px rgba(20, 60, 50, 0.3);
+  box-shadow: 0 6px 16px var(--ombre-bouton);
 }
 
 /* ——— Fiche et formulaire ——— */
@@ -298,7 +359,7 @@ a {
 .bouton-plein {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--sur-accent);
 }
 
 .bouton-danger {
@@ -310,7 +371,7 @@ a {
 .bouton-danger-plein {
   border-color: var(--danger);
   background: var(--danger);
-  color: #fff;
+  color: var(--sur-danger);
 }
 
 .titre-formulaire {
@@ -367,7 +428,7 @@ a {
 .erreur {
   padding: 12px 14px;
   border-radius: 12px;
-  background: #fbeaea;
+  background: var(--erreur-fond);
   color: var(--danger);
   font-weight: 600;
 }
@@ -389,7 +450,7 @@ a {
 }
 
 .confirmation::backdrop {
-  background: rgba(20, 30, 26, 0.5);
+  background: var(--voile);
 }
 
 .confirmation p {
@@ -474,6 +535,48 @@ fieldset.champ legend {
 
 .champ select {
   appearance: auto;
+}
+
+/* ——— Réglages ——— */
+
+.groupe-reglages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bloc-reglages {
+  gap: 18px;
+  padding: 16px;
+}
+
+.reglage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reglage + .reglage {
+  padding-top: 18px;
+  border-top: 1px solid var(--bord);
+}
+
+.reglage h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.succes {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--succes-fond);
+  color: var(--accent-texte);
+  font-weight: 600;
+}
+
+.succes[hidden] {
+  display: none;
 }
 
 /* ——— Conjoint et union ——— */
@@ -617,7 +720,7 @@ fieldset.champ legend {
 }
 
 .feuille::backdrop {
-  background: rgba(20, 30, 26, 0.5);
+  background: var(--voile);
 }
 
 .feuille-titre {

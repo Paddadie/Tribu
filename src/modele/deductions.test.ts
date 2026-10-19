@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conjoint, enfants, enfantsDuCouple, fratrie, liensEnfants, liensParents, parents } from './deductions';
+import { conjoint, enfants, enfantsDuCouple, fratrie, liensEnfants, liensParents, parents, parentsCommuns } from './deductions';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, TypeFiliation } from './types';
 
@@ -172,6 +172,22 @@ describe('frères et sœurs', () => {
     m.pers('Plus âgé', '1990-01-01');
     ['Moi', 'Plus jeune', 'Plus âgé'].forEach((e) => m.filiation('Mère', e));
     expect(prenoms(fratrie(m.d, m.id.Moi).freresSoeurs)).toEqual(['Plus âgé', 'Plus jeune']);
+  });
+});
+
+describe('parents communs', () => {
+  it('donne le parent partagé par un demi-frère, et les deux pour un frère', () => {
+    const m = monde();
+    ['Mère', 'Père', 'Beau-père', 'Moi', 'Frère', 'Demi'].forEach((p) => m.pers(p));
+    for (const e of ['Moi', 'Frère']) {
+      m.filiation('Mère', e);
+      m.filiation('Père', e);
+    }
+    m.filiation('Mère', 'Demi');
+    m.filiation('Beau-père', 'Demi');
+    expect(prenoms(parentsCommuns(m.d, m.id.Moi, m.id.Demi))).toEqual(['Mère']);
+    expect(prenoms(parentsCommuns(m.d, m.id.Moi, m.id.Frère))).toEqual(['Mère', 'Père']);
+    expect(parentsCommuns(m.d, m.id.Moi, m.id['Beau-père'])).toEqual([]);
   });
 });
 

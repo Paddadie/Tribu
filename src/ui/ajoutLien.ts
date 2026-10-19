@@ -1,12 +1,12 @@
 // Ajout d'un parent ou d'un enfant à une personne : choisir une personne existante ou en créer une,
 // puis préciser le lien (biologique ou adoptif). Les personnes déjà liées ne sont pas choisissables.
 
-import { comparerParNom, filtrerParNom, initiales, libelleNaissance, nomComplet } from '../modele/liste';
+import { comparateur, filtrerParNom, initiales, libelleNaissance, nomComplet, nomListe } from '../modele/liste';
 import { ajouterFiliation, creerPersonne } from '../modele/modele';
 import type { Personne, TypeFiliation } from '../modele/types';
 import { champsIdentite } from './champsPersonne';
 import { h, icone } from './dom';
-import { lireDonnees, modifierDonnees } from './etat';
+import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 
 export type RoleLien = 'parent' | 'enfant';
 type Mode = 'existante' | 'nouvelle';
@@ -56,13 +56,13 @@ export function ajoutLien(p: Personne, role: RoleLien, naviguer: (route: string)
         },
       },
       h('span', { class: 'avatar' }, initiales(c)),
-      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomListe(c, lireReglages().tri)), detail && h('span', { class: 'secondaire' }, detail)),
       choisie === c.id && icone('coche', 22),
     );
   };
 
   const lignes = (liste: HTMLElement): HTMLElement[] => {
-    const autres = lireDonnees().personnes.filter((c) => c.id !== p.id).sort(comparerParNom);
+    const autres = lireDonnees().personnes.filter((c) => c.id !== p.id).sort(comparateur(lireReglages().tri));
     const trouvees = filtrerParNom(autres, filtre);
     if (autres.length === 0) return [h('p', { class: 'vide' }, 'Aucune autre personne. Créez-en une avec « Nouvelle personne ».')];
     if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];

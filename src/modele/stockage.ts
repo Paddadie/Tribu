@@ -78,6 +78,12 @@ export function exporterJson(donnees: Donnees): string {
   return JSON.stringify(donnees, null, 2);
 }
 
+/** « tribu-2026-10-19.json », avec la date locale du jour. */
+export function nomFichierExport(date: Date): string {
+  const deux = (n: number) => String(n).padStart(2, '0');
+  return `tribu-${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}.json`;
+}
+
 /** Lève une Error si le texte n'est pas un JSON Tribu valide (rien n'est alors écrasé). */
 export function importerJson(texte: string): Donnees {
   let lu: unknown;

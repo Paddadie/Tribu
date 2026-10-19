@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assemblerDate, comparerParNom, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleNaissance, nomComplet } from './liste';
+import { assemblerDate, comparateur, comparerParNom, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleNaissance, nomComplet, nomListe } from './liste';
 import type { Personne } from './types';
 
 let n = 0;
@@ -80,6 +80,37 @@ describe('grouperParLettre', () => {
     const entree = [p('B', 'Zola'), p('A', 'Abel')];
     grouperParLettre(entree);
     expect(entree.map((x) => x.nom)).toEqual(['Zola', 'Abel']);
+  });
+});
+
+describe('tri par prénom', () => {
+  it('regroupe par initiale du prénom, membres départagés par le nom', () => {
+    const g = grouperParLettre([p('Pierre', 'Girard'), p('Louis', 'Bernard'), p('Marie', 'Girard'), p('Marie', 'Bernard')], 'prenom');
+    expect(g.map((x) => x.lettre)).toEqual(['L', 'M', 'P']);
+    expect(g[1].personnes.map((x) => x.nom)).toEqual(['Bernard', 'Girard']);
+  });
+  it('utilise le nom pour une personne sans prénom', () => {
+    const g = grouperParLettre([p('', 'Zola'), p('Anna', 'Abel')], 'prenom');
+    expect(g.map((x) => x.lettre)).toEqual(['A', 'Z']);
+  });
+  it('trie « prenom » et « nom » différemment', () => {
+    const liste = [p('Zoé', 'Abel'), p('Anna', 'Zola')];
+    expect([...liste].sort(comparateur('prenom')).map((x) => x.prenom)).toEqual(['Anna', 'Zoé']);
+    expect([...liste].sort(comparateur('nom')).map((x) => x.prenom)).toEqual(['Zoé', 'Anna']);
+  });
+  it('garde le tri par nom par défaut', () => {
+    expect(grouperParLettre([p('Anna', 'Zola'), p('Zoé', 'Abel')]).map((x) => x.lettre)).toEqual(['A', 'Z']);
+  });
+});
+
+describe('nomListe', () => {
+  it('écrit « Nom Prénom » en tri par nom et « Prénom Nom » en tri par prénom', () => {
+    expect(nomListe(p('Alice', 'Dupont'), 'nom')).toBe('Dupont Alice');
+    expect(nomListe(p('Alice', 'Dupont'), 'prenom')).toBe('Alice Dupont');
+  });
+  it('ignore un champ vide', () => {
+    expect(nomListe(p('Alice', ''), 'nom')).toBe('Alice');
+    expect(nomListe(p('', 'Dupont'), 'prenom')).toBe('Dupont');
   });
 });
 

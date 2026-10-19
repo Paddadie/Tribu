@@ -1,7 +1,6 @@
-// Fiche d'une personne : identité, parents, conjoint, enfants, note, modification, suppression avec confirmation.
-// La section fratrie arrive à l'étape 7.
+// Fiche d'une personne : identité, conjoint, enfants, frères et sœurs, parents, note, modification, suppression avec confirmation.
 
-import { conjoint, liensEnfants, liensParents, type Lien } from '../modele/deductions';
+import { conjoint, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien } from '../modele/deductions';
 import { initiales, libelleNaissance, nomComplet } from '../modele/liste';
 import { supprimerPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
@@ -24,6 +23,33 @@ function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libel
     ),
     h('a', { class: 'bouton-icone', href: hrefModifier, 'aria-label': libelleModifier }, icone('crayon', 20)),
   );
+}
+
+/** Ligne touchable d'un frère, d'une sœur ou d'un demi : déduite des parents, donc sans crayon. `via` = parents communs (demis). */
+function ligneFratrie(c: Personne, via: Personne[] = []): HTMLElement {
+  const detail = [libelleNaissance(c.naissance, c.sexe), via.length > 0 && `par ${via.map((x) => x.prenom || x.nom).join(' et ')}`]
+    .filter(Boolean)
+    .join(' · ');
+  return h(
+    'div',
+    { class: 'ligne' },
+    h(
+      'a',
+      { class: 'ligne-lien', href: `#/personne/${c.id}` },
+      h('span', { class: 'avatar' }, initiales(c)),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
+    ),
+  );
+}
+
+/** Frères et sœurs, puis demi-frères et demi-sœurs ; une section vide est masquée. */
+function sectionsFratrie(p: Personne): (HTMLElement | null)[] {
+  const d = lireDonnees();
+  const { freresSoeurs, demis } = fratrie(d, p.id);
+  return [
+    freresSoeurs.length > 0 ? section('FRÈRES ET SŒURS', ...freresSoeurs.map((f) => ligneFratrie(f))) : null,
+    demis.length > 0 ? section('DEMI-FRÈRES ET DEMI-SŒURS', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null,
+  ];
 }
 
 function section(titre: string, ...lignes: HTMLElement[]): HTMLElement {
@@ -126,9 +152,10 @@ export function fiche(p: Personne, naviguer: (route: string) => void): HTMLEleme
     h(
       'div',
       { class: 'contenu' },
-      sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
       sectionConjoint(p),
       sectionFiliation('ENFANTS', liensEnfants(lireDonnees(), p.id), p),
+      ...sectionsFratrie(p),
+      sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
       h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       p.note &&h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),

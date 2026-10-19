@@ -75,6 +75,13 @@ export function enfantsDuCouple(d: Donnees, idA: string, idB: string): Personne[
   return parId(d, communs).sort(comparerParNaissance);
 }
 
+/** Parents que les deux personnes ont en commun (ordre alphabétique). */
+export function parentsCommuns(d: Donnees, idA: string, idB: string): Personne[] {
+  const deA = new Set(d.filiations.filter((f) => f.enfant === idA).map((f) => f.parent));
+  const communs = d.filiations.filter((f) => f.enfant === idB && deA.has(f.parent)).map((f) => f.parent);
+  return parId(d, communs).sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr'));
+}
+
 /**
  * Frères et sœurs : mêmes parents (ensemble identique, non vide).
  * Demi-frères et demi-sœurs : au moins un parent en commun, mais pas tous.

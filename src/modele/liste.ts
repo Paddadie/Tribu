@@ -24,18 +24,29 @@ function simplifier(texte: string): string {
   return texte.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr');
 }
 
-/** Nom de famille, ou à défaut le prénom pour une personne sans nom. */
-function cleDeTri(p: Personne): string {
-  return p.nom || p.prenom;
+/** Critère de tri de la liste : par prénom ou par nom de famille. */
+export type Tri = 'prenom' | 'nom';
+
+/** Clé de tri selon le critère ; à défaut, l'autre champ pour une personne sans prénom (ou sans nom). */
+function cleDeTri(p: Personne, tri: Tri): string {
+  return tri === 'prenom' ? p.prenom || p.nom : p.nom || p.prenom;
+}
+
+/** Comparateur selon le critère (ordre alphabétique français) ; le second champ départage les ex æquo. */
+export function comparateur(tri: Tri): (a: Personne, b: Personne) => number {
+  const [premier, second] = tri === 'prenom' ? (['prenom', 'nom'] as const) : (['nom', 'prenom'] as const);
+  return (a, b) =>
+    cleDeTri(a, tri).localeCompare(cleDeTri(b, tri), 'fr') ||
+    a[premier].localeCompare(b[premier], 'fr') ||
+    a[second].localeCompare(b[second], 'fr');
 }
 
 /** Tri par nom de famille puis prénom (ordre alphabétique français). */
-export function comparerParNom(a: Personne, b: Personne): number {
-  return (
-    cleDeTri(a).localeCompare(cleDeTri(b), 'fr') ||
-    a.prenom.localeCompare(b.prenom, 'fr') ||
-    a.nom.localeCompare(b.nom, 'fr')
-  );
+export const comparerParNom = comparateur('nom');
+
+/** Nom tel qu'écrit dans la liste : « Prénom Nom » en tri par prénom, « Nom Prénom » en tri par nom. */
+export function nomListe(p: Pick<Personne, 'prenom' | 'nom'>, tri: Tri): string {
+  return tri === 'nom' ? [p.nom, p.prenom].filter(Boolean).join(' ') : nomComplet(p);
 }
 
 /** Personnes dont le prénom ou le nom (ou « prénom nom ») contient la saisie, sans tenir compte de la casse ni des accents. */
@@ -49,16 +60,16 @@ export function filtrerParNom(personnes: Personne[], saisie: string): Personne[]
 }
 
 /** Lettre de regroupement : initiale sans accent, « # » si ce n'est pas une lettre. */
-function lettreDe(p: Personne): string {
-  const l = simplifier(cleDeTri(p)).charAt(0).toLocaleUpperCase('fr');
+function lettreDe(p: Personne, tri: Tri): string {
+  const l = simplifier(cleDeTri(p, tri)).charAt(0).toLocaleUpperCase('fr');
   return /^[A-Z]$/.test(l) ? l : '#';
 }
 
-/** Personnes triées par nom de famille, regroupées par lettre (« # » en dernier). */
-export function grouperParLettre(personnes: Personne[]): Groupe[] {
+/** Personnes triées selon le critère (par nom de famille par défaut), regroupées par lettre (« # » en dernier). */
+export function grouperParLettre(personnes: Personne[], tri: Tri = 'nom'): Groupe[] {
   const groupes = new Map<string, Personne[]>();
-  for (const p of [...personnes].sort(comparerParNom)) {
-    const lettre = lettreDe(p);
+  for (const p of [...personnes].sort(comparateur(tri))) {
+    const lettre = lettreDe(p, tri);
     groupes.set(lettre, [...(groupes.get(lettre) ?? []), p]);
   }
   return [...groupes]
