@@ -16,8 +16,10 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Prénom, nom.
 - Date de naissance (facultative).
 - Note libre.
-- Sections affichées : conjoints, parents, enfants, frères et sœurs.
+- Sections affichées, dans cet ordre : conjoints, enfants, frères et sœurs (puis demi-frères et demi-sœurs), parents.
+- Une section vide n'est pas affichée. Un bouton « Ajouter un proche » en bas de fiche permet de créer un lien dans une catégorie absente.
 - Chaque proche affiché est touchable et ouvre sa fiche.
+- Étiquettes sur les proches : « Marié » (conjoint), « Adoptif » (parent ou enfant) ; le lien biologique n'est pas étiqueté.
 
 ## Couples (unions)
 - Une union relie deux personnes ayant chacune leur fiche.
@@ -38,7 +40,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Affichés séparément sur la fiche.
 
 ## Écran d'accueil
-- Liste alphabétique de toutes les personnes.
+- Liste de toutes les personnes, triée par défaut par nom de famille (regroupée par lettre). Le critère de tri sera paramétrable plus tard, dans une page de paramètres.
 - Champ de filtre par nom (prénom ou nom).
 - Bouton « + » pour créer une personne.
 

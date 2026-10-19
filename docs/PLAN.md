@@ -8,7 +8,7 @@
 - [x] **2. Modèle et stockage** — Personnes, unions, filiations dans localStorage ; déductions (enfants d'un couple, frères et sœurs, demi).
   Terminé quand : les tests Vitest couvrent création, persistance et déductions, et passent.
 
-- [ ] **3. Maquettes** — Écrans liste et fiche, publiés pour validation.
+- [x] **3. Maquettes** — Écrans liste et fiche, publiés pour validation.
   Terminé quand : Paul a validé les maquettes.
 
 - [ ] **4. Liste et fiche personne** — Créer, modifier, supprimer (avec confirmation) ; filtre de la liste par nom.
@@ -27,6 +27,7 @@
   Terminé quand : un export réimporté sur une appli vide restitue toute la famille.
 
 ## Plus tard
+- Page de paramètres, dont le critère de tri de la liste (nom, prénom, date de naissance…)
 - Vue arbre graphique
 - Photos
 - Partage avec des proches
