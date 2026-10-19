@@ -30,7 +30,8 @@ export function ajoutConjoint(p: Personne, naviguer: (route: string) => void): H
     marie,
   );
 
-  const identite = champsIdentite(undefined, false);
+  // Sexe proposé à l'opposé de celui de la personne ; sans sexe enregistré elle compte comme un homme (défaut du formulaire).
+  const identite = champsIdentite(undefined, false, p.sexe === 'F' ? 'M' : 'F');
   const zone = h('div', { class: 'zone-conjoint' });
   const valider = h('button', { type: 'button', class: 'bouton bouton-plein' });
 

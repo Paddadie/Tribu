@@ -16,7 +16,7 @@ const champ = (libelle: string, id: string, controle: HTMLElement) =>
   h('div', { class: 'champ' }, h('label', { for: id }, libelle), controle);
 
 /** `existante` préremplit les champs ; `avecNote` ajoute la note libre. */
-export function champsIdentite(existante: Personne | undefined, avecNote: boolean): ChampsIdentite {
+export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M'): ChampsIdentite {
   const prenom = h('input', { id: 'prenom', type: 'text', value: existante?.prenom ?? '', autocomplete: 'off', autocapitalize: 'words' });
   const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? '', autocomplete: 'off', autocapitalize: 'words' });
   // Date partielle possible : année seule, mois + année, ou date complète.
@@ -30,8 +30,8 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   );
   const annee = h('input', { id: 'annee', type: 'text', inputmode: 'numeric', maxlength: 4, placeholder: 'AAAA', value: date.annee, autocomplete: 'off' });
 
-  // Homme par défaut (création, et personnes enregistrées avant l'ajout du champ).
-  const sexeInitial: Sexe = existante?.sexe ?? 'M';
+  // Homme par défaut (création, et personnes enregistrées avant l'ajout du champ), sauf `sexeParDefaut`.
+  const sexeInitial: Sexe = existante?.sexe ?? sexeParDefaut;
   const radios = (
     [
       ['M', 'Homme'],
