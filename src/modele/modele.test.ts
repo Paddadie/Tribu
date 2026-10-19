@@ -9,6 +9,7 @@ import {
   anneeDe,
   decesAvantNaissance,
   estDateValide,
+  estDecede,
   modifierFiliation,
   modifierPersonne,
   modifierUnion,
@@ -231,8 +232,26 @@ describe('dates de naissance partielles', () => {
   it('refuse un jour sans année impossible ou mal formé', () => {
     for (const d of ['--02-30', '--13-01', '--04-31', '--00-10', '--10-00', '--10', '--1-24', '-10-24']) expect(() => creer(d)).toThrow();
   });
-  it('refuse une date de décès sans année', () => {
-    expect(() => creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', deces: '--10-24' })).toThrow('décès');
+  it('accepte un décès sans année (jour et mois), sans le comparer à la naissance', () => {
+    expect(creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', naissance: '1990', deces: '--10-24' }).personne.deces).toBe('--10-24');
+    expect(decesAvantNaissance('1990', '--01-01')).toBe(false);
+    expect(() => creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', deces: '--02-30' })).toThrow('décès');
+  });
+  it('décès sans date : drapeau `decede`, seulement en l’absence de date', () => {
+    const sans = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', decede: true }).personne;
+    expect(sans.decede).toBe(true);
+    expect(sans.deces).toBeUndefined();
+    expect(estDecede(sans)).toBe(true);
+    const date = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', decede: true, deces: '2024' }).personne;
+    expect(date.decede).toBeUndefined();
+    expect(estDecede(date)).toBe(true);
+  });
+  it('interrupteur éteint : la date de décès est ignorée ; sans interrupteur, la date suffit', () => {
+    const eteint = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', decede: false, deces: '2024' }).personne;
+    expect(eteint.deces).toBeUndefined();
+    expect(estDecede(eteint)).toBe(false);
+    expect(estDecede(creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', deces: '2024' }).personne)).toBe(true);
+    expect(estDecede(creerPersonne(donneesVides(), { prenom: 'A', nom: 'B' }).personne)).toBe(false);
   });
   it('ne compare pas le décès à une naissance sans année', () => {
     expect(decesAvantNaissance('--10-24', '1990')).toBe(false);

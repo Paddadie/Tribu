@@ -2,11 +2,13 @@
 // une bulle sous la famille (maquette A). On s'y déplace au doigt (glisser, pincer, double toucher) ou à la
 // souris (molette) ; toucher une personne ouvre sa fiche. Le placement vient de `disposerArbre` (modèle testé).
 
-import { disposerArbre, type Disposition, type Point } from '../modele/arbreGlobal';
+import { disposerArbre, type Disposition, type GroupeDessine, type Point } from '../modele/arbreGlobal';
+import { nomGroupe } from '../modele/deductions';
 import { filtrerParNom, nomComplet } from '../modele/liste';
+import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Personne } from '../modele/types';
-import { noeud } from './arbre';
+import { LIGNE_EN_PLUS, noeud } from './arbre';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
@@ -19,13 +21,40 @@ const PAS_Y = 140;
 /** Rayon de l'avatar, largeur d'un nœud. */
 const R = 19;
 const LARG = 76;
-/** Sous l'avatar, le nom et l'année : un trait qui part d'un parent seul commence en dessous. */
-const SOUS_NOM = R + 40;
+/** Sous l'avatar, le nom (sur 2 lignes si besoin) et l'année : un trait qui part d'un parent seul commence en dessous. */
+const SOUS_NOM = R + 40 + LIGNE_EN_PLUS;
 const MARGE = 70;
 const ECHELLE_MIN = 0.2;
 const ECHELLE_MAX = 3;
 /** En dessous de cette échelle, les noms s'effacent : il ne reste que les pastilles. */
 const ECHELLE_LOIN = 0.6;
+
+/** Cadre d'un groupe d'amis, en pixels : de l'étiquette (haut) au nom de la dernière ligne (bas). */
+interface Cadre {
+  groupe: GroupeDessine;
+  x: number;
+  y: number;
+  l: number;
+  ha: number;
+}
+/** Dans la bulle : le cadre commence 56 px au-dessus du centre de l'avatar, la zone « TES AMIS » 34 px plus haut. */
+const HAUT_CADRE = R + 56;
+const HAUT_ZONE = 34;
+const MARGE_CADRE = 8;
+
+/** Une famille de la liste « Familles » : nom, couleur de lignée, effectif et zone occupée (pixels). */
+interface FamilleListee {
+  nom: string;
+  lignee: number;
+  n: number;
+  zone: Zone;
+}
+interface Zone {
+  x: number;
+  y: number;
+  l: number;
+  ha: number;
+}
 
 interface Vue {
   tx: number;
@@ -36,6 +65,12 @@ interface Vue {
 /** Zoom et position gardés pendant la session : au retour d'une fiche, l'arbre est tel qu'on l'a laissé. */
 let vueGardee: Vue | undefined;
 let astuceMontree = false;
+
+/** Douze couleurs pastel de CSS (--c0 à --c11) : une par nom de famille ; les groupes d'amis reprennent la série en décalé. */
+const couleur = (k: number) => `var(--c${k % 12})`;
+/** Teinte des traits et des textes : la couleur pastel assombrie, pour rester lisible sur le fond. */
+const couleurTrait = (k: number) => `color-mix(in srgb, ${couleur(k)} 62%, var(--encre))`;
+const couleurGroupe = (i: number) => couleurTrait(i + 5);
 
 const borne = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -94,6 +129,12 @@ class Carte {
   private recherche: HTMLElement | undefined;
   private readonly disp: Disposition;
   private readonly moi: Personne;
+  private cadres: Cadre[] = [];
+  private familles: FamilleListee[] = [];
+  /** Liste ouverte par « Familles » ou « Amis », posée au-dessus des commandes. */
+  private readonly feuille = h('div', { class: 'feuille-arbre', hidden: true });
+  private feuilleOuverte: 'familles' | 'amis' | undefined;
+  private readonly puces = new Map<string, HTMLElement>();
 
   constructor(disp: Disposition, moi: Personne) {
     this.disp = disp;
@@ -113,11 +154,25 @@ class Carte {
       n.dataset.id = pl.personne.id;
       n.setAttribute('draggable', 'false');
       if (pl.personne.id === moi.id) n.classList.add('moi');
+      if (pl.lignee !== undefined) {
+        n.classList.add('lignee');
+        n.style.setProperty('--cc', couleur(pl.lignee));
+      }
       this.noeuds.set(pl.personne.id, n);
       return n;
     });
 
-    this.calque = h('div', { class: 'calque' }, this.traits(px), ...noeuds);
+    this.cadres = this.calculerCadres();
+    disp.groupes.forEach((g, i) => {
+      for (const m of g.membres) {
+        const n = this.noeuds.get(m);
+        n?.classList.add('membre-groupe');
+        n?.style.setProperty('--cg', couleurGroupe(i));
+      }
+    });
+    this.familles = this.calculerFamilles();
+    this.calque = h('div', { class: 'calque' }, this.traits(px), ...this.legendes(px), ...noeuds);
+    this.calque.addEventListener('pointerdown', () => this.fermerFeuille());
     this.calque.style.width = `${this.largeur}px`;
     this.calque.style.height = `${this.hauteur}px`;
     const astuce = !astuceMontree && h('div', { class: 'astuce-arbre', 'aria-hidden': 'true' }, 'Glisse pour te déplacer, pince pour zoomer');
@@ -131,7 +186,10 @@ class Carte {
         { class: 'commandes-arbre gauche' },
         h('button', { type: 'button', class: 'puce-arbre accent', onclick: () => this.aller(this.surPersonne(moi.id, 1)) }, 'Toi'),
         h('button', { type: 'button', class: 'puce-arbre', onclick: () => this.aller(this.toutVoir()) }, 'Tout'),
+        this.familles.length > 0 && this.puceListe('familles', 'Familles'),
+        this.cadres.length > 0 && this.puceListe('amis', 'Amis'),
       ),
+      this.feuille,
       h(
         'div',
         { class: 'commandes-arbre droite' },
@@ -164,49 +222,56 @@ class Carte {
     s.setAttribute('width', String(this.largeur));
     s.setAttribute('height', String(this.hauteur));
     s.setAttribute('aria-hidden', 'true');
-    const trait = (d: string, classe: string) => {
+    const trait = (d: string, classe: string, lignee?: number) => {
       const c = document.createElementNS(SVG, 'path');
       c.setAttribute('class', classe);
       c.setAttribute('d', d);
+      if (lignee !== undefined) c.setAttribute('style', `stroke: ${couleurTrait(lignee)}`);
       s.append(c);
     };
     const centre = (id: string) => this.centres.get(id)!;
 
-    // Bulle des amis, derrière tout le reste.
-    const bulle = this.disp.places.filter((p) => p.bulle).map((p) => centre(p.personne.id));
+    // Bulle des amis, derrière tout le reste : la zone « TES AMIS » et, dedans, un cadre par groupe.
     let hautBulle: Point | undefined;
-    if (bulle.length > 0) {
-      const g = Math.min(...bulle.map((p) => p.x)) - LARG / 2 - 14;
-      const dr = Math.max(...bulle.map((p) => p.x)) + LARG / 2 + 14;
-      const ha = Math.min(...bulle.map((p) => p.y)) - R - 40;
-      const ba = Math.max(...bulle.map((p) => p.y)) + SOUS_NOM + 14;
+    const zoneBulle = this.zoneBulle();
+    if (zoneBulle) {
+      const { g, dr, ha, ba } = zoneBulle;
       const zone = document.createElementNS(SVG, 'rect');
       for (const [k, val] of Object.entries({ x: g, y: ha, width: dr - g, height: ba - ha, rx: 28, class: 'zone-amis' })) zone.setAttribute(k, String(val));
       const titre = document.createElementNS(SVG, 'text');
-      for (const [k, val] of Object.entries({ x: g + 18, y: ha + 24, class: 'titre-amis' })) titre.setAttribute(k, String(val));
+      for (const [k, val] of Object.entries({ x: g + 18, y: ha + 22, class: 'titre-amis' })) titre.setAttribute(k, String(val));
       titre.textContent = 'TES AMIS';
       s.append(zone, titre);
+      for (const c of this.cadres) {
+        const r = document.createElementNS(SVG, 'rect');
+        for (const [k, val] of Object.entries({ x: c.x, y: c.y, width: c.l, height: c.ha, rx: 16, class: 'cadre-groupe' })) r.setAttribute(k, String(val));
+        r.setAttribute('style', `--cc: ${couleurGroupe(this.cadres.indexOf(c))}`);
+        s.append(r);
+      }
       hautBulle = { x: (g + dr) / 2, y: ha };
     }
 
     for (const c of this.disp.couples) {
       const [a, b] = [centre(c.a), centre(c.b)].sort((p, q) => p.x - q.x);
-      const voisins = a.y === b.y && b.x - a.x <= PAS_X * 1.01;
-      const d = voisins
-        ? `M ${a.x + R} ${a.y} H ${b.x - R}`
-        : `M ${a.x} ${a.y - R} C ${a.x} ${a.y - R - 46}, ${b.x} ${b.y - R - 46}, ${b.x} ${b.y - R}`;
-      trait(d, c.separe ? 'trait couple ex' : 'trait couple');
+      // Même ligne : trait droit, même quand l'écart est grand (chaîne d'ex). Lignes différentes : courbe.
+      const d =
+        a.y === b.y
+          ? `M ${a.x + R} ${a.y} H ${b.x - R}`
+          : `M ${a.x} ${a.y - R} C ${a.x} ${a.y - R - 46}, ${b.x} ${b.y - R - 46}, ${b.x} ${b.y - R}`;
+      // Marié(e) : trait plein ; en couple : pointillé court ; séparé(e) : gris.
+      trait(d, `trait couple${c.marie ? '' : ' libre'}${c.separe ? ' ex' : ''}`, c.separe ? undefined : c.lignee);
     }
 
     for (const br of this.disp.branches) {
       const bus = px({ x: 0, y: br.bus }).y;
-      const origines = br.origines.map((o) => ({ ...px(o), seul: o.parent !== undefined }));
+      // Un parent inconnu n'a ni nom ni trait : seul le trait commun relie les frères et sœurs.
+      const origines = br.origines.filter((o) => !o.inconnu).map((o) => ({ ...px(o), seul: o.parent !== undefined }));
       const enfants = br.enfants.map((e) => ({ ...px(e), adoptif: e.adoptif }));
       const classe = enfants.every((e) => e.adoptif) ? 'trait pointille' : 'trait';
-      for (const o of origines) trait(`M ${o.x} ${o.seul ? o.y + SOUS_NOM : o.y} V ${bus}`, classe);
+      for (const o of origines) trait(`M ${o.x} ${o.seul ? o.y + SOUS_NOM : o.y} V ${bus}`, classe, br.lignee);
       const xs = [...origines, ...enfants].map((p) => p.x);
-      if (Math.max(...xs) - Math.min(...xs) > 0.5) trait(`M ${Math.min(...xs)} ${bus} H ${Math.max(...xs)}`, classe);
-      for (const e of enfants) trait(`M ${e.x} ${bus} V ${e.y - R - 3}`, e.adoptif ? 'trait pointille' : 'trait');
+      if (Math.max(...xs) - Math.min(...xs) > 0.5) trait(`M ${Math.min(...xs)} ${bus} H ${Math.max(...xs)}`, classe, br.lignee);
+      for (const e of enfants) trait(`M ${e.x} ${bus} V ${e.y - R - 3}`, e.adoptif ? 'trait pointille' : 'trait', br.lignee);
     }
 
     const courbe = (a: Point, b: Point) => {
@@ -221,6 +286,132 @@ class Carte {
     for (const a of this.disp.amities) trait(courbe(centre(a.a), centre(a.b)), 'trait ami');
     if (hautBulle) trait(lisse(this.versBulle(hautBulle)), 'trait ami');
     return s;
+  }
+
+  /** Un cadre par groupe : le rectangle qui entoure les membres et leurs familles dans la bulle. */
+  private calculerCadres(): Cadre[] {
+    return this.disp.groupes.flatMap((groupe) => {
+      const c = groupe.ids.map((id) => this.centres.get(id)).filter((p): p is Point => p !== undefined);
+      if (c.length === 0) return [];
+      const x = Math.min(...c.map((p) => p.x)) - LARG / 2 - MARGE_CADRE;
+      const y = Math.min(...c.map((p) => p.y)) - HAUT_CADRE;
+      return [{ groupe, x, y, l: Math.max(...c.map((p) => p.x)) + LARG / 2 + MARGE_CADRE - x, ha: Math.max(...c.map((p) => p.y)) + SOUS_NOM + MARGE_CADRE - y }];
+    });
+  }
+
+  /** Une entrée par lignée de l'arbre principal (de gauche à droite), nommée d'après son étiquette « Famille X ». */
+  private calculerFamilles(): FamilleListee[] {
+    const parLignee = new Map<number, Point[]>();
+    const noms = new Map<number, Map<string, number>>();
+    for (const p of this.disp.places) {
+      if (p.lignee === undefined || estVirtuel(p.personne.id)) continue;
+      parLignee.set(p.lignee, [...(parLignee.get(p.lignee) ?? []), this.centres.get(p.personne.id)!]);
+      // Sans étiquette (lignée dont la racine a des parents), le nom le plus répandu de la lignée la nomme.
+      const nom = p.personne.nom.trim();
+      if (nom) {
+        const compte = noms.get(p.lignee) ?? new Map<string, number>();
+        compte.set(nom, (compte.get(nom) ?? 0) + 1);
+        noms.set(p.lignee, compte);
+      }
+    }
+    const plusRepandu = (lignee: number) => [...(noms.get(lignee) ?? [])].sort((a, b) => b[1] - a[1])[0]?.[0];
+    return [...parLignee]
+      .sort((a, b) => a[0] - b[0])
+      .map(([lignee, pts]) => {
+        const x = Math.min(...pts.map((p) => p.x)) - LARG / 2;
+        const y = Math.min(...pts.map((p) => p.y)) - R - 24;
+        const nom = this.disp.etiquettes.find((e) => e.lignee === lignee)?.texte ?? (plusRepandu(lignee) ? `Famille ${plusRepandu(lignee)}` : `Famille ${lignee + 1}`);
+        return { nom, lignee, n: pts.length, zone: { x, y, l: Math.max(...pts.map((p) => p.x)) + LARG / 2 - x, ha: Math.max(...pts.map((p) => p.y)) + SOUS_NOM - y } };
+      });
+  }
+
+  // ——— Listes « Familles » et « Amis » ———
+
+  private puceListe(quoi: 'familles' | 'amis', texte: string): HTMLElement {
+    const b = h('button', { type: 'button', class: 'puce-arbre', 'aria-expanded': 'false', onclick: () => this.basculerFeuille(quoi) }, texte);
+    this.puces.set(quoi, b);
+    return b;
+  }
+
+  private fermerFeuille(): void {
+    this.feuille.hidden = true;
+    this.feuilleOuverte = undefined;
+    for (const b of this.puces.values()) b.setAttribute('aria-expanded', 'false');
+  }
+
+  private basculerFeuille(quoi: 'familles' | 'amis'): void {
+    const etait = this.feuilleOuverte;
+    this.fermerFeuille();
+    if (etait === quoi) return;
+    this.feuilleOuverte = quoi;
+    this.puces.get(quoi)?.setAttribute('aria-expanded', 'true');
+    const ligne = (pastille: HTMLElement, nom: string, detail: string, zone: Zone) =>
+      h('button', { type: 'button', class: 'ligne-feuille', onclick: () => this.aller(this.surZone(zone)) }, pastille, h('span', { class: 'nom-feuille' }, nom), h('small', {}, detail));
+    const lignes =
+      quoi === 'familles'
+        ? this.familles.map((f) => {
+            const pastille = h('span', { class: 'pastille-feuille' });
+            pastille.style.background = couleur(f.lignee);
+            return ligne(pastille, f.nom, `${f.n} pers.`, f.zone);
+          })
+        : this.cadres.map((c, i) => {
+            const d = lireDonnees();
+            const pastille = h('span', { class: 'pastille-feuille anneau' });
+            pastille.style.borderColor = couleurGroupe(i);
+            return ligne(pastille, nomGroupe(d, d.groupes.find((g) => g.id === c.groupe.id)!), `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`, c);
+          });
+    this.feuille.replaceChildren(h('h2', {}, quoi === 'familles' ? 'Familles' : 'Groupes d’amis'), ...lignes);
+    this.feuille.hidden = false;
+  }
+
+  /** Vue qui montre toute la zone (jusqu'à l'échelle 1,2), un peu au-dessus du centre pour laisser la place aux commandes. */
+  private surZone(z: Zone): Vue {
+    const marge = 40;
+    const s = borne(Math.min(this.vue.clientWidth / (z.l + marge), (this.vue.clientHeight * 0.75) / (z.ha + marge), 1.2), ECHELLE_MIN, ECHELLE_MAX);
+    return { s, tx: this.vue.clientWidth / 2 - (z.x + z.l / 2) * s, ty: this.vue.clientHeight * 0.42 - (z.y + z.ha / 2) * s };
+  }
+
+  /** Zone « TES AMIS » : autour de tous les cadres et de toute personne de la bulle ; absente sans bulle. */
+  private zoneBulle(): { g: number; dr: number; ha: number; ba: number } | undefined {
+    const pts = this.disp.places.filter((p) => p.bulle).map((p) => this.centres.get(p.personne.id)!);
+    if (pts.length === 0) return undefined;
+    const g = Math.min(...pts.map((p) => p.x - LARG / 2), ...this.cadres.map((c) => c.x)) - 14;
+    const dr = Math.max(...pts.map((p) => p.x + LARG / 2), ...this.cadres.map((c) => c.x + c.l)) + 14;
+    const ha = Math.min(...pts.map((p) => p.y - HAUT_CADRE), ...this.cadres.map((c) => c.y)) - HAUT_ZONE;
+    const ba = Math.max(...pts.map((p) => p.y + SOUS_NOM + MARGE_CADRE), ...this.cadres.map((c) => c.y + c.ha)) + 14;
+    return { g, dr, ha, ba };
+  }
+
+  /** Textes posés sur le dessin : nom et effectif de chaque groupe, nom de famille au-dessus de chaque lignée. */
+  private legendes(px: (p: Point) => Point): HTMLElement[] {
+    const placer = (el: HTMLElement, x: number, y: number) => {
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      return el;
+    };
+    const d = lireDonnees();
+    const titres = this.cadres.map((c) => {
+      const nom = nomGroupe(d, d.groupes.find((g) => g.id === c.groupe.id)!);
+      const el = h('div', { class: 'cadre-titre' }, h('span', { class: 'cadre-nom' }, nom), c.l > 150 && h('span', { class: 'cadre-n' }, `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`));
+      el.style.width = `${c.l - 24}px`;
+      el.style.setProperty('--cc', couleurGroupe(this.cadres.indexOf(c)));
+      return placer(el, c.x + 12, c.y + 8);
+    });
+    const familles = this.disp.etiquettes.map((e) => {
+      const c = px(e);
+      // Une fratrie reliée par un trait commun (parents non renseignés) : le nom se met au-dessus du trait, pas dessous.
+      let haut = c.y - R - 24;
+      for (const br of e.fratrie ? this.disp.branches : []) {
+        const bus = px({ x: 0, y: br.bus }).y;
+        const xs = br.enfants.map((f) => px(f).x);
+        if (bus >= c.y - R - 24 || bus < c.y - PAS_Y || !br.enfants.some((f) => px(f).y === c.y)) continue;
+        if (c.x >= Math.min(...xs) - 1 && c.x <= Math.max(...xs) + 1) haut = Math.min(haut, bus - 24);
+      }
+      const el = placer(h('div', { class: 'etiquette-famille' }, e.texte), c.x, haut);
+      if (e.lignee !== undefined) el.style.setProperty('--cc', couleurTrait(e.lignee));
+      return el;
+    });
+    return [...titres, ...familles];
   }
 
   /**
@@ -293,6 +484,7 @@ class Carte {
 
   /** Va vers une vue, en glissant (320 ms) sauf si les animations sont réduites. */
   private aller(cible: Vue): void {
+    this.fermerFeuille();
     cancelAnimationFrame(this.animation);
     const fin = this.borner(cible);
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
@@ -425,7 +617,7 @@ class Carte {
       this.recherche = undefined;
       return;
     }
-    const personnes = this.disp.places.map((p) => p.personne);
+    const personnes = this.disp.places.map((p) => p.personne).filter((p) => !estVirtuel(p.id));
     const liste = h('ul', {});
     const champ = h('input', { type: 'search', placeholder: 'Prénom ou nom', 'aria-label': 'Chercher une personne', enterkeyhint: 'search' });
     const remplir = () => {

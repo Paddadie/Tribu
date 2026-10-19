@@ -3,7 +3,8 @@
 // Retour avec une saisie en cours demande confirmation.
 
 import { avecDe, nomComplet } from '../modele/liste';
-import { creerPersonne, modifierPersonne } from '../modele/modele';
+import { autreParent } from '../modele/deductions';
+import { creerPersonne, definirMariageParents, modifierPersonne, personnesVisibles } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
 import { accepterHomonyme, champsIdentite } from './champsPersonne';
@@ -16,6 +17,11 @@ export function formulaire(existante: Personne | undefined): HTMLElement {
   const identite = champsIdentite(existante, true);
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
+  // Parent sans nom (ou son autre parent) : case « Marié avec … », sans union actuelle à gérer ailleurs.
+  const autre = existante && autreParent(lireDonnees(), existante.id);
+  const unionExistante = autre && lireDonnees().unions.find((u) => [u.personneA, u.personneB].includes(autre.id) && [u.personneA, u.personneB].includes(existante!.id));
+  const marie = h('input', { id: 'marie-parents', type: 'checkbox', class: 'bascule', checked: !!unionExistante?.marie });
+  const caseMarie = autre ? h('div', { class: 'champ' }, h('label', { class: 'ligne-deces', for: 'marie-parents' }, h('span', {}, `Marié${existante!.sexe === 'F' ? 'e' : ''} avec ${autre.prenom}`), marie)) : null;
   const retour = existante ? `#/personne/${existante.id}` : '#/';
   garderSaisie(identite.modifie);
 
@@ -25,11 +31,21 @@ export function formulaire(existante: Personne | undefined): HTMLElement {
     try {
       const champs = identite.lire();
       if (existante) {
-        if (identite.modifie()) changerAvecAnnulation((d) => modifierPersonne(d, existante.id, champs), `Fiche ${nomComplet(champs) ? avecDe(nomComplet(champs)) : 'de cette personne'} modifiée.`, 'Modification annulée.');
+        const mariageChange = !!autre && marie.checked !== !!unionExistante?.marie;
+        if (identite.modifie() || mariageChange) {
+          changerAvecAnnulation(
+            (d) => {
+              const maj = identite.modifie() ? modifierPersonne(d, existante.id, champs) : d;
+              return mariageChange ? definirMariageParents(maj, existante.id, autre!.id, marie.checked) : maj;
+            },
+            `Fiche ${nomComplet(champs) ? avecDe(nomComplet(champs)) : 'de cette personne'} modifiée.`,
+            'Modification annulée.',
+          );
+        }
         revenir(retour);
         return;
       }
-      if (!(await accepterHomonyme(lireDonnees().personnes, champs))) return;
+      if (!(await accepterHomonyme(personnesVisibles(lireDonnees()), champs))) return;
       let id = '';
       modifierDonnees((d) => {
         const r = creerPersonne(d, champs);
@@ -53,6 +69,7 @@ export function formulaire(existante: Personne | undefined): HTMLElement {
       'form',
       { class: 'contenu', onsubmit: enregistrer, novalidate: true },
       ...identite.noeuds,
+      ...(caseMarie ? [caseMarie] : []),
       erreur,
       h('button', { type: 'submit', class: 'bouton bouton-plein' }, 'Enregistrer'),
       lienRetour(retour, { class: 'bouton' }, 'Annuler'),

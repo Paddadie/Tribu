@@ -4,6 +4,7 @@
 import { libelleDelai, prochainsAnniversaires, type Anniversaire } from '../modele/age';
 import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
 import type { Personne } from '../modele/types';
+import { personnesVisibles } from '../modele/modele';
 import { importerJson } from '../modele/stockage';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
@@ -29,7 +30,7 @@ function accueilVide(): HTMLElement {
     if (!choisi) return;
     try {
       const importees = importerJson(await choisi.text());
-      changerAvecAnnulation(() => importees, messageImport(importees.personnes.length), 'Restauration annulée.');
+      changerAvecAnnulation(() => importees, messageImport(personnesVisibles(importees).length), 'Restauration annulée.');
       rafraichirEcran();
     } catch (e) {
       erreur.textContent = e instanceof Error ? `${e.message}.` : 'Restauration impossible.';
@@ -54,7 +55,7 @@ function accueilVide(): HTMLElement {
 }
 
 function liste(): HTMLElement[] {
-  const toutes = lireDonnees().personnes;
+  const toutes = personnesVisibles(lireDonnees());
   const tri = lireReglages().tri;
   const trouvees = filtrerParNom(toutes, filtre);
   if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];
@@ -120,7 +121,7 @@ function ligneAnniversaire({ personne, dans, age, date }: Anniversaire): HTMLEle
 
 /** Les 3 prochains anniversaires des 30 jours à venir, au-dessus de la liste ; le bloc est vide s'il n'y en a pas. */
 function blocAnniversaires(): HTMLElement {
-  const proches = prochainsAnniversaires(lireDonnees().personnes, new Date());
+  const proches = prochainsAnniversaires(personnesVisibles(lireDonnees()), new Date());
   return h(
     'section',
     { class: 'anniversaires', hidden: proches.length === 0 },
@@ -130,7 +131,7 @@ function blocAnniversaires(): HTMLElement {
 }
 
 export function accueil(): HTMLElement {
-  const total = lireDonnees().personnes.length;
+  const total = personnesVisibles(lireDonnees()).length;
   const titre = h(
     'div',
     { class: 'entete-ligne' },
@@ -172,7 +173,7 @@ export function accueil(): HTMLElement {
     titre,
     h('label', { class: 'champ-filtre' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Filtrer par nom'), champ),
   );
-  const { index, bulle } = indexLettres(grouperParLettre(lireDonnees().personnes, lireReglages().tri), zoneListe, entete);
+  const { index, bulle } = indexLettres(grouperParLettre(personnesVisibles(lireDonnees()), lireReglages().tri), zoneListe, entete);
   masquerIndex();
 
   return h(

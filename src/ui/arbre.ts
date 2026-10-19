@@ -3,9 +3,10 @@
 // le dessin se fait une fois l'écran inséré dans la page, puis à chaque changement de largeur.
 
 import type { Etape, Foyer } from '../modele/deductions';
-import { anneeDe } from '../modele/modele';
+import { anneeDe, estDecede } from '../modele/modele';
 import { motsChemin } from '../modele/parente';
-import type { Personne } from '../modele/types';
+import { estParentSansNom } from '../modele/parentSansNom';
+import type { Donnees, Personne } from '../modele/types';
 import { h } from './dom';
 import { avatarPersonne } from './lignePersonne';
 
@@ -16,6 +17,9 @@ interface Trait {
   pointille?: boolean;
 }
 
+/** Hauteur d'une 2e ligne de nom (prénom composé) : réservée sous chaque nom, pour que ni trait ni rang suivant ne la touche. */
+export const LIGNE_EN_PLUS = 16;
+
 interface OptionsNoeud {
   /** Personne de la fiche : pas de lien, nœud plus grand. */
   ici?: boolean;
@@ -25,10 +29,10 @@ interface OptionsNoeud {
   manque?: string;
 }
 
-/** « 1990 », « 1938–2019 », « ?–2019 » ; vide sans date connue. */
+/** « 1990 », « 1938–2019 », « ?–2019 », « 1938–? » (décès sans année) ; vide sans année connue. */
 function annees(p: Personne): string {
   const n = anneeDe(p.naissance);
-  const d = anneeDe(p.deces);
+  const d = anneeDe(p.deces) ?? (estDecede(p) && n ? '?' : undefined);
   return d ? `${n ?? '?'}–${d}` : (n ?? '');
 }
 
@@ -47,12 +51,13 @@ export function noeud(p: Personne | undefined, moi: string | undefined, x: numbe
       h('span', { class: 'nom' }, 'Parent'),
     );
   }
-  const avatar = avatarPersonne(p);
-  if (p.deces) avatar.classList.add('decede');
+  const sansNom = estParentSansNom(p);
+  const avatar = sansNom ? h('span', { class: 'avatar sans-nom' }, '?') : avatarPersonne(p);
+  if (estDecede(p)) avatar.classList.add('decede');
   const an = o.annee && annees(p);
   const contenu = [
     avatar,
-    p.id === moi ? h('span', { class: 'nom toi' }, 'Toi') : h('span', { class: 'nom' }, p.prenom || p.nom),
+    sansNom ? undefined : p.id === moi ? h('span', { class: 'nom toi' }, 'Toi') : h('span', { class: 'nom' }, p.prenom || p.nom),
     an && h('span', { class: 'an' }, an),
   ];
   return o.ici
@@ -98,82 +103,154 @@ function bloc(classe: string, hauteur: number, dessiner: (arbre: HTMLElement, la
   return h('div', { class: 'carte dessin' }, sonde, arbre, ...apres);
 }
 
-/** « Famille proche » : parents (ou « + Parent »), la personne avec sa fratrie en pile et son conjoint, enfants rangés par union. */
+/** Largeur d'une place de frère ou sœur sur la rangée de la personne. */
+const SL = 64;
+
+/** « Famille proche » : parents (ou « + Parent »), la rangée de la fratrie par âge avec la personne et son conjoint, enfants rangés par union. */
 export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTMLElement {
   const cles = h('div', { class: 'cles', hidden: true });
-  const R = 19, RG = 26, LBL = 14, RANG = 92 + LBL;
+  const R = 19, RG = 26, LBL = 14, RANG = 92 + LBL + LIGNE_EN_PLUS;
   const nbHaut = f.parents.length + f.manque;
   const n = f.enfants.length;
   const yP = R + 2;
-  const yM = nbHaut > 0 ? yP + RANG : RG + 2;
+  // Fratrie sans parent dessiné : la place du trait de fratrie, au-dessus de la rangée.
+  const yM = nbHaut > 0 ? yP + RANG : f.fratrie.length > 0 ? RG + 22 : RG + 2;
   const yE = yM + RANG + 14;
-  const H = (n > 0 ? yE + R : yM + RG) + 26 + LBL;
+  const H = (n > 0 ? yE + R : yM + RG) + 26 + LBL + LIGNE_EN_PLUS;
   return bloc('foyer', H, (el, W) => {
     const cj = f.conjoint?.personne;
     const fr = f.fratrie;
     const traits: Trait[] = [];
     const noeuds: HTMLElement[] = [];
-    let deces = !!p.deces;
+    let deces = estDecede(p);
     let adoption = false;
-    let bande: HTMLElement | undefined;
+    const bandes: HTMLElement[] = [];
     // Sur grand écran, le foyer garde ses proportions de téléphone, centré ; seuls les enfants s'étalent.
-    const Wc = Math.min(W, 400);
-    const o = (W - Wc) / 2;
-    const xS = o + 40;
+    const o = (W - Math.min(W, 400)) / 2;
+
+    // Fratrie sur la rangée de la personne, à sa place d'âge : aînés à gauche, cadets à droite (conjoint contre elle).
+    const aines = fr.filter((s) => datee(s) < datee(p)).sort(parNaissance);
+    const cadets = fr.filter((s) => datee(s) >= datee(p)).sort(parNaissance);
+    const nA = aines.length;
+    const nB = cadets.length;
+    const bw = cj ? 166 : 84;
+    const totalFr = (nA + nB) * SL + bw;
+    // Trop large : la personne reste au centre, ses aînés et ses cadets défilent de chaque côté.
+    const defilant = fr.length > 0 && totalFr > W - 8;
     let xM: number;
-    let xC = 0;
-    if (fr.length > 0) {
-      xM = o + (cj ? Wc / 2 - 6 : Wc / 2 + 20);
-      xC = xM + 92;
-    } else {
+    let xC: number;
+    if (fr.length === 0) {
       xM = W / 2 - (cj ? 50 : 0);
       xC = W / 2 + 50;
+    } else if (defilant) {
+      xM = W / 2 - (cj ? 46 : 0);
+      xC = xM + 92;
+    } else {
+      xM = (W - totalFr) / 2 + nA * SL + 42;
+      xC = xM + 92;
     }
 
     noeuds.push(noeud(p, moi, xM, yM, RG, { ici: true, larg: 84, annee: true }));
     if (cj) {
       noeuds.push(noeud(cj, moi, xC, yM, R, { annee: true }));
-      deces ||= !!cj.deces;
-      traits.push({ d: `M${xM + RG + 5} ${yM}H${xC - R - 5}` });
+      deces ||= estDecede(cj);
+      traits.push({ d: `M${xM + RG + 5} ${yM}H${xC - R - 5}`, pointille: f.conjoint?.separe });
     }
 
-    // Parents (et case « + Parent »), puis la fratrie en pile sous les mêmes parents.
+    // Trait de fratrie (au-dessus de la rangée) : du premier au dernier frère ou sœur, en passant par la personne.
+    const yJ = yM - RG - 18;
+    let busG = xM;
+    let busD = xM;
+    for (const s of fr) deces ||= estDecede(s);
+    if (fr.length > 0 && !defilant) {
+      const x0 = xM - 42 - nA * SL;
+      const place = (s: Personne, x: number) => {
+        traits.push({ d: `M${x} ${yJ}V${yM - R - 5}` });
+        noeuds.push(noeud(s, moi, x, yM, R, { annee: true, larg: SL - 4 }));
+        busG = Math.min(busG, x);
+        busD = Math.max(busD, x);
+      };
+      aines.forEach((s, i) => place(s, x0 + (i + 0.5) * SL));
+      cadets.forEach((s, i) => place(s, x0 + nA * SL + bw + (i + 0.5) * SL));
+    } else if (defilant) {
+      busG = nA > 0 ? 4 : xM;
+      busD = nB > 0 ? W - 4 : xM;
+      const haut0 = yJ - 2;
+      const hB = yM + R + 30 + LBL + LIGNE_EN_PLUS - haut0;
+      const bande = (liste: Personne[], gauche: boolean) => {
+        if (liste.length === 0) return;
+        const g = gauche ? 0 : (cj ? xC + 34 : xM + 44);
+        const lb = gauche ? xM - 44 : W - g;
+        const cw = Math.max(lb, liste.length * SL + 8);
+        const tB: Trait[] = [];
+        const nB2: HTMLElement[] = liste.map((s, i) => {
+          const x = gauche ? cw - (liste.length - i - 0.5) * SL : (i + 0.5) * SL;
+          tB.push({ d: `M${x} 2V${yM - R - 5 - haut0}` });
+          return noeud(s, moi, x, yM - haut0, R, { annee: true, larg: SL - 4 });
+        });
+        const defile = h(
+          'div',
+          {
+            class: 'defile',
+            style: `left: ${g}px; top: ${haut0}px; width: ${lb}px; height: ${hB}px`,
+            role: 'group',
+            'aria-label': `${liste.length} ${gauche ? 'aînés' : 'cadets'}, faire défiler`,
+          },
+          h('div', { style: `width: ${cw}px` }, svg(cw, hB, tB), ...nB2),
+        );
+        const fondus = () => {
+          const max = defile.scrollWidth - defile.clientWidth;
+          defile.classList.toggle('fondu-g', defile.scrollLeft > 2);
+          defile.classList.toggle('fondu-d', defile.scrollLeft < max - 2);
+        };
+        defile.addEventListener('scroll', fondus, { passive: true });
+        // Départ contre la personne : fin de la bande pour les aînés, début pour les cadets.
+        requestAnimationFrame(() => {
+          if (gauche) defile.scrollLeft = defile.scrollWidth;
+          fondus();
+        });
+        bandes.push(defile);
+      };
+      bande(aines, true);
+      bande(cadets, false);
+    }
+
+    // Parents (et case « + Parent »), puis la fratrie sous les mêmes parents.
+    let milieu: number | undefined;
     if (nbHaut > 0) {
       const hauts: (Personne | undefined)[] = [...f.parents.map((x) => x.personne), ...Array<undefined>(f.manque).fill(undefined)];
-      const cible = fr.length > 0 ? (xS + xM) / 2 : xM;
+      const cible = fr.length === 0 ? xM : defilant ? W / 2 : (busG + busD) / 2;
       // Trait pointillé quand aucun parent biologique n'est dessiné.
       const pointille = f.parents.every((x) => x.adoptif);
       adoption ||= f.parents.some((x) => x.adoptif);
-      let milieu: number;
       let depart: number;
       if (hauts.length === 2) {
         const x0 = Math.max(o + 34, cible - 42);
         const x1 = x0 + 84;
         hauts.forEach((x, i) => {
           noeuds.push(noeud(x, moi, i ? x1 : x0, yP, R, { annee: true, manque: p.id }));
-          if (x?.deces) deces = true;
+          if (x && estDecede(x)) deces = true;
         });
-        traits.push({ d: `M${x0 + R + 5} ${yP}H${x1 - R - 5}`, pointille: f.manque > 0 });
+        traits.push({ d: `M${x0 + R + 5} ${yP}H${x1 - R - 5}`, pointille: f.manque > 0 || f.parentsSepares });
         milieu = (x0 + x1) / 2;
         depart = yP;
       } else {
         noeuds.push(noeud(hauts[0], moi, cible, yP, R, { annee: true, manque: p.id }));
-        if (hauts[0]?.deces) deces = true;
+        if (hauts[0] && estDecede(hauts[0])) deces = true;
         milieu = cible;
-        depart = yP + R + 24 + (hauts[0] ? LBL : 0);
+        depart = yP + R + 24 + (hauts[0] ? LBL + LIGNE_EN_PLUS : 0);
       }
       if (fr.length > 0) {
-        const yJ = yM - RG - 18;
         traits.push({ d: `M${milieu} ${depart}V${yJ}`, pointille });
-        traits.push({ d: `M${Math.min(xS, milieu)} ${yJ}H${Math.max(xM, milieu)}` });
-        traits.push({ d: `M${xS} ${yJ}V${yM - 19}` });
-        traits.push({ d: `M${xM} ${yJ}V${yM - RG - 5}` });
-        noeuds.push(pile(fr, xS, yM));
       } else if (milieu === xM) {
         traits.push({ d: `M${xM} ${depart}V${yM - RG - 5}`, pointille });
       } else {
         traits.push({ d: `M${milieu} ${depart}V${(yP + yM) / 2}H${xM}V${yM - RG - 5}`, pointille });
       }
+    }
+    if (fr.length > 0) {
+      traits.push({ d: `M${Math.min(busG, milieu ?? busG)} ${yJ}H${Math.max(busD, milieu ?? busD)}` });
+      traits.push({ d: `M${xM} ${yJ}V${yM - RG - 5}` });
     }
 
     // Enfants : ceux du couple sous le couple, ceux d'une autre union sous la personne seule.
@@ -184,10 +261,10 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
       const aS = f.enfants.some((e) => !e.duCouple);
       const aC = f.enfants.some((e) => e.duCouple);
       const yBus = yE - R - 14;
-      const departS = yM + RG + 28 + LBL;
+      const departS = yM + RG + 28 + LBL + LIGNE_EN_PLUS;
       for (const e of f.enfants) {
         adoption ||= e.adoptif;
-        deces ||= !!e.personne.deces;
+        deces ||= estDecede(e.personne);
       }
 
       if (n * 60 <= W - 8) {
@@ -217,7 +294,7 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         const pasD = (Wd - 16) / (k + 0.5);
         const largD = 16 + n * pasD;
         const haut0 = yBus - 2;
-        const hD = yE + R + 30 + LBL - haut0;
+        const hD = yE + R + 30 + LBL + LIGNE_EN_PLUS - haut0;
         if (aS) traits.push({ d: `M${oS} ${departS}V${yBus}` });
         if (aC) traits.push({ d: `M${oC} ${yM}V${yBus}` });
         const xPremier = 8 + pasD / 2;
@@ -245,11 +322,11 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         };
         defile.addEventListener('scroll', fondus, { passive: true });
         requestAnimationFrame(fondus);
-        bande = defile;
+        bandes.push(defile);
       }
     }
 
-    el.replaceChildren(svg(W, H, traits), ...noeuds, ...(bande ? [bande] : []));
+    el.replaceChildren(svg(W, H, traits), ...noeuds, ...bandes);
     cles.replaceChildren(
       ...(adoption ? [h('span', {}, h('i', { class: 'cle-pointille' }), 'adoption')] : []),
       ...(deces ? [h('span', {}, h('i', { class: 'cle-decede' }), 'décédé(e)')] : []),
@@ -258,31 +335,9 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
   }, cles);
 }
 
-/** Pile de la fratrie (trois avatars au plus) : un toucher fait défiler jusqu'à la section « Frères et sœurs ». */
-function pile(fr: Personne[], x: number, y: number): HTMLElement {
-  const libelle =
-    fr.length === 1
-      ? [fr[0].sexe === 'F' ? '1 sœur' : fr[0].sexe === 'M' ? '1 frère' : '1 frère ou sœur']
-      : [`${fr.length} frères`, h('br'), 'et sœurs'];
-  return h(
-    'button',
-    {
-      type: 'button',
-      class: 'pile',
-      style: `left: ${x - 40}px; top: ${y - 14}px; width: 80px`,
-      onclick: () => {
-        const reduit = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        document.getElementById('section-fratrie')?.scrollIntoView({ block: 'start', behavior: reduit ? 'auto' : 'smooth' });
-      },
-    },
-    h('span', { class: 'avatars' }, ...fr.slice(0, 3).map((s) => avatarPersonne(s))),
-    h('span', { class: 'nom' }, ...libelle),
-  );
-}
-
 /** « Lien avec toi » : chemin de « Moi » à la personne, coude pour parent et enfant, trait double pour un couple, simple pour une amitié. */
-export function dessinChemin(etapes: Etape[], moi: string): HTMLElement {
-  const phrase = h('p', { class: 'legende' }, h('b', {}, 'Toi'), ` → ${motsChemin(etapes).join(' → ')}`);
+export function dessinChemin(etapes: Etape[], moi: string, d?: Donnees): HTMLElement {
+  const phrase = h('p', { class: 'legende' }, h('b', {}, 'Toi'), ` → ${motsChemin(etapes, d).join(' → ')}`);
   const R = 17, RANG = 58, CO = 8, n = etapes.length;
   let g = 0;
   const gens = etapes.map((e) => {
@@ -292,7 +347,7 @@ export function dessinChemin(etapes: Etape[], moi: string): HTMLElement {
   });
   const gMax = Math.max(...gens);
   const gMin = Math.min(...gens);
-  const H = (gMax - gMin) * RANG + 2 * R + 26;
+  const H = (gMax - gMin) * RANG + 2 * R + 26 + LIGNE_EN_PLUS;
   return bloc('chemin', H, (el, W) => {
     const pas = Math.min(68, (W - 56) / (n - 1));
     const debut = (W - (n - 1) * pas) / 2;

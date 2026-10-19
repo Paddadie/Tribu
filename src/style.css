@@ -21,6 +21,7 @@
   --bord: #e1e8e4;
   --bord-champ: #c9d3cf;
   --trait: #aebcb7;
+  --trait-ex: #9aa4a0;
   --danger: #a32a2a;
   --danger-bord: #e3bdbd;
   --erreur-fond: #fbeaea;
@@ -29,6 +30,19 @@
   --sur-danger: #fff;
   --ombre-bouton: rgba(20, 60, 50, 0.3);
   --voile: rgba(20, 30, 26, 0.5);
+  /* Couleurs des lignées (arbre global) et des groupes d'amis. */
+  --c0: #8fcfb8;
+  --c1: #f2b98a;
+  --c2: #aab0f0;
+  --c3: #f0a8c8;
+  --c4: #8fc3ec;
+  --c5: #f0a99c;
+  --c6: #d6c16f;
+  --c7: #b79de0;
+  --c8: #9ed67f;
+  --c9: #7fd0d6;
+  --c10: #e2a0e0;
+  --c11: #c8b48f;
 }
 
 /* Thème sombre : data-theme="sombre" est posé par etat.ts, pour le réglage
@@ -51,12 +65,25 @@
   --bord: #2a3833;
   --bord-champ: #3d4d47;
   --trait: #4d605a;
+  --trait-ex: #6f7c77;
   --danger: #ef8a8a;
   --danger-bord: #6b3535;
   --erreur-fond: #3a2020;
   --succes-fond: #1d3a2d;
   --sur-accent: #0c1f19;
   --sur-danger: #2a0d0d;
+  --c0: #6fb89f;
+  --c1: #dfa070;
+  --c2: #8f96dd;
+  --c3: #de8db0;
+  --c4: #72a9d6;
+  --c5: #de8e80;
+  --c6: #bfa954;
+  --c7: #9d85cc;
+  --c8: #86bd68;
+  --c9: #62b5bb;
+  --c10: #c985c7;
+  --c11: #ae9a76;
   --ombre-bouton: rgba(0, 0, 0, 0.5);
   --voile: rgba(0, 0, 0, 0.65);
 }
@@ -515,6 +542,10 @@ a {
   gap: 6px;
 }
 
+.champ[hidden] {
+  display: none;
+}
+
 .champ label {
   padding: 0 4px;
   font-size: var(--t2);
@@ -817,6 +848,30 @@ fieldset.champ legend {
   gap: 14px;
 }
 
+/* Fiche : un bloc par groupe d'amis (nom qui ouvre le groupe, croix pour le quitter, puis les autres membres). */
+.groupe-amis + .groupe-amis {
+  border-top: 1px solid var(--bord);
+}
+
+.groupe-amis-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 0 16px;
+}
+
+.groupe-amis-nom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t2);
+  font-weight: 700;
+  color: var(--accent-texte);
+  text-decoration: none;
+}
+
 .etiquette {
   flex-shrink: 0;
   padding: 3px 10px;
@@ -919,6 +974,30 @@ fieldset.champ legend {
 .bascule:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Ligne « Décédé » du formulaire : intitulé de champ, petit interrupteur à droite. */
+.champ .ligne-deces {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.ligne-deces .bascule {
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.ligne-deces .bascule::after {
+  width: 18px;
+  height: 18px;
+}
+
+.ligne-deces .bascule:checked::after {
+  left: 19px;
 }
 
 .resume-union {
@@ -1074,6 +1153,19 @@ fieldset.champ legend {
   display: none;
 }
 
+/* Erreur + bouton de validation des écrans d'ajout : visibles sans défiler la liste. */
+.pied-collant {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 -20px -40px;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--fond) 14px);
+}
+
 .liste-choix {
   display: flex;
   flex-direction: column;
@@ -1148,8 +1240,7 @@ fieldset.champ legend {
   stroke-dasharray: 3 4;
 }
 
-.noeud,
-.pile {
+.noeud {
   position: absolute;
   display: flex;
   flex-direction: column;
@@ -1176,11 +1267,18 @@ fieldset.champ legend {
   opacity: 0.72;
 }
 
+/* Le nom passe à la ligne (espace, tiret) sur 2 lignes au plus. La case garde sa largeur ; seul un mot plus long
+   qu'elle élargit ce nom-là (largeur « fit-content » : jamais moins que le mot le plus long), jusqu'à 104 px.
+   Au-delà : « … ». Chaque arbre réserve LIGNE_EN_PLUS (arbre.ts) pour la 2e ligne. */
 .noeud .nom {
-  max-width: 100%;
+  max-width: 104px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-align: center;
+  text-wrap: balance;
   font-size: var(--t1);
   font-weight: 600;
   line-height: 16px;
@@ -1240,33 +1338,6 @@ fieldset.champ legend {
   color: var(--accent);
 }
 
-.pile {
-  cursor: pointer;
-}
-
-.pile .avatars {
-  display: flex;
-}
-
-.pile .avatar {
-  width: 26px;
-  height: 26px;
-  font-size: var(--t1);
-  font-weight: 700;
-  box-shadow: 0 0 0 2px var(--carte);
-}
-
-.pile .avatar + .avatar {
-  margin-left: -9px;
-}
-
-.pile .nom {
-  font-size: var(--t1);
-  line-height: 14px;
-  text-align: center;
-  color: var(--secondaire);
-}
-
 /* Rang d'enfants trop nombreux : il défile de côté, avec un fondu sur le bord qui cache encore quelqu'un. */
 .defile {
   position: absolute;
@@ -1313,13 +1384,11 @@ fieldset.champ legend {
   color: var(--encre);
 }
 
-a.noeud .avatar,
-.pile .avatars {
+a.noeud .avatar {
   transition: transform 90ms ease-out;
 }
 
-a.noeud:active .avatar,
-.pile:active .avatars {
+a.noeud:active .avatar {
   transform: scale(0.94);
 }
 
@@ -1366,7 +1435,8 @@ a.noeud:active .avatar,
   background: var(--fond);
 }
 
-.ecran-arbre button.bouton-icone {
+.ecran-arbre button.bouton-icone,
+button.bouton-icone {
   padding: 0;
   border: 0;
   background: none;
@@ -1414,12 +1484,16 @@ a.noeud:active .avatar,
 }
 
 .traits-arbre .couple {
-  stroke-width: calc(3px / var(--s));
+  stroke-width: calc(2px / var(--s));
 }
 
+.traits-arbre .couple.libre {
+  stroke-dasharray: calc(5px / var(--s)) calc(4px / var(--s));
+}
+
+/* Séparés : gris plein (les autres couples prennent la couleur de la lignée). */
 .traits-arbre .couple.ex {
-  stroke-width: calc(2px / var(--s));
-  stroke-dasharray: calc(7px / var(--s)) calc(6px / var(--s));
+  stroke: var(--trait-ex);
 }
 
 .traits-arbre .ami {
@@ -1441,6 +1515,87 @@ a.noeud:active .avatar,
   fill: var(--accent-texte);
 }
 
+.cadre-groupe {
+  fill: color-mix(in srgb, var(--cc, var(--accent)) 12%, var(--carte));
+  stroke: var(--cc, var(--accent));
+  stroke-opacity: 0.8;
+  stroke-width: 2;
+}
+
+/* Fond d'une lignée de l'arbre principal. */
+
+/* Textes du cadre d'un groupe et nom de famille d'une lignée : posés sur le calque, sans toucher. */
+.cadre-titre,
+.etiquette-famille {
+  position: absolute;
+  pointer-events: none;
+  font-size: var(--t1);
+  line-height: 16px;
+}
+
+.cadre-titre {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--cc, var(--accent-texte));
+}
+
+.cadre-nom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cadre-n {
+  flex: none;
+  font-weight: 500;
+  color: var(--secondaire);
+}
+
+.etiquette-famille {
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cc, var(--secondaire));
+}
+
+/* Avatar teinté par la lignée ; les membres d'un groupe d'amis ont en plus un anneau de la couleur du cadre. */
+.calque .noeud.lignee .avatar {
+  background: var(--cc);
+  color: #1f2a27;
+}
+
+/* Personne décédée : même couleur de famille, en plus pâle, avec une croix. */
+.calque .noeud .avatar.decede {
+  position: relative;
+  filter: none;
+  opacity: 1;
+  background: color-mix(in srgb, var(--cc, var(--secondaire)) 40%, var(--carte));
+  color: var(--secondaire);
+}
+
+.calque .noeud .avatar.decede::after {
+  content: '†';
+  position: absolute;
+  top: -9px;
+  right: -6px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--encre);
+}
+
+.calque .noeud.membre-groupe .avatar {
+  box-shadow: 0 0 0 2px var(--carte), 0 0 0 4.5px var(--cg, var(--accent));
+}
+
+.calque .noeud.membre-groupe:not(.lignee) .avatar {
+  background: var(--cg);
+  color: #1f2a27;
+}
+
 .calque .noeud {
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
@@ -1452,7 +1607,8 @@ a.noeud:active .avatar,
 
 /* Vu de loin, il ne reste que les pastilles. */
 .vue-arbre.loin .noeud .nom,
-.vue-arbre.loin .noeud .an {
+.vue-arbre.loin .noeud .an,
+.vue-arbre.loin .etiquette-famille {
   visibility: hidden;
 }
 
@@ -1508,6 +1664,85 @@ a.noeud:active .avatar,
   background: var(--accent);
   border-color: var(--accent);
   color: var(--sur-accent);
+}
+
+.commandes-arbre.gauche {
+  gap: 6px;
+}
+
+.commandes-arbre.gauche .puce-arbre {
+  padding: 0 13px;
+}
+
+.puce-arbre[aria-expanded='true'] {
+  outline: 2px solid var(--accent);
+}
+
+.feuille-arbre {
+  position: absolute;
+  left: 12px;
+  right: 68px;
+  bottom: calc(66px + env(safe-area-inset-bottom));
+  max-height: 50%;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--bord);
+  border-radius: 18px;
+  background: var(--carte);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.18);
+}
+
+.feuille-arbre h2 {
+  margin: 8px 10px 4px;
+  color: var(--secondaire);
+  font-size: var(--t1);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ligne-feuille {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--encre);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ligne-feuille:active {
+  background: var(--fond);
+}
+
+.ligne-feuille .nom-feuille {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ligne-feuille small {
+  margin-left: auto;
+  color: var(--secondaire);
+  white-space: nowrap;
+}
+
+.pastille-feuille {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.pastille-feuille.anneau {
+  box-sizing: border-box;
+  border: 3px solid;
 }
 
 .rond-arbre {
@@ -1758,6 +1993,16 @@ button.ligne:active,
 
 .nav-arriere::view-transition-new(root) {
   animation-name: entree-arriere;
+}
+
+/* Parent sans nom : cercle gris clair avec « ? » (arbre global et dessins de la fiche). */
+.noeud .avatar.sans-nom,
+.calque .noeud .avatar.sans-nom {
+  background: color-mix(in srgb, var(--trait-ex) 22%, var(--carte));
+  border: 1.5px dashed var(--trait-ex);
+  color: var(--secondaire);
+  font-size: var(--t4);
+  font-weight: 700;
 }
 
 @media (prefers-reduced-motion: reduce) {

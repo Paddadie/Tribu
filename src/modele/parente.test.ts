@@ -142,7 +142,7 @@ describe('relation', () => {
 
   it('se termine sur une boucle de filiations venue d’un import', () => {
     const d: Donnees = {
-      version: 3,
+      version: 4,
       personnes: [
         { id: 'a', prenom: 'A', nom: 'X', note: '' },
         { id: 'b', prenom: 'B', nom: 'X', note: '' },
@@ -152,7 +152,7 @@ describe('relation', () => {
         { id: 'f1', parent: 'a', enfant: 'b', type: 'biologique' },
         { id: 'f2', parent: 'b', enfant: 'a', type: 'biologique' },
       ],
-      amities: [],
+      groupes: [],
     };
     expect(relation(d, 'a', 'b')).toBeDefined();
   });

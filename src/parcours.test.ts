@@ -4,7 +4,7 @@
 // On vérifie ce qui s'affiche et ce qui est réellement enregistré.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele/modele';
+import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele/modele';
 import { charger, exporterJson, sauvegarder } from './modele/stockage';
 import type { Donnees, Sexe } from './modele/types';
 
@@ -194,10 +194,11 @@ describe('ajout d’un lien', () => {
     const fanny = enregistrees().personnes.find((p) => p.prenom === 'Fanny')!;
     expect(fanny.sexe).toBe('F');
     expect(enregistrees().unions).toContainEqual(expect.objectContaining({ personneA: ids.Denis, personneB: fanny.id, marie: true }));
-    expect(trouver('section', 'Conjoint').textContent).toContain('Fanny Roux');
+    expect(fanny.nomNaissance).toBe('Roux');
+    expect(trouver('section', 'Conjoint').textContent).toContain('Fanny Martin');
   });
 
-  it('ami choisi parmi les fiches, puis retiré depuis la fiche et rétabli par le bandeau', async () => {
+  it('ami choisi parmi les fiches : forme un groupe, quitté depuis la fiche et rétabli par le bandeau', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/personne/${ids.Denis}`);
     await toucher(trouver('button', 'Ajouter un proche'));
@@ -206,21 +207,87 @@ describe('ajout d’un lien', () => {
     await demarrer(donnees, `#/ami/${ids.Denis}`);
     await toucher(trouver('label', 'Personne existante').querySelector('input')!);
     await toucher(trouver('button.ligne-choix', 'Chloé'));
-    await toucher(trouver('button', 'Ajouter comme ami'));
-    expect(enregistrees().amities).toContainEqual(expect.objectContaining({ personneA: ids.Denis, personneB: ids.Chloé }));
+    await toucher(trouver('button', 'Former un groupe'));
+    expect(enregistrees().groupes).toHaveLength(1);
+    expect([...enregistrees().groupes[0].membres].sort()).toEqual([ids.Denis, ids.Chloé].sort());
 
     await demarrer(enregistrees(), `#/personne/${ids.Denis}`, { moi: ids.Chloé });
     expect(trouver('section', 'Amis', ecran()).textContent).toContain('Chloé Martin');
     expect(ecran().querySelector('.lien-moi')?.textContent).toBe('Ami');
 
-    await toucher(ecran().querySelector<HTMLElement>('button[aria-label="Retirer Chloé des amis"]')!);
-    expect(enregistrees().amities).toHaveLength(0);
-    expect(bandeau()!.textContent).toContain('Denis et Chloé ne sont plus amis.');
+    await toucher(ecran().querySelector<HTMLElement>('button[aria-label^="Quitter le groupe"]')!);
+    expect(enregistrees().groupes).toHaveLength(0);
+    expect(bandeau()!.textContent).toContain('Denis a quitté');
     expect(ecran().textContent).not.toContain('Amis');
 
     await toucher(trouver('.bandeau button', 'Annuler'));
-    expect(enregistrees().amities).toHaveLength(1);
+    expect(enregistrees().groupes).toHaveLength(1);
     expect(trouver('section', 'Amis', ecran()).textContent).toContain('Chloé Martin');
+  });
+
+  it('plusieurs amis cochés d’un coup forment un seul groupe nommé, une seule coche par ligne, décochable', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/ami/${ids.Denis}`);
+    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    expect(trouver('button', 'Former un groupe').hasAttribute('disabled')).toBe(true);
+
+    await toucher(trouver('button.ligne-choix', 'Chloé'));
+    await toucher(trouver('button.ligne-choix', 'Anne'));
+    expect(ecran().querySelectorAll('button.ligne-choix.choisie')).toHaveLength(2);
+    expect(trouver('button.ligne-choix', 'Chloé').querySelector('svg')).toBeNull();
+
+    await toucher(trouver('button.ligne-choix', 'Anne'));
+    expect(trouver('button.ligne-choix', 'Anne').getAttribute('aria-pressed')).toBe('false');
+    await toucher(trouver('button.ligne-choix', 'Anne'));
+    saisir('nom-groupe', 'Les voisins');
+    await toucher(trouver('button', 'Former un groupe de 3'));
+
+    expect(enregistrees().groupes).toHaveLength(1);
+    expect(enregistrees().groupes[0].nom).toBe('Les voisins');
+    expect([...enregistrees().groupes[0].membres].sort()).toEqual([ids.Denis, ids.Anne, ids.Chloé].sort());
+  });
+
+  it('rejoint un groupe existant depuis la fiche, puis un nouvel ami rejoint ce groupe', async () => {
+    const { donnees, ids } = famille();
+    const groupe = creerGroupe(donnees, [ids.Anne, ids.Bruno], 'Les voisins');
+    await demarrer(groupe.donnees, `#/ami/${ids.Denis}`);
+    expect(ecran().textContent).toContain('Rejoindre un groupe');
+    await toucher(trouver('button.ligne-choix', 'Les voisins'));
+    expect([...enregistrees().groupes[0].membres].sort()).toEqual([ids.Anne, ids.Bruno, ids.Denis].sort());
+
+    await demarrer(enregistrees(), `#/ami/${ids.Denis}`);
+    expect(ecran().textContent).not.toContain('Rejoindre un groupe');
+    expect(ecran().textContent).toContain('Les amis ajoutés rejoignent ce groupe');
+    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    expect(trouver('button.ligne-choix', 'Anne').hasAttribute('disabled')).toBe(true);
+    await toucher(trouver('button.ligne-choix', 'Chloé'));
+    await toucher(trouver('button', 'Ajouter au groupe'));
+    expect(enregistrees().groupes).toHaveLength(1);
+    expect(enregistrees().groupes[0].membres).toHaveLength(4);
+  });
+
+  it('réglages : renomme un groupe, retire un membre (annulable), supprime le groupe', async () => {
+    const { donnees, ids } = famille();
+    const groupe = creerGroupe(donnees, [ids.Anne, ids.Bruno, ids.Denis]);
+    await demarrer(groupe.donnees, '#/reglages');
+    await toucher(trouver('a', 'Groupes d’amis'));
+    expect(location.hash).toBe('#/groupes');
+    await toucher(trouver('a', 'Groupe de Anne, Bruno, Denis'));
+    expect(location.hash).toBe(`#/groupe/${groupe.groupe.id}`);
+
+    saisir('nom-groupe', 'Les voisins');
+    ecran().querySelector('#nom-groupe')!.dispatchEvent(new Event('change'));
+    expect(enregistrees().groupes[0].nom).toBe('Les voisins');
+
+    await toucher(ecran().querySelector<HTMLElement>('button[aria-label="Retirer Denis du groupe"]')!);
+    expect(enregistrees().groupes[0].membres).toHaveLength(2);
+    await toucher(trouver('.bandeau button', 'Annuler'));
+    expect(enregistrees().groupes[0].membres).toHaveLength(3);
+
+    await toucher(trouver('button', 'Supprimer le groupe'));
+    await toucher(trouver('dialog button', 'Supprimer'));
+    expect(enregistrees().groupes).toHaveLength(0);
+    expect(location.hash).toBe('#/groupes');
   });
 
   it('parent créé depuis l’écran d’ajout', async () => {
@@ -296,13 +363,48 @@ describe('ajout d’un lien', () => {
     expect(trouver('button', 'Créer et ajouter').hasAttribute('disabled')).toBe(true);
   });
 
-  it('frère ou sœur : grisé dans la feuille tant qu’aucun parent n’est connu', async () => {
+  it('frère ou sœur sans parent connu : proposé dans la feuille, sans case de parent', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/personne/${ids.Denis}`);
     await toucher(trouver('button', 'Ajouter un proche'));
     const option = trouver('dialog.feuille .option', 'Un frère ou une sœur');
-    expect(option.tagName).toBe('DIV');
-    expect(option.textContent).toContain('Ajoutez d’abord un parent');
+    expect(option.tagName).toBe('A');
+    expect(option.textContent).toContain('Parents inconnus');
+
+    await toucher(option);
+    expect(titre()).toBe('Ajouter un frère ou une sœur');
+    expect(ecran().querySelector('label.case')).toBeNull();
+    expect(ecran().textContent).not.toContain('Type de lien');
+    expect(ecran().textContent).toContain('Parents inconnus');
+  });
+
+  it('frère ou sœur sans parent connu : créé, il apparaît sans montrer de parent inconnu', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/frere/${ids.Denis}`);
+    saisir('prenom', 'Hugo');
+    await toucher(trouver('button', 'Créer et ajouter'));
+
+    expect(location.hash).toBe(`#/personne/${ids.Denis}`);
+    expect(trouver('section', 'Frères et sœurs').textContent).toContain('Hugo Martin');
+    expect(ecran().textContent).not.toContain('Parents');
+    const d = enregistrees();
+    expect(d.personnes.filter((p) => p.inconnu)).toHaveLength(1);
+
+    // Le parent inconnu reste invisible : la liste ne compte que les vraies personnes.
+    await demarrer(d, '#/');
+    expect(ecran().textContent).toContain('5 personnes');
+    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(5);
+
+    // Un vrai parent ajouté à Hugo devient aussi celui de Denis.
+    await demarrer(d, `#/parent/${enregistrees().personnes.find((p) => p.prenom === 'Hugo')!.id}`);
+    saisir('prenom', 'Paula');
+    await toucher(trouver('button', 'Créer et ajouter'));
+    const apres = enregistrees();
+    const paula = apres.personnes.find((p) => p.prenom === 'Paula')!;
+    expect(apres.personnes.filter((p) => p.inconnu)).toHaveLength(0);
+    expect(apres.filiations.filter((f) => f.parent === paula.id).map((f) => f.enfant).sort()).toEqual(
+      [ids.Denis, apres.personnes.find((p) => p.prenom === 'Hugo')!.id].sort(),
+    );
   });
 
   it('homonyme : la création demande confirmation', async () => {
@@ -752,6 +854,7 @@ describe('mémo : décès, âge et anniversaires', () => {
   it('le formulaire enregistre la date de décès et refuse un décès avant la naissance', async () => {
     const { donnees, ids } = avec({ prenom: 'Anne', naissance: '1941-05-03' });
     await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    await toucher(ecran().querySelector<HTMLInputElement>('#decede')!);
     saisir('annee-deces', '1940');
     await toucher(trouver('button', 'Enregistrer'));
     expect(ecran().textContent).toContain('Le décès ne peut pas précéder la naissance');
@@ -768,9 +871,67 @@ describe('mémo : décès, âge et anniversaires', () => {
   it('une date de décès incomplète est signalée avec « de décès »', async () => {
     const { donnees, ids } = avec({ prenom: 'Anne' });
     await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    await toucher(ecran().querySelector<HTMLInputElement>('#decede')!);
     saisir('jour-deces', '14');
     await toucher(trouver('button', 'Enregistrer'));
     expect(ecran().textContent).toContain('de décès');
+  });
+
+  it('la date de décès n’apparaît qu’avec l’interrupteur « Décédée », accordé au sexe', async () => {
+    const { donnees, ids } = avec({ prenom: 'Anne' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    const bascule = ecran().querySelector<HTMLInputElement>('#decede')!;
+    const ligne = ecran().querySelector<HTMLElement>('.ligne-deces')!;
+    const date = ecran().querySelector<HTMLElement>('#annee-deces')!.closest<HTMLElement>('[hidden], .champ')!;
+    expect(bascule.checked).toBe(false);
+    expect(ligne.textContent).toBe('Décédée');
+    expect(date.hidden).toBe(true);
+
+    await toucher(ecran().querySelector<HTMLInputElement>('input[name=sexe][value=M]')!);
+    expect(ligne.textContent).toBe('Décédé');
+    await toucher(bascule);
+    expect(date.hidden).toBe(false);
+  });
+
+  it('allumé sans date : décédée sans date, affichée « Décédée », sans âge', async () => {
+    // Naissance en année seule : happy-dom perd le mois prérempli (voir plus bas).
+    const { donnees, ids } = avec({ prenom: 'Anne', naissance: '1941' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    await toucher(ecran().querySelector<HTMLInputElement>('#decede')!);
+    await toucher(trouver('button', 'Enregistrer'));
+    const anne = enregistrees().personnes[0];
+    expect(anne.decede).toBe(true);
+    expect(anne.deces).toBeUndefined();
+    const dates = [...ecran().querySelectorAll('.dates span')].map((s) => s.textContent);
+    expect(dates).toEqual(['Née en 1941', 'Décédée']);
+
+    await demarrer(enregistrees(), `#/modifier/${ids.Anne}`);
+    expect(ecran().querySelector<HTMLInputElement>('#decede')!.checked).toBe(true);
+  });
+
+  it('éteindre l’interrupteur efface la date de décès, même incomplète', async () => {
+    const { donnees, ids } = avec({ prenom: 'Anne', deces: '2024' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    const bascule = ecran().querySelector<HTMLInputElement>('#decede')!;
+    expect(bascule.checked).toBe(true);
+    saisir('jour-deces', '14');
+    await toucher(bascule);
+    await toucher(trouver('button', 'Enregistrer'));
+    const anne = enregistrees().personnes[0];
+    expect(anne.deces).toBeUndefined();
+    expect(anne.decede).toBeUndefined();
+  });
+
+  it('le formulaire enregistre un décès sans année (jour et mois)', async () => {
+    const { donnees, ids } = avec({ prenom: 'Anne', naissance: '1941' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    await toucher(ecran().querySelector<HTMLInputElement>('#decede')!);
+    ecran().querySelector<HTMLSelectElement>('#mois-deces')!.value = '1';
+    saisir('jour-deces', '14');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(enregistrees().personnes[0].deces).toBe('--01-14');
+    const dates = [...ecran().querySelectorAll('.dates span')].map((s) => s.textContent);
+    expect(dates).toEqual(['Née en 1941', 'Décédée le 14 janvier']);
   });
 
   it('le formulaire enregistre une naissance sans année, que la fiche affiche sans âge', async () => {

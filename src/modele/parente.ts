@@ -98,7 +98,20 @@ function nomPas(e: Etape): string {
   if (e.par === 'parent') return accorder(s, 'père', 'mère', 'parent');
   if (e.par === 'enfant') return accorder(s, 'fils', 'fille', 'enfant');
   if (e.par === 'ami') return accorder(s, 'ami', 'amie', 'ami(e)');
+  if (e.par === 'frere') return accorder(s, 'frère', 'sœur', 'frère ou sœur');
   return e.marie ? accorder(s, 'époux', 'épouse', 'conjoint') : accorder(s, 'compagnon', 'compagne', 'conjoint');
+}
+
+/**
+ * Lien de famille le plus court entre l'ami le plus proche (étape `k`) et la personne au bout du chemin, s'il a un nom :
+ * « sœur », « neveu ». Undefined si la personne est l'ami lui-même ou si le lien n'a pas de nom usuel.
+ */
+function lienDepuisAmi(d: Donnees, etapes: Etape[], k: number): { libelle: string; feminin: boolean } | undefined {
+  if (k >= etapes.length - 1) return undefined;
+  const cible = etapes[etapes.length - 1].personne;
+  const r = relation(d, etapes[k].personne.id, cible.id);
+  const libelle = r && libelleRelation(r, cible.sexe);
+  return libelle ? { libelle, feminin: cible.sexe === 'F' } : undefined;
 }
 
 /**
@@ -114,7 +127,7 @@ export function etiquette(d: Donnees, moi: string, vers: string): string | undef
     return libelle && majuscule(libelle);
   }
   const etapes = chemin(d, moi, vers);
-  if (!etapes) return undefined;
+  if (!etapes || !etapes.some((e) => e.par === 'ami')) return undefined;
   const k = etapes.map((e) => e.par).lastIndexOf('ami');
   const ami = etapes[k];
   if (k === etapes.length - 1) {
@@ -122,11 +135,20 @@ export function etiquette(d: Donnees, moi: string, vers: string): string | undef
     return majuscule(nomPas(ami)) + (k === 1 ? '' : ` ${avecDe(appel(avant))}`);
   }
   const reste = etapes.slice(k + 1);
+  const lien = lienDepuisAmi(d, etapes, k);
+  if (lien) return `${majuscule(lien.libelle)} ${avecDe(appel(ami))}`;
   return reste.length === 1 ? `${majuscule(nomPas(reste[0]))} ${avecDe(appel(ami))}` : `Proche ${avecDe(appel(ami))}`;
 }
 
 /** Mots du chemin après « Toi » : « ton épouse », « son père » (« ta » et « sa » deviennent « ton » et « son » devant une voyelle). */
-export function motsChemin(etapes: Etape[]): string[] {
+export function motsChemin(etapes: Etape[], d?: Donnees): string[] {
+  // Après le dernier ami, le lien de famille le plus court remplace le détour : « son neveu », pas « sa mère → son fils → son fils ».
+  const k = etapes.map((e) => e.par).lastIndexOf('ami');
+  const lien = d && k > 0 ? lienDepuisAmi(d, etapes, k) : undefined;
+  if (lien) {
+    const ta = determinant(lien.libelle, lien.feminin);
+    return [...motsChemin(etapes.slice(0, k + 1)), `${ta === 'ta' ? 'sa' : 'son'} ${lien.libelle}`];
+  }
   return etapes.slice(1).map((e, i) => {
     const nom = nomPas(e);
     const ta = determinant(nom, e.personne.sexe === 'F');

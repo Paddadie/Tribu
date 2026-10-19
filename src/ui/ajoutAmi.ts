@@ -1,25 +1,106 @@
-// Ajout d'un ami à une personne : choisir une personne existante ou en créer une.
-// Une amitié relie deux personnes quelconques, de la famille ou non ; elle ne crée aucune parenté.
+// Ajout d'un ami à une personne, toujours par un groupe d'amis (tous les membres sont amis entre eux).
+// - La personne est déjà dans un groupe : on y ajoute les amis choisis (une personne n'est que dans un groupe).
+// - Sinon : en haut les groupes à rejoindre, en dessous les personnes pour former un nouveau groupe.
 
-import { accorder, avecDe } from '../modele/liste';
-import { ajouterAmitie, sontAmis } from '../modele/modele';
-import type { Personne } from '../modele/types';
+import { nomGroupe, relation } from '../modele/deductions';
+import { avecDe } from '../modele/liste';
+import { ajouterAuGroupe, creerGroupe, groupesDe } from '../modele/modele';
+import { ficheMoi } from '../modele/reglages';
+import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { h, icone } from './dom';
+import { lireDonnees, lireReglages, modifierDonnees } from './etat';
+import { raisonGroupe } from './groupes';
 import { garderSaisie, lienRetour, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
+import { signaler } from './surbrillance';
+
+const appel = (p: Personne) => p.prenom || p.nom;
+
+/** « Karim, Thomas, Julie » : les membres d'un groupe, sans la personne éventuelle `sauf`. */
+function resume(d: Donnees, g: GroupeAmis, sauf?: string): string {
+  const noms = d.personnes.filter((p) => g.membres.includes(p.id) && p.id !== sauf).map(appel);
+  return noms.length > 3 ? `${noms.slice(0, 3).join(', ')}… (${noms.length})` : noms.join(', ');
+}
+
+/** Moi à ajouter d'office au groupe créé : quand la fiche est hors de ta famille, le groupe resterait sinon absent de ton arbre. */
+function moiAjoute(d: Donnees, p: Personne): Personne | undefined {
+  const moi = ficheMoi(lireReglages(), d);
+  if (!moi || moi.id === p.id || groupesDe(d, moi.id).length > 0) return undefined;
+  return relation(d, moi.id, p.id) === undefined ? moi : undefined;
+}
 
 export function ajoutAmi(p: Personne): HTMLElement {
   const retour = `#/personne/${p.id}`;
+  const depart = lireDonnees();
+  const groupe = groupesDe(depart, p.id)[0];
+
+  const nomChamp = h('input', { id: 'nom-groupe', type: 'text', autocomplete: 'off', autocapitalize: 'words', placeholder: 'Ex. Les voisins' });
+  const moi = groupe ? undefined : moiAjoute(depart, p);
 
   const selecteur = selecteurPersonne({
     personne: p,
     libelleOrigine: 'Origine de l’ami',
-    libelleValider: 'Ajouter comme ami',
-    indisponible: (d, c) => (sontAmis(d, p.id, c.id) ? accorder(c.sexe, 'Déjà ami', 'Déjà amie', 'Déjà ami(e)') : undefined),
-    lier: (d, autre) => ajouterAmitie(d, p.id, autre).donnees,
+    libelleValider: groupe ? 'Ajouter au groupe' : 'Former un groupe',
+    libelleValiderPlusieurs: (n) => (groupe ? `Ajouter ${n} amis au groupe` : `Former un groupe de ${n + 1}`),
+    indisponible: (d, c) => raisonGroupe(d, c, groupesDe(d, p.id)[0]),
+    // Le premier ami forme le groupe (avec la fiche, et Moi si besoin) ; les suivants le rejoignent.
+    lier: (d, autre) => {
+      const existant = groupesDe(d, p.id)[0];
+      if (existant) return ajouterAuGroupe(d, existant.id, autre);
+      const membres = [p.id, autre];
+      if (moi && autre !== moi.id) membres.push(moi.id);
+      return creerGroupe(d, membres, nomChamp.value.trim()).donnees;
+    },
     apres: () => revenir(retour),
   });
   garderSaisie(selecteur.modifie);
+
+  const rejoindre = (g: GroupeAmis) => {
+    try {
+      modifierDonnees((d) => ajouterAuGroupe(d, g.id, p.id));
+      signaler(g.membres[0]);
+      revenir(retour);
+    } catch (e) {
+      selecteur.erreur.textContent = e instanceof Error ? e.message : 'Enregistrement impossible';
+      selecteur.erreur.hidden = false;
+    }
+  };
+
+  const groupes = depart.groupes;
+  const aRejoindre =
+    !groupe && groupes.length > 0
+      ? h(
+          'section',
+          { class: 'bloc-choix' },
+          h('h2', { class: 'titre-section' }, 'Rejoindre un groupe'),
+          h(
+            'div',
+            { class: 'carte' },
+            ...groupes.map((g) =>
+              h(
+                'button',
+                { type: 'button', class: 'ligne ligne-choix', onclick: () => rejoindre(g) },
+                icone('ami', 24),
+                h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomGroupe(depart, g)), h('span', { class: 'secondaire' }, resume(depart, g))),
+              ),
+            ),
+          ),
+        )
+      : null;
+
+  const intro = groupe
+    ? h('p', { class: 'secondaire' }, `${appel(p)} est dans « ${nomGroupe(depart, groupe)} » (${resume(depart, groupe, p.id)}). Les amis ajoutés rejoignent ce groupe.`)
+    : null;
+
+  const champNom = groupe
+    ? null
+    : h(
+        'div',
+        { class: 'champ' },
+        h('label', { for: 'nom-groupe' }, 'Nom du nouveau groupe (facultatif)'),
+        nomChamp,
+        moi ? h('p', { class: 'secondaire' }, `${appel(moi)} fera aussi partie du groupe, pour qu’il apparaisse dans l’arbre.`) : null,
+      );
 
   return h(
     'div',
@@ -28,8 +109,18 @@ export function ajoutAmi(p: Personne): HTMLElement {
       'div',
       { class: 'barre' },
       lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, `Ami ${avecDe(p.prenom || p.nom)}`),
+      h('h1', { class: 'titre-formulaire' }, `Ami ${avecDe(appel(p))}`),
     ),
-    h('div', { class: 'contenu' }, selecteur.onglets, selecteur.zone, selecteur.erreur, selecteur.valider),
+    h(
+      'div',
+      { class: 'contenu' },
+      intro,
+      aRejoindre,
+      aRejoindre && h('h2', { class: 'titre-section' }, 'Ou former un nouveau groupe'),
+      champNom,
+      selecteur.onglets,
+      selecteur.zone,
+      selecteur.pied,
+    ),
   );
 }

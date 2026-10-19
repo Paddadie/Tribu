@@ -1,10 +1,12 @@
-// Champs d'identité d'une personne (prénom, nom, sexe, naissance, note), partagés
+// Champs d'identité d'une personne (prénom, nom, sexe, naissance, décès, note), partagés
 // par le formulaire de fiche et l'ajout d'un conjoint à créer.
 
-import { assemblerDate, decouperDate, homonymes, MOIS, nomComplet } from '../modele/liste';import type { ChampsPersonne } from '../modele/modele';
+import { accorder, assemblerDate, decouperDate, homonymes, MOIS, nomComplet, nomsConnus } from '../modele/liste';
+import { estDecede, personnesVisibles, type ChampsPersonne } from '../modele/modele';
 import type { Personne, Sexe } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h } from './dom';
+import { lireDonnees } from './etat';
 
 export interface ChampsIdentite {
   /** Contrôles à insérer dans un formulaire, dans l'ordre d'affichage. */
@@ -43,6 +45,7 @@ function champDate(suffixe: string, de: string, valeur: string | undefined, sans
   return {
     groupe: h('div', { class: 'date-groupe' }, jour, mois, annee),
     valeurs: () => [jour.value, mois.value, annee.value],
+    viserAnnee: () => annee.focus(),
     lire: () => assemblerDate({ jour: jour.value, mois: mois.value, annee: annee.value }, de, sansAnnee),
   };
 }
@@ -50,9 +53,11 @@ function champDate(suffixe: string, de: string, valeur: string | undefined, sans
 /** `existante` préremplit les champs ; `avecNote` ajoute la note libre ; `nomInitial` préremplit le nom d'une création. */
 export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M', nomInitial = ''): ChampsIdentite {
   const prenom = h('input', { id: 'prenom', type: 'text', value: existante?.prenom ?? '', autocomplete: 'off', autocapitalize: 'words' });
-  const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? nomInitial, autocomplete: 'off', autocapitalize: 'words' });
+  // Propositions : les noms de famille déjà saisis (liste native, filtrée par le navigateur pendant la frappe).
+  const propositions = h('datalist', { id: 'noms-connus' }, ...nomsConnus(personnesVisibles(lireDonnees())).map((n) => h('option', { value: n })));
+  const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? nomInitial, autocomplete: 'off', autocapitalize: 'words', list: 'noms-connus' });
   const naissance = champDate('', 'de naissance', existante?.naissance, true);
-  const deces = champDate('-deces', 'de décès', existante?.deces);
+  const deces = champDate('-deces', 'de décès', existante?.deces, true);
 
   // Création : `sexeParDefaut` (Homme sauf indication). Fiche existante : son sexe,
   // ou rien de coché si elle date d'avant l'ajout du champ (il reste alors non précisé).
@@ -68,12 +73,32 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
     libelle,
   }));
   const choixSexe = radios.map(({ radio, libelle }) => h('label', { class: 'choix' }, radio, h('span', {}, libelle)));
+  const sexeCoche = () => radios.find((r) => r.radio.checked)?.valeur;
+
+  // Nom de jeune fille : proposé pour une femme seulement.
+  const nomNaissance = h('input', { id: 'nom-naissance', type: 'text', value: existante?.nomNaissance ?? '', autocomplete: 'off', autocapitalize: 'words', list: 'noms-connus' });
+  const champNomNaissance = champ('Nom de jeune fille (facultatif)', 'nom-naissance', nomNaissance);
+  champNomNaissance.hidden = sexeCoche() !== 'F';
+  for (const { radio } of radios) radio.addEventListener('change', () => (champNomNaissance.hidden = sexeCoche() !== 'F'));
+
+  // Décès : un interrupteur, la date (facultative) n'apparaît qu'une fois allumé.
+  const decede = h('input', { id: 'decede', type: 'checkbox', class: 'bascule', checked: !!existante && estDecede(existante) });
+  const motDecede = h('span', {});
+  const dateDeces = h('div', { hidden: !decede.checked }, deces.groupe);
+  const accorderDecede = () => (motDecede.textContent = accorder(sexeCoche(), 'Décédé', 'Décédée', 'Décédé(e)'));
+  accorderDecede();
+  for (const { radio } of radios) radio.addEventListener('change', accorderDecede);
+  decede.addEventListener('change', () => {
+    dateDeces.hidden = !decede.checked;
+    if (decede.checked) deces.viserAnnee();
+  });
 
   const note = h('textarea', { id: 'note', rows: 5, value: existante?.note ?? '' });
   const champNom = champ('Nom', 'nom', nom);
+  champNom.append(propositions);
 
-  // Contenu de départ, comparé à l'actuel pour savoir si une saisie serait perdue.
-  const valeurs = () => [prenom.value, nom.value, ...naissance.valeurs(), radios.find((r) => r.radio.checked)?.valeur, note.value, ...deces.valeurs()];
+  // Contenu de départ, comparé à l'actuel pour savoir si une saisie serait perdue (date de décès : seulement si affichée).
+  const valeurs = () => [prenom.value, nom.value, ...naissance.valeurs(), sexeCoche(), note.value, nomNaissance.value, decede.checked, ...(decede.checked ? deces.valeurs() : [])];
   const depart = valeurs();
 
   return {
@@ -89,21 +114,25 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
       champ('Prénom', 'prenom', prenom),
       champNom,
       h('fieldset', { class: 'champ' }, h('legend', {}, 'Sexe'), h('div', { class: 'choix-groupe' }, ...choixSexe)),
+      champNomNaissance,
       h(
         'fieldset',
         { class: 'champ' },
         h('legend', {}, 'Date de naissance (facultative, année seule possible)'),
         naissance.groupe,
       ),
-      h('fieldset', { class: 'champ' }, h('legend', {}, 'Date de décès (facultative, année seule possible)'), deces.groupe),
+      h('div', { class: 'champ' }, h('label', { class: 'ligne-deces', for: 'decede' }, motDecede, decede), dateDeces),
       ...(avecNote ? [champ('Note', 'note', note)] : []),
     ],
     lire: () => ({
       prenom: prenom.value,
       nom: nom.value,
       naissance: naissance.lire(),
-      deces: deces.lire(),
-      sexe: radios.find((r) => r.radio.checked)?.valeur,
+      decede: decede.checked,
+      // Interrupteur éteint : une date restée dans les champs cachés est ignorée, sans erreur.
+      ...(decede.checked ? { deces: deces.lire() } : {}),
+      sexe: sexeCoche(),
+      nomNaissance: nomNaissance.value,
       note: avecNote ? note.value : (existante?.note ?? ''),
     }),
   };

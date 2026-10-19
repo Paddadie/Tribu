@@ -7,9 +7,11 @@ import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
 import { EVENEMENT_RAFRAICHIR } from "./ui/annulation";
 import { ecranArbre } from "./ui/arbreGlobal";
-import { appliquerTheme, lireBrutIllisible, lireDonnees } from "./ui/etat";
+import { enregistrerParentSansNom, estVirtuel } from "./modele/parentSansNom";
+import { appliquerTheme, lireBrutIllisible, lireDonnees, modifierDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
+import { ecranAjoutMembre, ecranGroupe, ecranGroupes, ecranNouveauGroupe } from "./ui/groupes";
 import { ecranIllisible } from "./ui/illisible";
 import { ecranLien } from "./ui/lien";
 import { demarrerNavigation, profondeurCourante, remplacer } from "./ui/navigation";
@@ -26,6 +28,7 @@ import { ecranUnion } from "./ui/union";
 //   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
 //   #/arbre            arbre de tous les liens autour de « Moi »
+//   #/groupes          groupes d'amis      #/groupe/nouveau   création      #/groupe/<id>   détail      #/groupe/<id>/ajouter   ajout d'un membre
 const app = document.querySelector<HTMLElement>("#app");
 
 function vue(route: string): HTMLElement {
@@ -36,22 +39,32 @@ function vue(route: string): HTMLElement {
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
   if (section === "arbre") return ecranArbre();
+  if (section === "groupes") return ecranGroupes();
+  if (section === "groupe" && id === "nouveau") return ecranNouveauGroupe();
+  if (section === "groupe") {
+    const groupe = lireDonnees().groupes.find((g) => g.id === id);
+    if (groupe) return route.split("/")[3] === "ajouter" ? ecranAjoutMembre(groupe) : ecranGroupe(groupe);
+  }
   if (section === "nouveau") return formulaire(undefined);
+  if (section === "personne" && id && estVirtuel(id)) {
+    // Parent « ? » touché dans l'arbre : on l'enregistre, puis on ouvre sa fiche à la place de cette entrée.
+    const creation = enregistrerParentSansNom(lireDonnees(), id);
+    if (creation) {
+      modifierDonnees(() => creation.donnees);
+      remplacer(`#/personne/${creation.personne.id}`, false);
+      return fiche(creation.personne);
+    }
+  }
   if (section === "personne" && personne) return fiche(personne);
   if (section === "modifier" && personne) return formulaire(personne);
   if (section === "conjoint" && personne) return ajoutConjoint(personne);
+  if (section === "ex" && personne) return ajoutConjoint(personne, true);
   if (section === "ami" && personne) return ajoutAmi(personne);
   if (section === "union") {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
     if (origine) return ecranUnion(origine, id);
   }
-  if ((section === "parent" || section === "enfant") && personne) return ajoutLien(personne, section, lireDonnees());
-  if (section === "frere" && personne) {
-    // Sans parent connu, pas de fratrie à compléter : retour à la fiche.
-    if (lireDonnees().filiations.some((f) => f.enfant === personne.id)) return ajoutLien(personne, "frere", lireDonnees());
-    remplacer(`#/personne/${personne.id}`, false);
-    return fiche(personne);
-  }
+  if ((section === "parent" || section === "enfant" || section === "frere") && personne) return ajoutLien(personne, section, lireDonnees());
   if (section === "lien") {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
     if (origine) return ecranLien(id, origine);

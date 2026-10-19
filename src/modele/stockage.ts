@@ -17,12 +17,12 @@ function estObjet(v: unknown): v is Record<string, unknown> {
 
 /**
  * Vérifie la forme et la cohérence des données : types des champs, ids uniques,
- * liens pointant vers des personnes existantes, règles de filiation, amitiés sans doublon.
+ * liens pointant vers des personnes existantes, règles de filiation, groupes d'amis cohérents.
  */
 export function estDonneesValides(v: unknown): v is Donnees {
-  if (!estObjet(v) || v.version !== 3) return false;
-  const { personnes, unions, filiations, amities } = v;
-  if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations) || !Array.isArray(amities)) return false;
+  if (!estObjet(v) || v.version !== 4) return false;
+  const { personnes, unions, filiations, groupes } = v;
+  if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations) || !Array.isArray(groupes)) return false;
 
   const ids = new Set<string>();
   for (const p of personnes) {
@@ -30,7 +30,10 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (typeof p.prenom !== 'string' || typeof p.nom !== 'string' || typeof p.note !== 'string') return false;
     if (p.naissance !== undefined && typeof p.naissance !== 'string') return false;
     if (p.deces !== undefined && typeof p.deces !== 'string') return false;
+    if (p.decede !== undefined && p.decede !== true) return false;
+    if (p.nomNaissance !== undefined && typeof p.nomNaissance !== 'string') return false;
     if (p.sexe !== undefined && p.sexe !== 'F' && p.sexe !== 'M') return false;
+    if (p.inconnu !== undefined && p.inconnu !== true) return false;
     ids.add(p.id);
   }
 
@@ -67,16 +70,12 @@ export function estDonneesValides(v: unknown): v is Donnees {
     idsLiens.add(f.id);
   }
 
-  // Une seule amitié par paire, dans un sens ou dans l'autre.
-  const amis = new Set<string>();
-  for (const a of amities) {
-    if (!estObjet(a) || typeof a.id !== 'string' || idsLiens.has(a.id)) return false;
-    if (typeof a.personneA !== 'string' || typeof a.personneB !== 'string') return false;
-    if (!ids.has(a.personneA) || !ids.has(a.personneB) || a.personneA === a.personneB) return false;
-    const paire = [a.personneA, a.personneB].sort().join('|');
-    if (amis.has(paire)) return false;
-    amis.add(paire);
-    idsLiens.add(a.id);
+  // Groupes d'amis : au moins deux membres existants, sans doublon.
+  for (const g of groupes) {
+    if (!estObjet(g) || typeof g.id !== 'string' || idsLiens.has(g.id) || typeof g.nom !== 'string') return false;
+    if (!Array.isArray(g.membres) || g.membres.length < 2 || new Set(g.membres).size !== g.membres.length) return false;
+    if (!g.membres.every((m) => typeof m === 'string' && ids.has(m))) return false;
+    idsLiens.add(g.id);
   }
   return true;
 }

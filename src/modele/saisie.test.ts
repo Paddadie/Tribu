@@ -14,8 +14,8 @@ function monde() {
       return d;
     },
     id,
-    pers(prenom: string, nom = 'X', sexe?: Sexe) {
-      const r = creerPersonne(d, { prenom, nom, sexe });
+    pers(prenom: string, nom = prenom, sexe?: Sexe, naissance?: string) {
+      const r = creerPersonne(d, { prenom, nom, sexe, naissance });
       d = r.donnees;
       id[prenom] = r.personne.id;
     },
@@ -144,6 +144,57 @@ describe('suggestions', () => {
     const s = suggestions(m.d, m.id.Léa, 'conjoint');
     expect(prenoms(s)).toEqual(['Marc']);
     expect(s[0].detail).toBe('Parent de Jules');
+  });
+
+  it('même nom de famille : proposé après les liens déduits, sans casse ni accents', () => {
+    const m = monde();
+    m.pers('Jules', 'Dupont');
+    m.pers('Léa', 'Dupont');
+    m.pers('Thomas', 'dupont');
+    m.pers('Éric', 'Durand');
+    m.union('Léa', 'Thomas');
+    m.filiation('Léa', 'Jules');
+    const s = suggestions(m.d, m.id.Jules, 'parent');
+    expect(prenoms(s)).toEqual(['Thomas']);
+    expect(s[0].detail).toBe('Conjoint de Léa');
+    const frere = suggestions(m.d, m.id.Jules, 'frere');
+    expect(prenoms(frere)).toEqual(['Thomas']);
+    expect(frere[0].detail).toBe('Même nom : dupont');
+  });
+
+  it('le nom de jeune fille permet aussi de proposer un lien de famille', () => {
+    const m = monde();
+    m.pers('Jules', 'Dupont');
+    const d = creerPersonne(m.d, { prenom: 'Cécile', nom: 'Prévot', sexe: 'F', nomNaissance: 'Dupont' }).donnees;
+    expect(prenoms(suggestions(d, m.id.Jules, 'frere'))).toEqual(['Cécile']);
+  });
+
+  it('même nom de famille : jamais un ascendant ni un descendant, ni un nom vide', () => {
+    const m = monde();
+    m.pers('Jules', 'Dupont');
+    m.pers('Papy', 'Dupont');
+    m.pers('Pierre', 'Dupont');
+    m.pers('Sans', '');
+    m.pers('Autre', '');
+    m.filiation('Papy', 'Jules');
+    m.filiation('Jules', 'Pierre');
+    expect(suggestions(m.d, m.id.Jules, 'parent')).toEqual([]);
+    expect(suggestions(m.d, m.id.Jules, 'enfant')).toEqual([]);
+    expect(suggestions(m.d, m.id.Sans, 'parent')).toEqual([]);
+  });
+
+  it('même nom de famille : écart d’âge vraisemblable', () => {
+    const m = monde();
+    m.pers('Jules', 'Dupont', undefined, '1990');
+    m.pers('Pere', 'Dupont', undefined, '1960');
+    m.pers('Cousin', 'Dupont', undefined, '1995');
+    m.pers('Fils', 'Dupont', undefined, '2020');
+    m.pers('Papy', 'Dupont', undefined, '1930');
+    m.pers('Inconnu', 'Dupont');
+    expect(prenoms(suggestions(m.d, m.id.Jules, 'parent'))).toEqual(['Inconnu', 'Papy', 'Pere']);
+    expect(prenoms(suggestions(m.d, m.id.Jules, 'enfant'))).toEqual(['Fils', 'Inconnu']);
+    expect(prenoms(suggestions(m.d, m.id.Jules, 'frere'))).toEqual(['Cousin', 'Fils', 'Inconnu', 'Pere']);
+    expect(suggestions(m.d, m.id.Jules, 'conjoint')).toEqual([]);
   });
 
   it('aucune suggestion sans lien', () => {

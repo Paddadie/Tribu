@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { assemblerDate, comparateur, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe, teinteFamille } from './liste';
+import { assemblerDate, comparateur, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe, nomsConnus, teinteFamille } from './liste';
 import type { Personne } from './types';
 
 let n = 0;
 function p(prenom: string, nom: string, naissance?: string): Personne {
   return { id: `id${++n}`, prenom, nom, note: '', ...(naissance ? { naissance } : {}) };
 }
+
+describe('nomsConnus', () => {
+  it('regroupe casse et accents, garde la graphie la plus fréquente, les plus répandus d\'abord', () => {
+    const liste = [p('A', 'Dupont'), p('B', 'Martin'), p('C', 'martin'), p('D', 'Martin'), p('E', 'Dupont'), p('F', 'Éloi'), p('G', 'Eloi')];
+    expect(nomsConnus(liste)).toEqual(['Martin', 'Dupont', 'Eloi']);
+  });
+
+  it('compte aussi les noms de naissance et ignore les noms vides', () => {
+    const jeuneFille = { ...p('H', 'Durand'), nomNaissance: 'Lemaire' };
+    expect(nomsConnus([jeuneFille, p('I', '  '), p('J', '')])).toEqual(['Durand', 'Lemaire']);
+  });
+});
 
 describe('nomComplet et initiales', () => {
   it('assemble prénom et nom', () => {

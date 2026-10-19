@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterAmitie, ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
+import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele';
 import {
   CLE_SECOURS,
   CLE_STOCKAGE,
@@ -31,7 +31,7 @@ function exemple(): Donnees {
   d = c.donnees;
   d = ajouterUnion(d, a.personne.id, b.personne.id, true).donnees;
   d = ajouterFiliation(d, a.personne.id, c.personne.id, 'adoptif').donnees;
-  d = ajouterAmitie(d, b.personne.id, c.personne.id).donnees;
+  d = creerGroupe(d, [b.personne.id, c.personne.id], 'Voisins').donnees;
   return d;
 }
 
@@ -105,7 +105,7 @@ describe('validation des données', () => {
 
   it('refuse une mauvaise version', () => {
     expect(estDonneesValides({ ...donneesVides(), version: 2 })).toBe(false);
-    expect(estDonneesValides({ ...donneesVides(), version: 4 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 5 })).toBe(false);
   });
 
   it('refuse un lien vers une personne inexistante', () => {
@@ -138,14 +138,17 @@ describe('validation des données', () => {
     ).toBe(false);
   });
 
-  it('refuse une amitié invalide : personne inconnue, avec soi-même, en double dans un sens ou dans l’autre, id déjà pris', () => {
+  it('refuse un groupe d’amis invalide : membre inconnu, doublon, moins de deux membres, id déjà pris, nom mal typé', () => {
     const d = exemple();
-    const a = d.amities[0];
-    expect(estDonneesValides({ ...d, amities: [{ ...a, personneB: 'fantôme' }] })).toBe(false);
-    expect(estDonneesValides({ ...d, amities: [{ ...a, personneB: a.personneA }] })).toBe(false);
-    expect(estDonneesValides({ ...d, amities: [a, { id: 'x', personneA: a.personneB, personneB: a.personneA }] })).toBe(false);
-    expect(estDonneesValides({ ...d, amities: [{ ...a, id: d.unions[0].id }] })).toBe(false);
-    expect(estDonneesValides({ ...d, amities: undefined })).toBe(false);
+    const g = d.groupes[0];
+    expect(estDonneesValides({ ...d, groupes: [{ ...g, membres: [g.membres[0], 'fantôme'] }] })).toBe(false);
+    expect(estDonneesValides({ ...d, groupes: [{ ...g, membres: [g.membres[0], g.membres[0]] }] })).toBe(false);
+    expect(estDonneesValides({ ...d, groupes: [{ ...g, membres: [g.membres[0]] }] })).toBe(false);
+    expect(estDonneesValides({ ...d, groupes: [{ ...g, id: d.unions[0].id }] })).toBe(false);
+    expect(estDonneesValides({ ...d, groupes: [{ ...g, nom: 3 }] })).toBe(false);
+    expect(estDonneesValides({ ...d, groupes: undefined })).toBe(false);
+    // Une personne peut être dans plusieurs groupes (Moi, par exemple).
+    expect(estDonneesValides({ ...d, groupes: [g, { ...g, id: 'autre' }] })).toBe(true);
   });
 });
 

@@ -32,7 +32,7 @@ function avec(...noms: string[]): { d: Donnees; ids: string[] } {
 /** Date locale, comme `new Date()` sur le téléphone. */
 const le = (annee: number, mois: number, jour: number) => new Date(annee, mois - 1, jour);
 
-describe('migration v1 → v2 → v3', () => {
+describe('migration v1 → v2 → v3 → v4', () => {
   const v1 = {
     version: 1,
     personnes: [
@@ -44,20 +44,20 @@ describe('migration v1 → v2 → v3', () => {
     filiations: [{ id: 'f1', parent: 'a', enfant: 'c', type: 'biologique' }],
   };
 
-  it('donne le statut « actuelle » aux unions, aucune amitié, et passe en version 3, sans rien perdre', () => {
+  it('donne le statut « actuelle » aux unions, aucun groupe d’amis, et passe en version 4, sans rien perdre', () => {
     const v3 = migrer(v1) as Donnees;
-    expect(v3.version).toBe(3);
+    expect(v3.version).toBe(4);
     expect(v3.unions).toEqual([{ id: 'u1', personneA: 'a', personneB: 'b', marie: true, statut: 'actuelle' }]);
     expect(v3.personnes).toEqual(v1.personnes);
     expect(v3.filiations).toEqual(v1.filiations);
-    expect(v3.amities).toEqual([]);
+    expect(v3.groupes).toEqual([]);
     expect(estDonneesValides(v3)).toBe(true);
   });
 
-  it('un contenu v2 reçoit une liste d’amitiés vide, sans rien perdre', () => {
+  it('un contenu v2 reçoit une liste de groupes vide, sans rien perdre', () => {
     const v2 = { version: 2, personnes: v1.personnes, unions: [], filiations: v1.filiations };
     const v3 = migrer(v2) as Donnees;
-    expect(v3).toEqual({ ...v2, version: 3, amities: [] });
+    expect(v3).toEqual({ ...v2, version: 4, groupes: [] });
     expect(estDonneesValides(v3)).toBe(true);
     expect(v2.version).toBe(2);
   });
@@ -68,7 +68,7 @@ describe('migration v1 → v2 → v3', () => {
     expect(v1.unions[0]).not.toHaveProperty('statut');
   });
 
-  it('laisse un contenu v3 ou inconnu tel quel', () => {
+  it('laisse un contenu v4 ou inconnu tel quel', () => {
     const v3 = donneesVides();
     expect(migrer(v3)).toBe(v3);
     expect(migrer(null)).toBeNull();
@@ -85,7 +85,7 @@ describe('migration v1 → v2 → v3', () => {
 
   it('un ancien export s’importe', () => {
     const d = importerJson(JSON.stringify(v1, null, 2));
-    expect(d.version).toBe(3);
+    expect(d.version).toBe(4);
     expect(d.unions[0].statut).toBe('actuelle');
   });
 
@@ -98,6 +98,37 @@ describe('migration v1 → v2 → v3', () => {
     const { donnees, union } = ajouterUnion(d, ids[0], ids[1]);
     const separes = separerUnion(donnees, union.id);
     expect(importerJson(exporterJson(separes))).toEqual(separes);
+  });
+});
+
+describe('migration v3 → v4 : amitiés en groupes', () => {
+  const pers = (id: string) => ({ id, prenom: id.toUpperCase(), nom: 'X', note: '' });
+  const v3 = {
+    version: 3,
+    personnes: ['a', 'b', 'c', 'd', 'e', 'f'].map(pers),
+    unions: [],
+    filiations: [],
+    amities: [
+      { id: 'm1', personneA: 'a', personneB: 'b' },
+      { id: 'm2', personneA: 'b', personneB: 'c' },
+      { id: 'm3', personneA: 'd', personneB: 'e' },
+    ],
+  };
+
+  it('réunit les amis d’amis en un groupe sans nom, sans toucher aux autres', () => {
+    const d = migrer(v3) as Donnees;
+    expect(d.version).toBe(4);
+    expect(d).not.toHaveProperty('amities');
+    expect(d.groupes.map((g) => [...g.membres].sort())).toEqual([['a', 'b', 'c'], ['d', 'e']]);
+    expect(d.groupes.every((g) => g.nom === '' && g.id !== '')).toBe(true);
+    expect(d.personnes).toEqual(v3.personnes);
+    expect(estDonneesValides(d)).toBe(true);
+  });
+
+  it('ne modifie pas l’objet reçu', () => {
+    migrer(v3);
+    expect(v3.version).toBe(3);
+    expect(v3.amities).toHaveLength(3);
   });
 });
 
@@ -197,6 +228,15 @@ describe('date de décès', () => {
     expect(libelleDeces('2024-01', 'M')).toBe('décédé en janvier 2024');
     expect(libelleDeces('2024')).toBe('décédé(e) en 2024');
     expect(libelleDeces(undefined)).toBe('');
+    expect(libelleDeces('--01-14', 'F')).toBe('décédée le 14 janvier');
+    expect(libelleDeces(undefined, 'F', true)).toBe('décédée');
+  });
+
+  it('la validation accepte `decede: true` et refuse toute autre valeur', () => {
+    const { d } = avec('A');
+    expect(estDonneesValides({ ...d, personnes: [{ ...d.personnes[0], decede: true }] })).toBe(true);
+    expect(estDonneesValides({ ...d, personnes: [{ ...d.personnes[0], decede: false }] })).toBe(false);
+    expect(estDonneesValides({ ...d, personnes: [{ ...d.personnes[0], decede: 'oui' }] })).toBe(false);
   });
 });
 
@@ -243,12 +283,23 @@ describe('âge', () => {
     expect(libelleAgeDeces({ naissance: '1941' }, auj)).toBe('');
   });
 
+  it('un décès sans année (ou sans date) ne donne aucun âge, ni actuel ni au décès', () => {
+    for (const p of [{ naissance: '1941-05-03', decede: true as const }, { naissance: '1941-05-03', deces: '--01-14' }]) {
+      expect(libelleAge(p, auj)).toBe('');
+      expect(libelleAgeDeces(p, auj)).toBe('');
+    }
+  });
+
   it('ligne de liste : naissance et âge, ou années de vie pour un décédé', () => {
     const base: Personne = { id: 'a', prenom: 'A', nom: 'X', note: '', sexe: 'M' };
     expect(detailPersonne({ ...base, naissance: '1963-06-02' }, auj)).toBe('né le 2 juin 1963 · 63 ans');
     expect(detailPersonne({ ...base, naissance: '1963-06-02', deces: '2024-01-14' }, auj)).toBe('1963 – 2024');
     expect(detailPersonne({ ...base, deces: '2024' }, auj)).toBe('décédé en 2024');
     expect(detailPersonne(base, auj)).toBe('');
+    // Décès sans année, ou sans date.
+    expect(detailPersonne({ ...base, naissance: '1963-06-02', decede: true }, auj)).toBe('1963 – ?');
+    expect(detailPersonne({ ...base, naissance: '1963', deces: '--01-14' }, auj)).toBe('1963 – ?');
+    expect(detailPersonne({ ...base, sexe: 'F', decede: true }, auj)).toBe('décédée');
   });
 });
 
@@ -271,6 +322,10 @@ describe('prochains anniversaires', () => {
       { personne: l[2], dans: 5, age: 67, date: '24 octobre' },
       { personne: l[0], dans: 24, age: 35, date: '12 novembre' },
     ]);
+  });
+
+  it('ignore une personne décédée sans date', () => {
+    expect(noms([{ ...p('Disparue', '1959-10-24'), decede: true }, p('Paulette', '1959-10-24')])).toEqual(['Paulette']);
   });
 
   it('s’arrête à 30 jours (bornes comprises) et à 3 personnes', () => {

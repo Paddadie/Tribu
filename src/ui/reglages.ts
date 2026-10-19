@@ -3,7 +3,7 @@
 // effacement des données, version. Import et effacement sont annulables.
 
 import type { Tri } from '../modele/liste';
-import { donneesVides } from '../modele/modele';
+import { donneesVides, personnesVisibles } from '../modele/modele';
 import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
 import { changerAvecAnnulation } from './annulation';
@@ -73,7 +73,7 @@ export function ecranReglages(): HTMLElement {
 
   /** Met à jour ce qui dépend des données et des réglages (après export, import, effacement, annulation). */
   const maj = () => {
-    const n = lireDonnees().personnes.length;
+    const n = personnesVisibles(lireDonnees()).length;
     resumeExport.textContent = `Enregistre ${pluriel(n)} et leurs liens dans ${nomFichierExport(new Date())}.`;
     dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
     boutonEffacer.disabled = n === 0;
@@ -103,9 +103,9 @@ export function ecranReglages(): HTMLElement {
     if (!choisi) return;
     try {
       const importees = importerJson(await choisi.text());
-      const actuelles = lireDonnees().personnes.length;
-      if (actuelles > 0 && !(await confirmer(avertissementRemplacement(choisi.name, importees.personnes.length, actuelles), 'Remplacer'))) return;
-      changerAvecAnnulation(() => importees, messageImport(importees.personnes.length), 'Import annulé.');
+      const actuelles = personnesVisibles(lireDonnees()).length;
+      if (actuelles > 0 && !(await confirmer(avertissementRemplacement(choisi.name, personnesVisibles(importees).length, actuelles), 'Remplacer'))) return;
+      changerAvecAnnulation(() => importees, messageImport(personnesVisibles(importees).length), 'Import annulé.');
       maj();
     } catch (e) {
       erreurImport.textContent = e instanceof Error ? `${e.message}. Vos données n’ont pas été modifiées.` : 'Import impossible. Vos données n’ont pas été modifiées.';
@@ -114,7 +114,7 @@ export function ecranReglages(): HTMLElement {
   });
 
   const effacer = async () => {
-    const n = lireDonnees().personnes.length;
+    const n = personnesVisibles(lireDonnees()).length;
     if (n === 0) return;
     const message = `Effacer toutes les données ? ${pluriel(n)} et tous leurs liens seront supprimés de cet appareil. Pensez à exporter d’abord.`;
     if (!(await confirmer(message, 'Effacer'))) return;
@@ -143,6 +143,22 @@ export function ecranReglages(): HTMLElement {
       'div',
       { class: 'contenu' },
       h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Moi'), carteMoi, aideMoi),
+      h(
+        'section',
+        { class: 'groupe-reglages' },
+        h('h2', { class: 'titre-section' }, 'Amis'),
+        h(
+          'div',
+          { class: 'carte' },
+          h(
+            'a',
+            { class: 'ligne ligne-lien', href: '#/groupes' },
+            icone('ami', 24),
+            h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Groupes d’amis'), h('span', { class: 'secondaire' }, 'Noms et membres')),
+            icone('chevron', 20),
+          ),
+        ),
+      ),
       h(
         'section',
         { class: 'groupe-reglages' },

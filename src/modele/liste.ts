@@ -47,6 +47,35 @@ function simplifier(texte: string): string {
   return texte.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr');
 }
 
+/** Même nom de famille, sans tenir compte de la casse, des accents ni des espaces ; faux si l'un des deux est vide. */
+export function memeNom(a: string, b: string): boolean {
+  const cle = cleHomonyme(a);
+  return cle !== '' && cle === cleHomonyme(b);
+}
+
+/**
+ * Noms de famille déjà saisis (actuels et de naissance), pour l'assistance à la saisie : un par nom
+ * (casse, accents et espaces ignorés, graphie la plus fréquente gardée), les plus répandus d'abord.
+ */
+export function nomsConnus(personnes: Personne[]): string[] {
+  const parCle = new Map<string, Map<string, number>>();
+  for (const p of personnes) {
+    for (const brut of [p.nom, p.nomNaissance]) {
+      const nom = brut?.trim().replace(/\s+/g, ' ');
+      const cle = nom ? cleHomonyme(nom) : '';
+      if (!nom || !cle) continue;
+      const graphies = parCle.get(cle) ?? new Map<string, number>();
+      graphies.set(nom, (graphies.get(nom) ?? 0) + 1);
+      parCle.set(cle, graphies);
+    }
+  }
+  const lignes = [...parCle.values()].map((graphies) => {
+    const tri = [...graphies].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
+    return { nom: tri[0][0], total: tri.reduce((s, [, n]) => s + n, 0) };
+  });
+  return lignes.sort((a, b) => b.total - a.total || a.nom.localeCompare(b.nom, 'fr')).map((l) => l.nom);
+}
+
 /** Critère de tri de la liste : par prénom ou par nom de famille. */
 export type Tri = 'prenom' | 'nom';
 
@@ -174,10 +203,14 @@ export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): st
   return date && `${accorder(sexe, 'né', 'née', 'né(e)')} ${date}`;
 }
 
-/** « décédée le 14 janvier 2024 », accordé selon le sexe ; chaîne vide sans date de décès exploitable. */
-export function libelleDeces(deces: string | undefined, sexe?: Sexe): string {
+/**
+ * « décédée le 14 janvier 2024 », accordé selon le sexe ; « décédée » seul pour un décès sans date (`decede`) ;
+ * chaîne vide sinon.
+ */
+export function libelleDeces(deces: string | undefined, sexe?: Sexe, decede = false): string {
   const date = formulerDate(deces);
-  return date && `${accorder(sexe, 'décédé', 'décédée', 'décédé(e)')} ${date}`;
+  const mot = accorder(sexe, 'décédé', 'décédée', 'décédé(e)');
+  return date ? `${mot} ${date}` : decede ? mot : '';
 }
 
 export interface ChampsDate {

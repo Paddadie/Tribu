@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { disposerArbre, isotone, type Disposition } from './arbreGlobal';
-import { ajouterAmitie, ajouterFiliation, ajouterUnion, creerPersonne, donneesVides, separerUnion } from './modele';
+import { ajouterFiliation, ajouterFrereSansParent, ajouterUnion, creerGroupe, creerPersonne, donneesVides, separerUnion } from './modele';
+import { estVirtuel } from './parentSansNom';
 import type { Donnees, Sexe, TypeFiliation } from './types';
 
 /** Petit atelier de données : personnes par prénom, liens par prénoms. */
@@ -26,7 +27,7 @@ function atelier() {
     },
     enfant: (e: string, parents: string[], type: TypeFiliation = 'biologique') =>
       parents.forEach((p) => (d = ajouterFiliation(d, id[p], id[e], type).donnees)),
-    ami: (x: string, y: string) => (d = ajouterAmitie(d, id[x], id[y]).donnees),
+    ami: (x: string, y: string) => (d = creerGroupe(d, [id[x], id[y]]).donnees),
   };
   return a;
 }
@@ -115,7 +116,8 @@ function verifierInvariants(d: Donnees, disp: Disposition, moi: string) {
     expect(ids).toContain(c.a);
     expect(ids).toContain(c.b);
   }
-  expect(d.personnes.length).toBeGreaterThanOrEqual(disp.places.length);
+  // Les parents « ? » d'un enfant à parent seul sont calculés pour le dessin : ils ne sont pas dans les données.
+  expect(d.personnes.length).toBeGreaterThanOrEqual(disp.places.filter((p) => !estVirtuel(p.personne.id)).length);
 }
 
 describe('disposerArbre : maquette A', () => {
@@ -174,7 +176,7 @@ describe('disposerArbre : maquette A', () => {
   it('garde les frères et sœurs groupés (seuls leurs conjoints et amis peuvent s’intercaler)', () => {
     const lies = (x: string) => [
       ...d.unions.flatMap((u) => (u.personneA === x ? [u.personneB] : u.personneB === x ? [u.personneA] : [])),
-      ...d.amities.flatMap((m) => (m.personneA === x ? [m.personneB] : m.personneB === x ? [m.personneA] : [])),
+      ...d.groupes.flatMap((g) => (g.membres.includes(x) ? g.membres.filter((m) => m !== x) : [])),
     ];
     for (const fratrie of [['Paul', 'Emma'], ['Léa', 'Hugo'], ['Inès', 'Théo'], ['Michel', 'Alain'], ['Claire', 'Isabelle']]) {
       const xs = fratrie.map((f) => p(f).x);
@@ -212,7 +214,9 @@ describe('disposerArbre : maquette A', () => {
     expect(avecMoi).toHaveLength(0);
     const paires = disp.amities.map((m) => [m.a, m.b].sort().join());
     expect(paires).toContain([id.Inès, id.Zoé].sort().join());
-    expect(paires).toContain([id.Camille, id.Yanis].sort().join());
+    // Camille et Yanis sont tous deux dans la bulle : leur groupe y devient un cadre, sans trait.
+    expect(paires).not.toContain([id.Camille, id.Yanis].sort().join());
+    expect(disp.groupes.some((g) => g.membres.includes(id.Camille) && g.membres.includes(id.Yanis))).toBe(true);
   });
 
   it('fait partir les enfants d’un couple du milieu des parents', () => {
@@ -279,7 +283,7 @@ describe('disposerArbre : cas limites', () => {
     a.enfant('Petit', ['Ca', 'Cb']);
     const disp = disposerArbre(a.d, a.id.Petit);
     verifierInvariants(a.d, disp, a.id.Petit);
-    expect(disp.places).toHaveLength(7);
+    expect(disp.places.filter((p) => !estVirtuel(p.personne.id))).toHaveLength(7);
     expect(pos(disp, a.id.Aïeul).y).toBe(-3);
   });
 
@@ -296,7 +300,7 @@ describe('disposerArbre : cas limites', () => {
     };
     const disp = disposerArbre(a.d, a.id.A);
     verifierInvariants(a.d, disp, a.id.A);
-    expect(disp.places).toHaveLength(3);
+    expect(disp.places.filter((p) => !estVirtuel(p.personne.id))).toHaveLength(3);
   });
 
   it('suit un ami d’ami jusque dans la bulle', () => {
@@ -324,5 +328,167 @@ describe('isotone', () => {
     const [x, y] = isotone([{ cible: 0, poids: 3 }, { cible: 0, poids: 1 }], [2, 2]);
     expect(y - x).toBe(2);
     expect(x).toBeCloseTo(-0.5);
+  });
+});
+
+describe('disposerArbre : groupes d’amis et étiquettes', () => {
+  /** Moi, et trois familles amies (couple + un enfant) : deux dans un groupe, la troisième dans un autre. */
+  function troisFamilles() {
+    const a = atelier();
+    a.pers('Moi', undefined, '1985');
+    for (const f of ['A', 'B', 'C']) {
+      a.pers(`Pere${f}`, 'M', '1980');
+      a.pers(`Mere${f}`, 'F', '1982');
+      a.pers(`Enfant${f}`, undefined, '2010');
+      a.union(`Pere${f}`, `Mere${f}`);
+      a.enfant(`Enfant${f}`, [`Pere${f}`, `Mere${f}`]);
+    }
+    const { id } = a;
+    a.d = creerGroupe(a.d, [id.Moi, id.PereA, id.PereB], 'Fac').donnees;
+    a.d = creerGroupe(a.d, [id.Moi, id.PereC], 'Voisins').donnees;
+    return a;
+  }
+
+  it('dessine un cadre par groupe, avec les membres et leurs familles, sans que deux cadres se chevauchent', () => {
+    const a = troisFamilles();
+    const disp = disposerArbre(a.d, a.id.Moi);
+    verifierInvariants(a.d, disp, a.id.Moi);
+    expect(disp.groupes.map((g) => g.nom).sort()).toEqual(['Fac', 'Voisins']);
+    const fac = disp.groupes.find((g) => g.nom === 'Fac')!;
+    expect(fac.membres.sort()).toEqual([a.id.PereA, a.id.PereB].sort());
+    expect(fac.amis).toBe(2);
+    for (const f of ['A', 'B']) for (const p of ['Pere', 'Mere', 'Enfant']) expect(fac.ids).toContain(a.id[p + f]);
+    expect(fac.ids).not.toContain(a.id.PereC);
+
+    // Largeur d'un cadre en pixels (80 px par place, nœud de 76 px, marge de 8 px) : les intervalles restent disjoints.
+    const x = new Map(disp.places.map((pl) => [pl.personne.id, pl.x]));
+    const bornes = disp.groupes
+      .map((g) => [Math.min(...g.ids.map((i) => x.get(i)! * 80)) - 46, Math.max(...g.ids.map((i) => x.get(i)! * 80)) + 46])
+      .sort((p, q) => p[0] - q[0]);
+    for (let i = 1; i < bornes.length; i++) expect(bornes[i][0]).toBeGreaterThan(bornes[i - 1][1]);
+  });
+
+  it('n’écrit aucune amitié en pointillé entre membres d’un même cadre', () => {
+    const a = troisFamilles();
+    const disp = disposerArbre(a.d, a.id.Moi);
+    expect(disp.amities).toEqual([]);
+  });
+
+  it('écrit un nom de famille au-dessus de chaque lignée sans parent, pas au-dessus d’un conjoint venu d’ailleurs', () => {
+    const a = troisFamilles();
+    const disp = disposerArbre(a.d, a.id.Moi);
+    // Trois couples d'amis avec enfant ; Moi, seul, sans parent, enfant ni frère, n'est pas nommé.
+    expect(disp.etiquettes).toHaveLength(3);
+    const place = (n: string) => disp.places.find((pl) => pl.personne.id === a.id[n])!;
+    const couple = disp.etiquettes.find((e) => Math.abs(e.x - (place('PereA').x + place('MereA').x) / 2) < 1e-9);
+    expect(couple?.texte).toBe('Famille X');
+    expect(couple?.y).toBe(place('PereA').y);
+  });
+});
+
+describe('disposerArbre : couleurs par nom de famille', () => {
+  it('même nom de famille, même couleur (sans casse ni accents) ; le nom actuel prime sur le nom de naissance ; sans nom, pas de couleur', () => {
+    let d = donneesVides();
+    const id: Record<string, string> = {};
+    const pers = (prenom: string, nom: string, sexe: Sexe, extra: { nomNaissance?: string } = {}) => {
+      const r = creerPersonne(d, { prenom, nom, sexe, naissance: '1990', ...extra });
+      d = r.donnees;
+      id[prenom] = r.personne.id;
+    };
+    pers('Paul', 'Dabadie', 'M');
+    pers('Michel', 'DABADIE', 'M');
+    pers('Cécile', 'Dabadie', 'F', { nomNaissance: 'Léger' });
+    pers('Léo', 'Leger', 'M');
+    pers('Anonyme', '', 'M');
+    d = ajouterUnion(d, id.Michel, id.Cécile).donnees;
+    d = ajouterFiliation(d, id.Michel, id.Paul, 'biologique').donnees;
+    d = ajouterFiliation(d, id.Cécile, id.Paul, 'biologique').donnees;
+    d = ajouterFiliation(d, id.Michel, id.Anonyme, 'biologique').donnees;
+    d = ajouterFiliation(d, id.Cécile, id.Léo, 'biologique').donnees;
+    const disp = disposerArbre(d, id.Paul);
+    const l = (prenom: string) => pos(disp, id[prenom]).lignee;
+    expect(l('Michel')).toBe(l('Paul'));
+    expect(l('Cécile')).toBe(l('Paul'));
+    expect(l('Cécile')).not.toBe(l('Léo'));
+    expect(l('Paul')).toBeDefined();
+    expect(l('Anonyme')).toBeUndefined();
+  });
+});
+
+describe('disposerArbre : parent sans union et familles d’amis', () => {
+  it('un parent sans union (ex) se place à côté de l’autre parent, près de ses enfants', () => {
+    const a = atelier();
+    ['Papi', 'Mamie', 'Oncle', 'Cousin'].forEach((n, i) => a.pers(n, i % 2 ? 'F' : 'M', String(1940 + i)));
+    a.pers('Cath', 'F', '1965');
+    a.pers('Mich', 'M', '1960');
+    a.pers('Moi', 'M', '1996');
+    a.pers('Demi', 'M', '1990');
+    a.union('Papi', 'Mamie');
+    a.enfant('Cath', ['Papi', 'Mamie']);
+    a.enfant('Oncle', ['Papi', 'Mamie']);
+    a.enfant('Cousin', ['Oncle']);
+    a.enfant('Moi', ['Cath']);
+    a.enfant('Demi', ['Cath', 'Mich']);
+    const x = (n: string) => disposerArbre(a.d, a.id.Moi).places.find((p) => p.personne.id === a.id[n])!.x;
+    // Moi n'a que Cath : un « ? » vient aussi près d'elle, d'où un écart de bloc plutôt que de couple.
+    expect(Math.abs(x('Mich') - x('Cath'))).toBeLessThanOrEqual(1.3);
+  });
+
+  it('deux familles d’amis voisines ne sont pas séparées par un grand vide', () => {
+    const a = atelier();
+    ['Moi', 'A1', 'A2', 'B1', 'C1', 'C2'].forEach((n) => a.pers(n, undefined, '1990'));
+    ['E1', 'E2', 'E3', 'E4', 'E5', 'E6'].forEach((n) => a.pers(n, undefined, '2015'));
+    a.d = creerGroupe(a.d, [a.id.Moi, a.id.A1, a.id.B1, a.id.C1]).donnees;
+    a.union('A1', 'A2');
+    a.union('C1', 'C2');
+    ['E1', 'E2', 'E3'].forEach((e) => a.enfant(e, ['A1', 'A2']));
+    ['E4', 'E5', 'E6'].forEach((e) => a.enfant(e, ['C1', 'C2']));
+    const d = disposerArbre(a.d, a.id.Moi);
+    const xs = d.places.filter((p) => p.bulle).map((p) => p.x).sort((u, v) => u - v);
+    const vide = Math.max(...xs.slice(1).map((v, i) => v - xs[i]));
+    expect(vide).toBeLessThanOrEqual(2.01);
+  });
+  it('montre aussi un groupe d’amis sans lien avec Moi ni sa famille', () => {
+    const a = atelier();
+    for (const n of ['Moi', 'Ami', 'Nantais1', 'Nantais2']) a.pers(n, undefined, '1990');
+    a.ami('Moi', 'Ami');
+    a.ami('Nantais1', 'Nantais2');
+    const d = disposerArbre(a.d, a.id.Moi);
+    expect(d.groupes).toHaveLength(2);
+    expect(d.places.map((p) => p.personne.id)).toEqual(expect.arrayContaining([a.id.Nantais1, a.id.Nantais2]));
+  });
+});
+
+describe('disposerArbre : frères d’un groupe d’amis', () => {
+  it('aucun ami ne s’intercale entre deux frères sans parent connu ; un conjoint sans suite n’est pas nommé', () => {
+    const a = atelier();
+    for (const [p, s] of [['Moi', 'M'], ['Baptiste', 'M'], ['Marie', 'F'], ['Corentin', 'M'], ['Mélanie', 'F'], ['Paul', 'M'], ['Côme', 'M']] as [string, Sexe][]) a.pers(p, s, '1990');
+    a.union('Baptiste', 'Marie');
+    a.union('Corentin', 'Mélanie');
+    a.d = creerGroupe(a.d, ['Moi', 'Baptiste', 'Corentin', 'Paul'].map((n) => a.id[n])).donnees;
+    a.d = ajouterFrereSansParent(a.d, a.id.Baptiste, a.id['Côme']);
+    const disp = disposerArbre(a.d, a.id.Moi);
+    const x = (n: string) => disp.places.find((pl) => pl.personne.id === a.id[n])!.x;
+    const [g, dr] = [x('Baptiste'), x('Côme')].sort((u, v) => u - v);
+    for (const n of ['Marie', 'Corentin', 'Mélanie', 'Paul']) {
+      const v = x(n);
+      expect(v < g || v > dr).toBe(true);
+    }
+    expect(disp.etiquettes.some((e) => e.texte === 'Famille X' && Math.abs(e.x - x('Corentin')) < 1)).toBe(false);
+  });
+});
+
+describe('disposerArbre : groupe d’amis sans Moi', () => {
+  it('un ami seul ne s’intercale pas entre deux conjoints ; la fratrie sans parent connu porte son nom', () => {
+    const a = atelier();
+    for (const [p, s] of [['Moi', 'M'], ['Adrien', 'M'], ['Marie', 'F'], ['Baptiste', 'M'], ['Corentin', 'M'], ['Kilian', 'M'], ['Côme', 'M']] as [string, Sexe][]) a.pers(p, s, '1990');
+    a.union('Adrien', 'Marie');
+    a.d = creerGroupe(a.d, ['Adrien', 'Baptiste', 'Corentin', 'Kilian'].map((n) => a.id[n])).donnees;
+    a.d = ajouterFrereSansParent(a.d, a.id.Baptiste, a.id['Côme']);
+    const disp = disposerArbre(a.d, a.id.Moi);
+    const x = (n: string) => disp.places.find((pl) => pl.personne.id === a.id[n])!.x;
+    expect(Math.abs(x('Adrien') - x('Marie'))).toBeCloseTo(1, 5);
+    expect(Math.abs(x('Baptiste') - x('Côme'))).toBeLessThan(2);
+    expect(disp.etiquettes.filter((e) => e.texte === 'Famille X')).toHaveLength(1);
   });
 });

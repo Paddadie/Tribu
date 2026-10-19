@@ -2,12 +2,12 @@
 // elles renvoient de nouvelles données sans modifier les anciennes, et lèvent
 // une Error (message en français) quand une règle du modèle est violée.
 
-import type { Amitie, Donnees, Filiation, Personne, Sexe, TypeFiliation, Union } from './types';
+import type { Donnees, Filiation, GroupeAmis, Personne, Sexe, StatutUnion, TypeFiliation, Union } from './types';
 
 export const MAX_PARENTS_PAR_TYPE = 2;
 
 export function donneesVides(): Donnees {
-  return { version: 3, personnes: [], unions: [], filiations: [], amities: [] };
+  return { version: 4, personnes: [], unions: [], filiations: [], groupes: [] };
 }
 
 function nouvelId(): string {
@@ -27,8 +27,16 @@ export interface ChampsPersonne {
   nom: string;
   naissance?: string;
   deces?: string;
+  /** Interrupteur « Décédé » : sans lui, `deces` est ignoré. Absent : décédée si `deces` est rempli. */
+  decede?: boolean;
   sexe?: Sexe;
+  nomNaissance?: string;
   note?: string;
+}
+
+/** Décédée : interrupteur allumé, ou date de décès connue (données d'avant l'interrupteur). */
+export function estDecede(p: Pick<Personne, 'deces' | 'decede'>): boolean {
+  return !!p.decede || !!p.deces;
 }
 
 /** Forme d'une date partielle : « AAAA », « AAAA-MM » ou « AAAA-MM-JJ » (groupes : année, mois, jour). Sans drapeau g : partageable. */
@@ -71,12 +79,22 @@ export function joursDuMois(annee: number, mois: number): number {
 
 /**
  * Le décès ne précède pas la naissance ; deux dates partielles se comparent sur ce qu'elles ont en commun.
- * Une naissance sans année ne permet pas de trancher : jamais en défaut.
+ * Une naissance ou un décès sans année ne permet pas de trancher : jamais en défaut.
  */
 export function decesAvantNaissance(naissance: string, deces: string): boolean {
-  if (!anneeDe(naissance)) return false;
+  if (!anneeDe(naissance) || !anneeDe(deces)) return false;
   const n = Math.min(naissance.length, deces.length);
   return deces.slice(0, n) < naissance.slice(0, n);
+}
+
+/** Parent inconnu : personne cachée qui relie des frères et sœurs sans parent connu (voir `Personne.inconnu`). */
+export function estInconnu(p: Pick<Personne, 'inconnu'>): boolean {
+  return !!p.inconnu;
+}
+
+/** Les personnes à montrer (listes, recherche, compteurs) : sans les parents inconnus. */
+export function personnesVisibles(d: Donnees): Personne[] {
+  return d.personnes.filter((p) => !p.inconnu);
 }
 
 function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
@@ -87,9 +105,10 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
   if (naissance && !estDateValide(naissance) && !estDateSansAnneeValide(naissance)) {
     throw new Error('Date de naissance invalide (attendu : année, mois et année, date complète, ou jour et mois)');
   }
-  const deces = champs.deces?.trim();
-  if (deces && !estDateValide(deces)) {
-    throw new Error('Date de décès invalide (attendu : année, mois et année, ou date complète)');
+  const decede = champs.decede ?? !!champs.deces?.trim();
+  const deces = decede ? champs.deces?.trim() : undefined;
+  if (deces && !estDateValide(deces) && !estDateSansAnneeValide(deces)) {
+    throw new Error('Date de décès invalide (attendu : année, mois et année, date complète, ou jour et mois)');
   }
   if (naissance && deces && decesAvantNaissance(naissance, deces)) {
     throw new Error('Le décès ne peut pas précéder la naissance');
@@ -102,7 +121,10 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
     nom,
     ...(naissance ? { naissance } : {}),
     ...(deces ? { deces } : {}),
+    // La date suffit à dire le décès : le drapeau ne sert qu'en son absence.
+    ...(decede && !deces ? { decede: true as const } : {}),
     ...(champs.sexe ? { sexe: champs.sexe } : {}),
+    ...(champs.sexe === 'F' && champs.nomNaissance?.trim() ? { nomNaissance: champs.nomNaissance.trim() } : {}),
     note: champs.note ?? '',
   };
 }
@@ -128,19 +150,32 @@ export function aDesLiens(d: Donnees, id: string): boolean {
   return (
     d.unions.some((u) => u.personneA === id || u.personneB === id) ||
     d.filiations.some((f) => f.parent === id || f.enfant === id) ||
-    d.amities.some((a) => a.personneA === id || a.personneB === id)
+    d.groupes.some((g) => g.membres.includes(id))
   );
 }
 
-/** Retire la personne ainsi que toutes ses unions, filiations et amitiés. */
+/** Retire la personne ainsi que toutes ses unions, filiations et appartenances à des groupes d'amis. */
 export function supprimerPersonne(d: Donnees, id: string): Donnees {
   exigerPersonne(d, id);
-  return {
+  return retirerInconnusOrphelins({
     ...d,
     personnes: d.personnes.filter((p) => p.id !== id),
     unions: d.unions.filter((u) => u.personneA !== id && u.personneB !== id),
     filiations: d.filiations.filter((f) => f.parent !== id && f.enfant !== id),
-    amities: d.amities.filter((a) => a.personneA !== id && a.personneB !== id),
+    groupes: sansPersonne(d.groupes, id),
+  });
+}
+
+/** Un parent inconnu n'a de sens que s'il relie au moins deux enfants : sinon, il est retiré avec ses liens. */
+function retirerInconnusOrphelins(d: Donnees): Donnees {
+  const orphelins = new Set(
+    d.personnes.filter((p) => p.inconnu && d.filiations.filter((f) => f.parent === p.id).length < 2).map((p) => p.id),
+  );
+  if (orphelins.size === 0) return d;
+  return {
+    ...d,
+    personnes: d.personnes.filter((p) => !orphelins.has(p.id)),
+    filiations: d.filiations.filter((f) => !orphelins.has(f.parent)),
   };
 }
 
@@ -149,6 +184,7 @@ export function ajouterUnion(
   personneA: string,
   personneB: string,
   marie = false,
+  statut: StatutUnion = 'actuelle',
 ): { donnees: Donnees; union: Union } {
   exigerPersonne(d, personneA);
   exigerPersonne(d, personneB);
@@ -159,11 +195,30 @@ export function ajouterUnion(
       (u.personneA === personneB && u.personneB === personneA),
   );
   if (doublon) throw new Error('Ces deux personnes ont déjà une union : rétablissez-la depuis leur fiche');
-  if (enCouple(d, personneA) || enCouple(d, personneB)) {
+  // Un seul conjoint actuel par personne ; les ex (union séparée) ne sont pas limités.
+  if (statut === 'actuelle' && (enCouple(d, personneA) || enCouple(d, personneB))) {
     throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
   }
-  const union: Union = { id: nouvelId(), personneA, personneB, marie, statut: 'actuelle' };
-  return { donnees: { ...d, unions: [...d.unions, union] }, union };
+  const union: Union = { id: nouvelId(), personneA, personneB, marie, statut };
+  const ajoute = { ...d, unions: [...d.unions, union] };
+  return { donnees: marie && statut === 'actuelle' ? prendreNomDuConjoint(ajoute, union) : ajoute, union };
+}
+
+/**
+ * Mariage : chaque femme de l'union (dont le conjoint n'est pas une femme) garde son nom actuel comme nom de jeune fille,
+ * sauf si elle en a déjà un, et prend le nom de son conjoint. Sans effet si le conjoint n'a pas de nom ou porte déjà le même.
+ */
+function prendreNomDuConjoint(d: Donnees, union: Union): Donnees {
+  const a = d.personnes.find((p) => p.id === union.personneA);
+  const b = d.personnes.find((p) => p.id === union.personneB);
+  if (!a || !b) return d;
+  const epouse = (femme: Personne, mari: Personne): Personne =>
+    femme.sexe !== 'F' || mari.sexe === 'F' || !mari.nom || femme.nom === mari.nom
+      ? femme
+      : { ...femme, nom: mari.nom, ...(femme.nomNaissance || !femme.nom ? {} : { nomNaissance: femme.nom }) };
+  const a2 = epouse(a, b);
+  const b2 = epouse(b, a);
+  return { ...d, personnes: d.personnes.map((p) => (p.id === a.id ? a2 : p.id === b.id ? b2 : p)) };
 }
 
 function exigerUnion(d: Donnees, id: string): Union {
@@ -173,8 +228,10 @@ function exigerUnion(d: Donnees, id: string): Union {
 }
 
 export function modifierUnion(d: Donnees, id: string, marie: boolean): Donnees {
-  exigerUnion(d, id);
-  return { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, marie } : u)) };
+  const avant = exigerUnion(d, id);
+  const maj = { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, marie } : u)) };
+  // Seul le passage à « marié » d'un couple actuel change les noms.
+  return marie && !avant.marie && avant.statut === 'actuelle' ? prendreNomDuConjoint(maj, { ...avant, marie }) : maj;
 }
 
 /** Une séparation garde l'union, au statut « séparée » : la personne n'a plus de conjoint actuel. */
@@ -209,24 +266,84 @@ export function ajouterFiliation(
   if (d.filiations.some((f) => f.parent === parent && f.enfant === enfant)) {
     throw new Error('Ce lien parent-enfant existe déjà');
   }
-  exigerPlaceParent(d, enfant, type);
-  if (estDescendant(d, parent, enfant)) {
+  const base = reprendreParentsInconnus(d, parent, enfant);
+  exigerPlaceParent(base, enfant, type);
+  if (estDescendant(base, parent, enfant)) {
     throw new Error('Ce lien créerait une boucle : le parent descend déjà de cet enfant');
   }
   const filiation: Filiation = { id: nouvelId(), parent, enfant, type };
-  return { donnees: { ...d, filiations: [...d.filiations, filiation] }, filiation };
+  return { donnees: { ...base, filiations: [...base.filiations, filiation] }, filiation };
+}
+
+/** Parents inconnus de `enfant`, et les autres enfants qu'ils relient (ses frères et sœurs sans parent connu). */
+function groupeInconnu(d: Donnees, enfant: string): { inconnus: Set<string>; freres: Filiation[] } {
+  const inconnus = new Set(d.filiations.filter((f) => f.enfant === enfant && d.personnes.some((p) => p.id === f.parent && p.inconnu)).map((f) => f.parent));
+  return { inconnus, freres: d.filiations.filter((f) => inconnus.has(f.parent) && f.enfant !== enfant) };
+}
+
+/**
+ * Un vrai parent ajouté à un enfant qui n'a que des parents inconnus les remplace pour toute la fratrie :
+ * les frères et sœurs deviennent enfants de ce parent, le parent inconnu disparaît (sinon ils deviendraient des demis).
+ */
+function reprendreParentsInconnus(d: Donnees, parent: string, enfant: string): Donnees {
+  if (d.personnes.some((p) => p.id === parent && p.inconnu)) return d;
+  const { inconnus, freres } = groupeInconnu(d, enfant);
+  if (inconnus.size === 0) return d;
+  for (const f of freres) {
+    if (f.enfant === parent || estDescendant(d, parent, f.enfant)) {
+      throw new Error('Ce lien créerait une boucle : le parent descend déjà d’un frère ou d’une sœur de cet enfant');
+    }
+  }
+  const reprises = freres.filter((f) => !d.filiations.some((g) => g.parent === parent && g.enfant === f.enfant)).map((f) => ({ ...f, parent }));
+  return {
+    ...d,
+    personnes: d.personnes.filter((p) => !inconnus.has(p.id)),
+    filiations: [...d.filiations.filter((f) => !inconnus.has(f.parent)), ...reprises],
+  };
 }
 
 /**
  * Relie `enfant` à plusieurs parents d'un coup (enfant d'un couple, frère ou sœur), avec le même type.
  * Un parent déjà relié à l'enfant est passé ; au moins un parent est demandé.
+ * Si l'enfant avait des frères et sœurs sans parent connu, les parents sont aussi les leurs.
  */
 export function ajouterFiliations(d: Donnees, parents: string[], enfant: string, type: TypeFiliation): Donnees {
   if (parents.length === 0) throw new Error('Cochez au moins un parent');
-  return parents.reduce(
-    (x, parent) => (x.filiations.some((f) => f.parent === parent && f.enfant === enfant) ? x : ajouterFiliation(x, parent, enfant, type).donnees),
-    d,
-  );
+  const fratrie = [enfant, ...new Set(groupeInconnu(d, enfant).freres.map((f) => f.enfant))];
+  const relier = (x: Donnees, parent: string, e: string) =>
+    x.filiations.some((f) => f.parent === parent && f.enfant === e) ? x : ajouterFiliation(x, parent, e, type).donnees;
+  return parents.reduce((x, parent) => fratrie.reduce((y, e) => relier(y, parent, e), x), d);
+}
+
+/**
+ * Frère ou sœur sans parent connu : `a` (la fiche) n'a aucun parent connu. Si `b` en a, `a` devient leur enfant ;
+ * sinon, les deux sont reliés à un parent inconnu créé en coulisse (réutilisé s'ils en ont déjà un, fusionné s'ils en ont deux).
+ */
+export function ajouterFrereSansParent(d: Donnees, a: string, b: string): Donnees {
+  exigerPersonne(d, a);
+  exigerPersonne(d, b);
+  if (a === b) throw new Error('Une personne ne peut pas être son propre frère ou sa propre sœur');
+  const estInconnuId = (id: string) => d.personnes.some((p) => p.id === id && p.inconnu);
+  const reels = (id: string) => d.filiations.filter((f) => f.enfant === id && !estInconnuId(f.parent));
+  const inconnuDe = (id: string) => d.filiations.find((f) => f.enfant === id && estInconnuId(f.parent))?.parent;
+  if (reels(a).length > 0) throw new Error('Cette personne a des parents connus : cochez-les pour lui ajouter un frère ou une sœur');
+  const parentsDeB = reels(b);
+  if (parentsDeB.length > 0) {
+    return ajouterFiliations(d, parentsDeB.map((f) => f.parent), a, 'biologique');
+  }
+  const [pa, pb] = [inconnuDe(a), inconnuDe(b)];
+  if (pa && pa === pb) throw new Error('Ces deux personnes sont déjà frères ou sœurs');
+  const inconnu: Personne = { id: pa ?? pb ?? nouvelId(), prenom: '', nom: '', note: '', inconnu: true };
+  // Un groupe existant l'emporte ; deux groupes distincts fusionnent dans celui de `a`.
+  const fusion = pa && pb ? pb : undefined;
+  const personnes = pa || pb ? d.personnes : [...d.personnes, inconnu];
+  const filiations = d.filiations.map((f) => (f.parent === fusion ? { ...f, parent: inconnu.id } : f));
+  for (const enfant of [a, b]) {
+    if (!filiations.some((f) => f.parent === inconnu.id && f.enfant === enfant)) {
+      filiations.push({ id: nouvelId(), parent: inconnu.id, enfant, type: 'biologique' });
+    }
+  }
+  return { ...d, personnes: personnes.filter((p) => p.id !== fusion), filiations };
 }
 
 /** Change le type (biologique/adoptif) d'un lien existant, sous la même limite de deux parents par type. */
@@ -263,25 +380,98 @@ function estDescendant(d: Donnees, id: string, ancetre: string): boolean {
 
 export function supprimerFiliation(d: Donnees, id: string): Donnees {
   if (!d.filiations.some((f) => f.id === id)) throw new Error(`Filiation introuvable : ${id}`);
-  return { ...d, filiations: d.filiations.filter((f) => f.id !== id) };
+  return retirerInconnusOrphelins({ ...d, filiations: d.filiations.filter((f) => f.id !== id) });
 }
 
-/** Deux personnes sont-elles amies (dans un sens ou dans l'autre) ? */
+// --- Groupes d'amis ------------------------------------------------------------
+
+/** Deux personnes sont-elles amies (dans un même groupe) ? */
 export function sontAmis(d: Donnees, idA: string, idB: string): boolean {
-  return d.amities.some((a) => (a.personneA === idA && a.personneB === idB) || (a.personneA === idB && a.personneB === idA));
+  return idA !== idB && d.groupes.some((g) => g.membres.includes(idA) && g.membres.includes(idB));
 }
 
-/** Amitié entre deux personnes quelconques, de la famille ou non ; une seule par paire. */
-export function ajouterAmitie(d: Donnees, personneA: string, personneB: string): { donnees: Donnees; amitie: Amitie } {
-  exigerPersonne(d, personneA);
-  exigerPersonne(d, personneB);
-  if (personneA === personneB) throw new Error('Une personne ne peut pas être sa propre amie');
-  if (sontAmis(d, personneA, personneB)) throw new Error('Ces deux personnes sont déjà amies');
-  const amitie: Amitie = { id: nouvelId(), personneA, personneB };
-  return { donnees: { ...d, amities: [...d.amities, amitie] }, amitie };
+/** Groupes dont la personne est membre. */
+export function groupesDe(d: Donnees, id: string): GroupeAmis[] {
+  return d.groupes.filter((g) => g.membres.includes(id));
 }
 
-export function supprimerAmitie(d: Donnees, id: string): Donnees {
-  if (!d.amities.some((a) => a.id === id)) throw new Error(`Amitié introuvable : ${id}`);
-  return { ...d, amities: d.amities.filter((a) => a.id !== id) };
+/** Groupes dont `id` ou un membre de sa famille fait partie (liens de filiation et d'union, de proche en proche). */
+export function groupesDeLaFamille(d: Donnees, id: string): GroupeAmis[] {
+  const voisins = new Map<string, string[]>();
+  const lier = (a: string, b: string) => {
+    voisins.set(a, [...(voisins.get(a) ?? []), b]);
+    voisins.set(b, [...(voisins.get(b) ?? []), a]);
+  };
+  for (const f of d.filiations) lier(f.parent, f.enfant);
+  for (const u of d.unions) lier(u.personneA, u.personneB);
+  const vus = new Set([id]);
+  const file = [id];
+  const trouves = new Set<GroupeAmis>();
+  for (let i = 0; i < file.length; i++) {
+    groupesDe(d, file[i]).forEach((g) => trouves.add(g));
+    for (const v of voisins.get(file[i]) ?? []) {
+      if (vus.has(v)) continue;
+      vus.add(v);
+      file.push(v);
+    }
+  }
+  return [...trouves];
+}
+
+function exigerGroupe(d: Donnees, id: string): GroupeAmis {
+  const g = d.groupes.find((x) => x.id === id);
+  if (!g) throw new Error(`Groupe d'amis introuvable : ${id}`);
+  return g;
+}
+
+/** Remplace un groupe ; un groupe qui n'a plus deux membres disparaît. */
+function avecGroupe(d: Donnees, g: GroupeAmis): Donnees {
+  return { ...d, groupes: d.groupes.flatMap((x) => (x.id !== g.id ? [x] : g.membres.length >= 2 ? [g] : [])) };
+}
+
+/** Groupe d'amis de deux personnes au moins, qui deviennent toutes amies entre elles. */
+export function creerGroupe(d: Donnees, membres: string[], nom = ''): { donnees: Donnees; groupe: GroupeAmis } {
+  const distincts = [...new Set(membres)];
+  distincts.forEach((id) => exigerPersonne(d, id));
+  if (distincts.length < 2) throw new Error('Un groupe d’amis compte au moins deux personnes');
+  const groupe: GroupeAmis = { id: nouvelId(), nom: nom.trim(), membres: distincts };
+  return { donnees: { ...d, groupes: [...d.groupes, groupe] }, groupe };
+}
+
+export function ajouterAuGroupe(d: Donnees, groupe: string, personne: string): Donnees {
+  const g = exigerGroupe(d, groupe);
+  exigerPersonne(d, personne);
+  if (g.membres.includes(personne)) throw new Error('Cette personne est déjà dans ce groupe');
+  return avecGroupe(d, { ...g, membres: [...g.membres, personne] });
+}
+
+/** Retire un membre ; le groupe est supprimé s'il lui reste moins de deux membres. */
+export function retirerDuGroupe(d: Donnees, groupe: string, personne: string): Donnees {
+  const g = exigerGroupe(d, groupe);
+  if (!g.membres.includes(personne)) throw new Error('Cette personne n’est pas dans ce groupe');
+  return avecGroupe(d, { ...g, membres: g.membres.filter((m) => m !== personne) });
+}
+
+export function renommerGroupe(d: Donnees, groupe: string, nom: string): Donnees {
+  return avecGroupe(d, { ...exigerGroupe(d, groupe), nom: nom.trim() });
+}
+
+export function supprimerGroupe(d: Donnees, id: string): Donnees {
+  exigerGroupe(d, id);
+  return { ...d, groupes: d.groupes.filter((g) => g.id !== id) };
+}
+
+/** Retire une personne de tous les groupes ; ceux qui n'ont plus deux membres disparaissent. */
+function sansPersonne(groupes: GroupeAmis[], id: string): GroupeAmis[] {
+  return groupes.map((g) => ({ ...g, membres: g.membres.filter((m) => m !== id) })).filter((g) => g.membres.length >= 2);
+}
+
+/**
+ * Mariage de deux parents sans union actuelle (l'un d'eux est un parent sans nom) : l'union est créée « séparée »
+ * si elle manque, car ils ne sont pas un couple actuel ; décochée, une union séparée disparaît.
+ */
+export function definirMariageParents(d: Donnees, a: string, b: string, marie: boolean): Donnees {
+  const u = d.unions.find((x) => (x.personneA === a && x.personneB === b) || (x.personneA === b && x.personneB === a));
+  if (u) return u.statut === 'separee' && !marie ? supprimerUnion(d, u.id) : modifierUnion(d, u.id, marie);
+  return marie ? ajouterUnion(d, a, b, true, 'separee').donnees : d;
 }

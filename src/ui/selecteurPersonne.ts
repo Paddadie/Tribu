@@ -5,7 +5,7 @@
 // ensemble, en une seule modification.
 
 import { avecDe, comparateur, filtrerParNom, nomListe } from '../modele/liste';
-import { creerPersonne } from '../modele/modele';
+import { creerPersonne, personnesVisibles } from '../modele/modele';
 import type { NomPropose, Suggestion } from '../modele/saisie';
 import type { Donnees, Personne, Sexe } from '../modele/types';
 import { accepterHomonyme, champsIdentite } from './champsPersonne';
@@ -23,6 +23,8 @@ export interface OptionsSelecteur {
   libelleOrigine: string;
   /** Bouton de validation pour une personne existante (« Ajouter ce conjoint »). */
   libelleValider: string;
+  /** Si présent, plusieurs personnes existantes peuvent être cochées d'un coup ; donne le bouton pour `n` ≥ 2 personnes. */
+  libelleValiderPlusieurs?: (n: number) => string;
   /** Sexe coché d'avance pour une nouvelle personne. */
   sexeParDefaut?: Sexe;
   /** Noms proposés pour une nouvelle personne : le premier est prérempli, un bouton passe au suivant. */
@@ -45,6 +47,8 @@ export interface Selecteur {
   zone: HTMLElement;
   erreur: HTMLElement;
   valider: HTMLButtonElement;
+  /** Erreur et bouton de validation, collés au bas de l'écran : à placer en dernier. */
+  pied: HTMLElement;
   /** À appeler quand un réglage de l'écran change (parents cochés) : liste, nom proposé et bouton. */
   rafraichir: () => void;
   /** Une saisie de nouvelle personne serait perdue. */
@@ -55,7 +59,9 @@ const appel = (p: Personne) => p.prenom || p.nom;
 
 export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   let mode: Mode = 'nouvelle';
-  let choisie: string | undefined;
+  /** Personnes existantes cochées (une seule hors choix multiple). */
+  const choisies = new Set<string>();
+  const multiple = o.libelleValiderPlusieurs !== undefined;
   let filtre = '';
 
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
@@ -85,22 +91,26 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   });
   identite.champNom.append(boutonNom);
 
+  // La coche à droite de la ligne choisie est dessinée par le CSS (`.ligne-choix.choisie::after`).
   const ligne = (c: Personne, detail: string | undefined, inactive: boolean): HTMLElement =>
     h(
       'button',
       {
         type: 'button',
-        class: `ligne ligne-choix${choisie === c.id ? ' choisie' : ''}`,
+        class: `ligne ligne-choix${choisies.has(c.id) ? ' choisie' : ''}`,
         disabled: inactive,
-        'aria-pressed': choisie === c.id,
+        'aria-pressed': String(choisies.has(c.id)),
         onclick: () => {
-          choisie = c.id;
+          if (choisies.has(c.id)) choisies.delete(c.id);
+          else {
+            if (!multiple) choisies.clear();
+            choisies.add(c.id);
+          }
           dessinerListe();
           majBouton();
         },
       },
       ...contenuLigne(c, nomListe(c, lireReglages().tri), detail),
-      choisie === c.id && icone('coche', 22),
     );
 
   const bloc = (titre: string, lignes: HTMLElement[]) =>
@@ -109,13 +119,14 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   /** Suggestions en tête, puis les autres personnes choisissables, puis les indisponibles avec leur raison. */
   const lignes = (): HTMLElement[] => {
     const d = lireDonnees();
-    const autres = d.personnes.filter((c) => c.id !== o.personne.id).sort(comparateur(lireReglages().tri));
+    const autres = personnesVisibles(d).filter((c) => c.id !== o.personne.id).sort(comparateur(lireReglages().tri));
     if (autres.length === 0) return [h('p', { class: 'vide' }, 'Aucune autre personne. Créez-en une avec « Nouvelle personne ».')];
+    // Une personne cochée devenue indisponible (parent coché ou décoché) est décochée, même si la recherche la masque.
+    for (const c of autres) if (choisies.has(c.id) && o.indisponible(d, c) !== undefined) choisies.delete(c.id);
     const trouvees = filtrerParNom(autres, filtre);
     if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];
     const raisons = new Map(trouvees.map((c) => [c.id, o.indisponible(d, c)]));
     const suggerees = new Map((o.suggestions?.(d) ?? []).map((s) => [s.personne.id, s.detail]));
-    if (choisie && raisons.get(choisie) !== undefined) choisie = undefined;
 
     const enTete = trouvees.filter((c) => suggerees.has(c.id) && raisons.get(c.id) === undefined);
     const reste = [...trouvees.filter((c) => !enTete.includes(c) && raisons.get(c.id) === undefined), ...trouvees.filter((c) => raisons.get(c.id) !== undefined)];
@@ -130,8 +141,8 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   const dessinerListe = () => liste.replaceChildren(...lignes());
 
   const majBouton = () => {
-    valider.textContent = mode === 'existante' ? o.libelleValider : 'Créer et ajouter';
-    valider.disabled = (mode === 'existante' && !choisie) || o.pret?.() === false;
+    valider.textContent = mode !== 'existante' ? 'Créer et ajouter' : o.libelleValiderPlusieurs && choisies.size > 1 ? o.libelleValiderPlusieurs(choisies.size) : o.libelleValider;
+    valider.disabled = (mode === 'existante' && choisies.size === 0) || o.pret?.() === false;
   };
 
   const dessiner = () => {
@@ -178,15 +189,16 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     erreur.hidden = true;
     try {
       if (mode === 'existante') {
-        if (!choisie) throw new Error('Choisissez une personne');
-        const autre = choisie;
-        modifierDonnees((d) => o.lier(d, autre));
-        signaler(autre);
+        if (choisies.size === 0) throw new Error('Choisissez une personne');
+        const autres = [...choisies];
+        // Un seul enregistrement : si un lien est refusé, aucun n'est ajouté.
+        modifierDonnees((d) => autres.reduce(o.lier, d));
+        signaler(autres[0]);
       } else {
         const champs = identite.lire();
         // Saisie vérifiée avant de parler d'homonyme.
         creerPersonne(lireDonnees(), champs);
-        if (!(await accepterHomonyme(lireDonnees().personnes, champs, 'Pour relier celle qui existe, choisissez-la dans « Personne existante ».'))) return;
+        if (!(await accepterHomonyme(personnesVisibles(lireDonnees()), champs, 'Pour relier celle qui existe, choisissez-la dans « Personne existante ».'))) return;
         let idNouvelle = '';
         modifierDonnees((d) => {
           const nouvelle = creerPersonne(d, champs);
@@ -210,6 +222,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     zone,
     erreur,
     valider,
+    pied: h('div', { class: 'pied-collant' }, erreur, valider),
     rafraichir: () => {
       majBouton();
       poserNom(false);

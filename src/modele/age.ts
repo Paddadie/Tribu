@@ -1,7 +1,7 @@
 // Âge, libellés de décès et prochains anniversaires. Fonctions pures : la date du jour est toujours passée en paramètre.
 
 import { accorder, libelleNaissance, MOIS } from './liste';
-import { anneeDe, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
+import { anneeDe, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
 import type { Personne } from './types';
 
 /** « 2026-10-19 », date locale. */
@@ -45,9 +45,11 @@ export function ageEntre(naissance: string, jusqua: string): Age | undefined {
   return { annees: Math.min(plus, Math.max(moins, milieu)), approximatif: true };
 }
 
-/** Âge actuel, ou à la mort ; undefined sans année de naissance. */
-export function agePersonne(p: Pick<Personne, 'naissance' | 'deces'>, aujourdhui: Date): Age | undefined {
-  return p.naissance && anneeDe(p.naissance) ? ageEntre(p.naissance, p.deces ?? iso(aujourdhui)) : undefined;
+/** Âge actuel, ou à la mort ; undefined sans année de naissance, ou pour un décès sans année. */
+export function agePersonne(p: Pick<Personne, 'naissance' | 'deces' | 'decede'>, aujourdhui: Date): Age | undefined {
+  if (!p.naissance || !anneeDe(p.naissance)) return undefined;
+  if (!estDecede(p)) return ageEntre(p.naissance, iso(aujourdhui));
+  return p.deces && anneeDe(p.deces) ? ageEntre(p.naissance, p.deces) : undefined;
 }
 
 function enAnnees({ annees, approximatif }: Age): string {
@@ -56,25 +58,29 @@ function enAnnees({ annees, approximatif }: Age): string {
 }
 
 /** « 34 ans » ou « environ 34 ans » ; vide pour une personne décédée (voir `libelleAgeDeces`) ou sans naissance. */
-export function libelleAge(p: Pick<Personne, 'naissance' | 'deces'>, aujourdhui: Date): string {
-  if (p.deces) return '';
+export function libelleAge(p: Pick<Personne, 'naissance' | 'deces' | 'decede'>, aujourdhui: Date): string {
+  if (estDecede(p)) return '';
   const age = agePersonne(p, aujourdhui);
   return age ? enAnnees(age) : '';
 }
 
 /** « Morte à 82 ans » ; vide si la personne n'est pas décédée ou si sa naissance est inconnue. */
-export function libelleAgeDeces(p: Pick<Personne, 'naissance' | 'deces' | 'sexe'>, aujourdhui: Date): string {
-  if (!p.deces) return '';
+export function libelleAgeDeces(p: Pick<Personne, 'naissance' | 'deces' | 'decede' | 'sexe'>, aujourdhui: Date): string {
+  if (!estDecede(p)) return '';
   const age = agePersonne(p, aujourdhui);
   return age ? `${accorder(p.sexe, 'Mort', 'Morte', 'Mort(e)')} à ${enAnnees(age)}` : '';
 }
 
-/** Seconde ligne d'une personne dans une liste : « 1941 – 2024 » si elle est décédée, sinon naissance et âge. */
+/**
+ * Seconde ligne d'une personne dans une liste. Décédée : « 1941 – 2024 », « 1941 – ? » sans année de décès,
+ * « décédée en 2024 » sans année de naissance, « décédée » sans aucune des deux. Sinon naissance et âge.
+ */
 export function detailPersonne(p: Personne, aujourdhui: Date): string {
-  if (p.deces) {
-    const naissance = anneeDe(p.naissance);
-    if (naissance) return `${naissance} – ${anneeDe(p.deces)}`;
-    return `décédé${p.sexe === 'F' ? 'e' : p.sexe === 'M' ? '' : '(e)'} en ${anneeDe(p.deces)}`;
+  if (estDecede(p)) {
+    const [naissance, deces] = [anneeDe(p.naissance), anneeDe(p.deces)];
+    if (naissance) return `${naissance} – ${deces ?? '?'}`;
+    const decede = accorder(p.sexe, 'décédé', 'décédée', 'décédé(e)');
+    return deces ? `${decede} en ${deces}` : decede;
   }
   return [libelleNaissance(p.naissance, p.sexe), libelleAge(p, aujourdhui)].filter(Boolean).join(' · ');
 }
@@ -100,7 +106,7 @@ export function prochainsAnniversaires(personnes: Personne[], aujourdhui: Date, 
   const base = Date.UTC(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
   const trouves: Anniversaire[] = [];
   for (const personne of personnes) {
-    if (personne.deces || !personne.naissance) continue;
+    if (estDecede(personne) || !personne.naissance) continue;
     const complete = personne.naissance.match(MOTIF_DATE);
     const sansAnnee = personne.naissance.match(MOTIF_SANS_ANNEE);
     let naissance: number | undefined, mois: number, jour: number;

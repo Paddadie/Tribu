@@ -12,10 +12,19 @@ export interface Personne {
   nom: string;
   /** Date ISO facultative, éventuellement partielle : « AAAA », « AAAA-MM » ou « AAAA-MM-JJ ». */
   naissance?: string;
-  /** Date de décès facultative, de la même forme que la naissance. Absente = vivante. */
+  /** Date de décès facultative, de la même forme que la naissance (sans année possible). */
   deces?: string;
+  /** Décédée sans date de décès connue (la date seule suffit sinon, voir `estDecede`). Absents tous deux = vivante. */
+  decede?: true;
   sexe?: Sexe;
+  /** Nom de jeune fille d'une femme mariée (`nom` est alors son nom d'épouse). */
+  nomNaissance?: string;
   note: string;
+  /**
+   * Parent inconnu : personne sans nom créée en coulisse pour relier des frères et sœurs dont on ignore les parents.
+   * Elle compte dans les déductions mais n'apparaît jamais (listes, fiches, arbres) ; voir `estInconnu`.
+   */
+  inconnu?: true;
 }
 
 /** `actuelle` : le couple de maintenant (un seul par personne) ; `separee` : un ex, gardé pour l'historique. */
@@ -38,17 +47,21 @@ export interface Filiation {
   type: TypeFiliation;
 }
 
-/** Amitié entre deux personnes distinctes quelconques ; elle ne crée aucune parenté. */
-export interface Amitie {
+/**
+ * Groupe d'amis : toutes les personnes qui en font partie sont amies entre elles, de la famille ou non ;
+ * une amitié ne crée aucune parenté. Au moins deux membres. `Moi` est un membre comme un autre : un groupe
+ * qui le contient est « tes amis ». Le nom est facultatif (voir `nomGroupe`).
+ */
+export interface GroupeAmis {
   id: string;
-  personneA: string;
-  personneB: string;
+  nom: string;
+  membres: string[];
 }
 
 export interface Donnees {
-  version: 3;
+  version: 4;
   personnes: Personne[];
   unions: Union[];
   filiations: Filiation[];
-  amities: Amitie[];
+  groupes: GroupeAmis[];
 }

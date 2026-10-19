@@ -32,9 +32,39 @@ function v2versV3(v: Record<string, unknown>): Record<string, unknown> {
   return { ...v, version: 3, amities: [] };
 }
 
+/**
+ * v3 → v4 : les amitiés deux à deux deviennent des groupes d'amis. Chaque ensemble de personnes reliées
+ * par des amitiés (transitivement) forme un groupe sans nom : les amis d'amis rejoignent donc le même groupe.
+ */
+function v3versV4(v: Record<string, unknown>): Record<string, unknown> {
+  const { amities, ...reste } = v;
+  const chef = new Map<unknown, unknown>();
+  const trouver = (x: unknown): unknown => {
+    let r = x;
+    while (chef.has(r) && chef.get(r) !== r) r = chef.get(r);
+    return r;
+  };
+  const ordre: unknown[] = [];
+  for (const a of Array.isArray(amities) ? amities : []) {
+    if (!estObjet(a)) continue;
+    for (const x of [a.personneA, a.personneB]) {
+      if (!chef.has(x)) {
+        chef.set(x, x);
+        ordre.push(x);
+      }
+    }
+    chef.set(trouver(a.personneA), trouver(a.personneB));
+  }
+  const parGroupe = new Map<unknown, unknown[]>();
+  for (const x of ordre) parGroupe.set(trouver(x), [...(parGroupe.get(trouver(x)) ?? []), x]);
+  const groupes = [...parGroupe.values()].map((membres) => ({ id: crypto.randomUUID(), nom: '', membres }));
+  return { ...reste, version: 4, groupes };
+}
+
 export function migrer(brut: unknown): unknown {
   let v = brut;
   if (estObjet(v) && v.version === 1) v = v1versV2(v);
   if (estObjet(v) && v.version === 2) v = v2versV3(v);
+  if (estObjet(v) && v.version === 3) v = v3versV4(v);
   return v;
 }

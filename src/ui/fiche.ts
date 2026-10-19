@@ -2,12 +2,13 @@
 // famille élargie déduite, ajout d'un proche, modification, suppression avec confirmation.
 
 import { detailPersonne, libelleAge, libelleAgeDeces } from '../modele/age';
-import { amis, chemin, conjoint, enfantsDuCouple, exConjoints, familleElargie, foyer, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
-import { avecDe, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
-import { aDesLiens, enCouple, supprimerAmitie, supprimerPersonne } from '../modele/modele';
+import { chemin, nomGroupe, conjoint, enfantsDuCouple, exConjoints, familleElargie, foyer, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
+import { avecDe, comparateur, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
+import { aDesLiens, enCouple, estDecede, groupesDe, retirerDuGroupe, supprimerPersonne } from '../modele/modele';
 import { etiquette as etiquetteMoi, libelleRelation } from '../modele/parente';
+import { estParentSansNom } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
-import type { Personne, Union } from '../modele/types';
+import type { GroupeAmis, Personne, Union } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { dessinChemin, dessinFoyer } from './arbre';
 import { confirmer } from './confirmer';
@@ -40,8 +41,6 @@ function sectionsFratrie(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
   const { freresSoeurs, demis } = fratrie(d, p.id);
   const freres = freresSoeurs.length > 0 ? section('Frères et sœurs', ...freresSoeurs.map((f) => ligneFratrie(f))) : null;
-  // Cible de la pile de la fratrie dans le dessin « Famille proche ».
-  if (freres) freres.id = 'section-fratrie';
   return [
     freres,
     demis.length > 0 ? section('Demi-frères et demi-sœurs', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null,
@@ -68,18 +67,23 @@ function sectionsDessins(p: Personne): (HTMLElement | null)[] {
   const f = foyer(d, p.id, moi);
   const dessin = (titre: string, contenu: HTMLElement) => h('section', {}, h('h2', { class: 'titre-section' }, titre), contenu);
   return [
-    etapes && moi && etapes.length > 2 ? dessin('Lien avec toi', dessinChemin(etapes, moi)) : null,
-    f.parents.length > 0 || f.conjoint || f.enfants.length > 0 ? dessin('Famille proche', dessinFoyer(p, f, moi)) : null,
+    etapes && moi && (etapes.length > 2 || estParentSansNom(p)) ? dessin('Lien avec toi', dessinChemin(etapes, moi, d)) : null,
+    f.parents.length > 0 || f.fratrie.length > 0 || f.conjoint || f.enfants.length > 0 ? dessin('Famille proche', dessinFoyer(p, f, moi)) : null,
   ];
 }
 
-/** Amis de la personne, chacun avec une croix pour retirer l'amitié (annulable) ; rien s'il n'y en a pas. Un échec s'affiche dans `erreur`. */
+/**
+ * Amis de la personne, par groupe : le nom du groupe (lien vers sa gestion), ses autres membres, et une croix
+ * pour quitter le groupe (annulable). Rien si la personne n'est dans aucun groupe. Un échec s'affiche dans `erreur`.
+ */
 function sectionAmis(p: Personne, erreur: HTMLElement): HTMLElement | null {
-  const liste = amis(lireDonnees(), p.id);
-  if (liste.length === 0) return null;
-  const retirer = (id: string, ami: Personne) => {
+  const d = lireDonnees();
+  const groupes = groupesDe(d, p.id);
+  if (groupes.length === 0) return null;
+  const quitter = (g: GroupeAmis) => {
     try {
-      changerAvecAnnulation((x) => supprimerAmitie(x, id), `${p.prenom || p.nom} et ${ami.prenom || ami.nom} ne sont plus amis.`, 'Amitié rétablie.');
+      const nom = nomGroupe(d, g);
+      changerAvecAnnulation((x) => retirerDuGroupe(x, g.id, p.id), `${p.prenom || p.nom} a quitté « ${nom} ».`, 'Groupe rétabli.');
     } catch (e) {
       erreur.textContent = e instanceof Error ? e.message : 'Retrait impossible';
       erreur.hidden = false;
@@ -89,16 +93,20 @@ function sectionAmis(p: Personne, erreur: HTMLElement): HTMLElement | null {
   };
   return section(
     'Amis',
-    ...liste.map(({ amitie, personne }) =>
+    ...groupes.map((g) =>
       h(
         'div',
-        { class: 'ligne ligne-union' },
-        h('a', { class: 'ligne-lien', href: `#/personne/${personne.id}` }, ...contenuLigne(personne)),
+        { class: 'groupe-amis' },
         h(
-          'button',
-          { type: 'button', class: 'bouton-icone', 'aria-label': `Retirer ${personne.prenom || personne.nom} des amis`, onclick: () => retirer(amitie.id, personne) },
-          icone('croix', 20),
+          'div',
+          { class: 'groupe-amis-titre' },
+          h('a', { class: 'groupe-amis-nom', href: `#/groupe/${g.id}` }, nomGroupe(d, g)),
+          h('button', { type: 'button', class: 'bouton-icone', 'aria-label': `Quitter le groupe ${nomGroupe(d, g)}`, onclick: () => quitter(g) }, icone('croix', 20)),
         ),
+        ...d.personnes
+          .filter((m) => g.membres.includes(m.id) && m.id !== p.id)
+          .sort(comparateur('prenom'))
+          .map((m) => h('div', { class: 'ligne ligne-union' }, h('a', { class: 'ligne-lien', href: `#/personne/${m.id}` }, ...contenuLigne(m)))),
       ),
     ),
   );
@@ -167,7 +175,7 @@ function sectionsConjoint(p: Personne): (HTMLElement | null)[] {
 
 /**
  * Feuille « Ajouter un proche » : conjoint, parent, enfant, frère ou sœur, ami.
- * Le conjoint est grisé s'il y en a déjà un ; le frère ou la sœur tant qu'aucun parent n'est connu.
+ * Le conjoint est grisé s'il y en a déjà un. Un frère ou une sœur s'ajoute même sans parent connu (parent inconnu en coulisse).
  */
 function ouvrirChoixProche(p: Personne): void {
   const d = lireDonnees();
@@ -191,9 +199,10 @@ function ouvrirChoixProche(p: Personne): void {
     { class: 'feuille', 'aria-label': 'Ajouter un proche', oncancel: fermer },
     h('h2', { class: 'feuille-titre' }, `Qui ajouter pour ${p.prenom || p.nom} ?`),
     option('Un conjoint', aConjoint ? 'Un seul conjoint à la fois' : 'Déjà dans la liste ou nouveau', 'coeur', `#/conjoint/${p.id}`, aConjoint),
+    option('Un ex', 'Une union terminée, même en couple aujourd’hui', 'coeur', `#/ex/${p.id}`),
     option('Un parent', 'Biologique ou adoptif', 'haut', `#/parent/${p.id}`),
     option('Un enfant', 'Biologique ou adoptif', 'bas', `#/enfant/${p.id}`),
-    option('Un frère ou une sœur', parents.length > 0 ? `Enfant ${avecDe(enumerer(parents))}` : 'Ajoutez d’abord un parent', 'cote', `#/frere/${p.id}`, parents.length === 0),
+    option('Un frère ou une sœur', parents.length > 0 ? `Enfant ${avecDe(enumerer(parents))}` : 'Parents inconnus', 'cote', `#/frere/${p.id}`),
     option('Un ami', 'Déjà dans la liste ou nouveau', 'ami', `#/ami/${p.id}`),
     h('button', { type: 'button', class: 'bouton', onclick: fermer }, 'Annuler'),
   );
@@ -209,10 +218,10 @@ function ouvrirChoixProche(p: Personne): void {
 export function fiche(p: Personne): HTMLElement {
   const maintenant = new Date();
   // Naissance, décès, puis âge (« 34 ans » ou « Morte à 82 ans ») sur sa propre ligne, plus appuyée.
-  const dates = [libelleNaissance(p.naissance, p.sexe), libelleDeces(p.deces, p.sexe)]
+  const dates = [libelleNaissance(p.naissance, p.sexe), libelleDeces(p.deces, p.sexe, estDecede(p))]
     .filter(Boolean)
     .map((t) => h('span', {}, majuscule(t)));
-  const age = p.deces ? libelleAgeDeces(p, maintenant) : libelleAge(p, maintenant);
+  const age = estDecede(p) ? libelleAgeDeces(p, maintenant) : libelleAge(p, maintenant);
   if (age) dates.push(h('span', { class: 'age' }, majuscule(age)));
   const lien = lienMoi(p);
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
@@ -245,12 +254,14 @@ export function fiche(p: Personne): HTMLElement {
       { class: 'identite' },
       avatarPersonne(p, true),
       h('h1', {}, nomComplet(p)),
-      lien && h('span', { class: 'lien-moi' }, lien),
+      p.nomNaissance && h('span', { class: 'dates secondaire' }, `née ${p.nomNaissance}`),
+      lien &&h('span', { class: 'lien-moi' }, lien),
       dates.length > 0 && h('span', { class: 'dates secondaire' }, ...dates),
     ),
     h(
       'div',
       { class: 'contenu' },
+      h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'Note'), h('p', {}, p.note)),
       ...sectionsDessins(p),
       ...sectionsConjoint(p),
@@ -259,7 +270,6 @@ export function fiche(p: Personne): HTMLElement {
       sectionFiliation('Parents', liensParents(lireDonnees(), p.id), p),
       ...sectionsElargies(p),
       sectionAmis(p, erreur),
-      h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
       erreur,
     ),

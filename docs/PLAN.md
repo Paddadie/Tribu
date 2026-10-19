@@ -67,7 +67,7 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] UX-03 : fiche : identité → note → proches → « Ajouter un proche » en style secondaire → suppression.
   - [x] UX-04 : ajout d'un enfant depuis une personne en couple : case « Ajouter aussi <conjoint> comme parent », cochée d'office.
   - [x] UX-05 : nom prérempli, toujours modifiable. Enfant : nom du père, bouton pour prendre celui de la mère si les deux sont connus, sinon nom de la fiche ouverte. Parent, frère ou sœur : nom de la fiche ouverte.
-  - [x] FEAT-03 (option A) : « Un frère ou une sœur » dans la feuille. La personne devient enfant des parents connus (tous cochés ; en décocher un donne un demi). Grisé avec « Ajoute d'abord un parent » si aucun parent n'est connu. Aucun lien de fratrie stocké (décision 9).
+  - [x] FEAT-03 (option A) : « Un frère ou une sœur » dans la feuille. La personne devient enfant des parents connus (tous cochés ; en décocher un donne un demi). Sans parent connu : parent inconnu caché créé en coulisse (voir DECISIONS). Aucun lien de fratrie stocké (décision 9).
   - [x] UX-06 : listes de choix : suggestions en tête (ex. le conjoint d'un parent déjà saisi), personnes grisées en fin de liste.
   - [x] UX-07 : bandeau bref « … · Annuler » après retrait d'un lien, fin d'union, modification (composant de S1). La suppression d'une personne garde sa confirmation.
   - [x] UX-09 : focus sur le prénom à la création ; confirmation avant d'abandonner un formulaire modifié.
@@ -109,6 +109,9 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
 - Partage avec des proches ; revoir alors le chiffrement de l'export (SEC-01)
 - [x] Mini-arbre sur la fiche (FEAT-09), avec le lien « ami » : maquette validée le 19/10 (claude.ai/artifact/CUp7N1VAn5HCNvLvHvJxiy, version 5), codé le 19/10 ; reste le test sur téléphone
 - [x] Arbre global (après FEAT-09) : maquette A validée le 19/10 (claude.ai/artifact/QeJzzjcSac5fzuuZ3R9Cow), personnes sans lien masquées, codé le 19/10 ; reste le test sur téléphone et la validation du bouton de l'accueil ; bouton sur l'accueil, « Moi » au centre, toutes les personnes et leurs liens (amis compris) ; zoom au pincement, défilement libre, toucher une personne ouvre sa fiche
+- [x] Arbre global lisible (19/10) : couleur par nom de famille (12 pastels, amis compris), décédés pâles avec « † », enfants centrés entre leurs parents (chaînes d'ex élargies), parents sans union côte à côte, familles d'amis resserrées, fonds de lignée supprimés ; reste le rendu à voir sur téléphone (Michel Budin à droite, croix à valider)
+- [x] Groupes d'amis (après l'arbre global) : nom de famille au-dessus des lignées, cadres de groupes dans « Tes amis », saisie par groupe, Réglages → Groupes d'amis ; maquette validée le 19/10 (claude.ai/artifact/C5fAaf2hkT89PDdtXV6E4T), codé le 19/10 ; reste le test sur téléphone
+- Plusieurs groupes par personne (règle « un seul » levée dans les écrans)
 - Photos (IndexedDB nécessaire)
 - Import et export GEDCOM
 - Autres critères de tri de la liste (date de naissance…)
