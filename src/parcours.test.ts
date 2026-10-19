@@ -48,9 +48,10 @@ afterEach(() => {
 const pause = () => new Promise((r) => setTimeout(r, 5));
 
 /** Lance l'appli sur `route` avec `donnees` déjà enregistrées. */
-async function demarrer(donnees: Donnees = donneesVides(), route = '#/') {
+async function demarrer(donnees: Donnees = donneesVides(), route = '#/', reglages?: { moi: string }) {
   localStorage.clear();
   sauvegarder(localStorage, donnees);
+  if (reglages) localStorage.setItem('tribu:reglages', JSON.stringify(reglages));
   document.body.innerHTML = '<div id="app"></div>';
   location.hash = route;
   await pause();
@@ -527,5 +528,94 @@ describe('route vers une personne supprimée', () => {
     expect(location.hash).toBe('#/');
     expect(titre()).toBe('Tribu');
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
+  });
+});
+
+describe('« Moi » et parenté', () => {
+  const lienMoi = () => ecran().querySelector('.lien-moi')?.textContent;
+  const reglagesStockes = () => JSON.parse(localStorage.getItem('tribu:reglages') ?? '{}');
+
+  it('choisit sa fiche dans les réglages, la change, puis ne la choisit plus', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/reglages');
+    expect(ecran().textContent).toContain('Choisir ma fiche');
+
+    await toucher(trouver('button', 'Choisir ma fiche', ecran()));
+    expect(document.querySelector('dialog.feuille')?.textContent).not.toContain('Ne plus choisir');
+    await toucher(trouver('dialog.feuille button', 'Chloé'));
+    expect(reglagesStockes().moi).toBe(ids.Chloé);
+    expect(document.querySelector('dialog.feuille')).toBeNull();
+    expect(ecran().textContent).toContain('Chloé Martin');
+    expect(ecran().textContent).toContain('Changer');
+
+    await toucher(trouver('button', 'Changer', ecran()));
+    await toucher(trouver('dialog.feuille button', 'Anne'));
+    expect(reglagesStockes().moi).toBe(ids.Anne);
+
+    await toucher(trouver('button', 'Changer', ecran()));
+    await toucher(trouver('dialog.feuille button', 'Ne plus choisir'));
+    expect(reglagesStockes().moi).toBeNull();
+    expect(ecran().textContent).toContain('Choisir ma fiche');
+  });
+
+  it('affiche sur chaque fiche son lien avec moi, accordé', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Anne}`, { moi: ids.Chloé });
+    expect(lienMoi()).toBe('Ta mère');
+    await demarrer(donnees, `#/personne/${ids.Bruno}`, { moi: ids.Chloé });
+    expect(lienMoi()).toBe('Ton père');
+    await demarrer(donnees, `#/personne/${ids.Chloé}`, { moi: ids.Chloé });
+    expect(lienMoi()).toBe('C’est toi');
+    await demarrer(donnees, `#/personne/${ids.Denis}`, { moi: ids.Chloé });
+    expect(lienMoi()).toBeUndefined();
+  });
+
+  it('n’affiche aucun lien tant que « Moi » n’est pas choisi, ou si sa fiche n’existe plus', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Anne}`);
+    expect(lienMoi()).toBeUndefined();
+    await demarrer(donnees, `#/personne/${ids.Anne}`, { moi: 'fiche-disparue' });
+    expect(lienMoi()).toBeUndefined();
+    await demarrer(donnees, '#/reglages', { moi: 'fiche-disparue' });
+    expect(ecran().textContent).toContain('Choisir ma fiche');
+  });
+
+  it('montre les sections déduites, vides masquées, avec les étiquettes', async () => {
+    const { donnees, ids } = famille();
+    // Eva est la mère d'Anne (donc grand-mère de Chloé) et de Hugo (donc oncle de Chloé).
+    let d = donnees;
+    for (const prenom of ['Eva', 'Hugo']) {
+      const r = creerPersonne(d, { prenom, nom: 'Martin', sexe: prenom === 'Eva' ? 'F' : 'M' });
+      d = r.donnees;
+      ids[prenom] = r.personne.id;
+    }
+    d = ajouterFiliation(d, ids.Eva, ids.Anne, 'biologique').donnees;
+    d = ajouterFiliation(d, ids.Eva, ids.Hugo, 'biologique').donnees;
+
+    await demarrer(d, `#/personne/${ids.Chloé}`, { moi: ids.Chloé });
+    const titres = [...ecran().querySelectorAll('h2.titre-section')].map((e) => e.textContent);
+    expect(titres).toEqual(['PARENTS', 'GRANDS-PARENTS', 'ONCLES ET TANTES']);
+    expect(trouver('section', 'GRANDS-PARENTS', ecran()).textContent).toContain('Eva Martin');
+    expect(trouver('section', 'ONCLES ET TANTES', ecran()).textContent).toContain('Hugo Martin');
+
+    // Depuis Hugo, Chloé est une nièce, et c'est moi : étiquette « Toi ».
+    await demarrer(d, `#/personne/${ids.Hugo}`, { moi: ids.Chloé });
+    expect(lienMoi()).toBe('Ton oncle');
+    expect(trouver('section', 'NEVEUX ET NIÈCES', ecran()).textContent).toContain('Toi');
+
+    // Chez Denis, sans lien : aucune section déduite.
+    await demarrer(d, `#/personne/${ids.Denis}`, { moi: ids.Chloé });
+    expect(ecran().querySelectorAll('h2.titre-section')).toHaveLength(0);
+  });
+
+  it('retrouve « Moi » quand on annule un import qui l’avait fait disparaître', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/reglages', { moi: ids.Chloé });
+    const autre = creerPersonne(donneesVides(), { prenom: 'Zoé', nom: 'Autre' }).donnees;
+    await choisirFichier('autre.json', exporterJson(autre));
+    await toucher(trouver('button', 'Remplacer', document.body));
+    expect(ecran().textContent).toContain('Choisir ma fiche');
+    await toucher(trouver('button', 'Annuler', bandeau()!));
+    expect(ecran().textContent).toContain('Chloé Martin');
   });
 });

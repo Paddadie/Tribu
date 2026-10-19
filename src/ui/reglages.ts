@@ -4,12 +4,14 @@
 
 import type { Tri } from '../modele/liste';
 import { donneesVides } from '../modele/modele';
-import { libelleDernierExport, type Theme } from '../modele/reglages';
+import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
 import { changerAvecAnnulation } from './annulation';
+import { ouvrirChoixMoi } from './choixMoi';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
+import { contenuLigne } from './lignePersonne';
 import { lienRetour } from './navigation';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
@@ -52,6 +54,23 @@ export function ecranReglages(): HTMLElement {
   const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
   const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
 
+  // Ma fiche : une ligne qui ouvre la feuille de choix ; redessinée après un choix.
+  const carteMoi = h('div', { class: 'carte' });
+  const dessinerMoi = () => {
+    const moi = ficheMoi(lireReglages(), lireDonnees());
+    carteMoi.replaceChildren(
+      h(
+        'button',
+        { type: 'button', class: 'ligne ligne-choix', onclick: () => ouvrirChoixMoi(dessinerMoi) },
+        ...(moi
+          ? [...contenuLigne(moi, undefined, 'Ma fiche'), h('span', { class: 'action-ligne' }, 'Changer')]
+          : [h('span', { class: 'avatar avatar-vide' }, icone('plus', 20)), h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom action-ligne' }, 'Choisir ma fiche'))]),
+      ),
+    );
+    aideMoi.textContent = moi ? 'Chaque fiche affiche son lien avec toi : « ta cousine », « ton oncle par alliance ».' : 'Chaque fiche affichera son lien avec toi.';
+  };
+  const aideMoi = h('p', { class: 'secondaire aide-section' });
+
   /** Met à jour ce qui dépend des données et des réglages (après export, import, effacement, annulation). */
   const maj = () => {
     const n = lireDonnees().personnes.length;
@@ -59,6 +78,7 @@ export function ecranReglages(): HTMLElement {
     dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
     boutonEffacer.disabled = n === 0;
     aideEffacer.hidden = n > 0;
+    dessinerMoi();
   };
   maj();
 
@@ -122,6 +142,7 @@ export function ecranReglages(): HTMLElement {
     h(
       'div',
       { class: 'contenu' },
+      h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'MOI'), carteMoi, aideMoi),
       h(
         'section',
         { class: 'groupe-reglages' },

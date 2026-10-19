@@ -1,13 +1,15 @@
-// Fiche d'une personne : identité, note, conjoint, enfants, frères et sœurs, parents, ajout d'un proche,
-// modification, suppression avec confirmation.
+// Fiche d'une personne : identité (avec le lien avec « Moi »), note, conjoint, enfants, frères et sœurs, parents,
+// famille élargie déduite, ajout d'un proche, modification, suppression avec confirmation.
 
-import { conjoint, enfantsDuCouple, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien } from '../modele/deductions';
+import { conjoint, enfantsDuCouple, familleElargie, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
 import { avecDe, enumerer, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
 import { aDesLiens, enCouple, supprimerPersonne } from '../modele/modele';
+import { libelleRelation, lienAvecMoi } from '../modele/parente';
+import { ficheMoi } from '../modele/reglages';
 import type { Personne } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
-import { lireDonnees, modifierDonnees } from './etat';
+import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { contenuLigne } from './lignePersonne';
 import { lienRetour, remplacer } from './navigation';
 
@@ -41,6 +43,42 @@ function sectionsFratrie(p: Personne): (HTMLElement | null)[] {
 
 function section(titre: string, ...lignes: HTMLElement[]): HTMLElement {
   return h('section', {}, h('h2', { class: 'titre-section' }, titre), h('div', { class: 'carte' }, ...lignes));
+}
+
+const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** Lien de la fiche avec ma fiche (« Ta cousine ») ; rien si « Moi » n'est pas choisi ou si le lien n'a pas de nom. */
+function lienMoi(p: Personne): string | undefined {
+  const moi = ficheMoi(lireReglages(), lireDonnees());
+  const lien = moi && lienAvecMoi(lireDonnees(), moi.id, p.id);
+  return lien ? majuscule(lien) : undefined;
+}
+
+/** Ligne touchable d'une personne de la famille élargie : déduite, donc sans crayon. */
+function ligneElargie({ personne, relation }: Parent, belleFamille: boolean): HTMLElement {
+  const moi = lireReglages().moi;
+  let etiquette: HTMLElement | false = false;
+  if (personne.id === moi) etiquette = h('span', { class: 'etiquette' }, 'Toi');
+  else if (belleFamille) {
+    const libelle = libelleRelation(relation, personne.sexe);
+    etiquette = !!libelle && h('span', { class: 'etiquette' }, majuscule(libelle));
+  } else if (relation.type === 'alliance') etiquette = h('span', { class: 'etiquette etiquette-adoptif' }, 'Par alliance');
+  return h('div', { class: 'ligne' }, h('a', { class: 'ligne-lien', href: `#/personne/${personne.id}` }, ...contenuLigne(personne), etiquette));
+}
+
+/** Grands-parents, petits-enfants, oncles et tantes, neveux et nièces, cousins, belle-famille ; une section vide est masquée. */
+function sectionsElargies(p: Personne): (HTMLElement | null)[] {
+  const f = familleElargie(lireDonnees(), p.id);
+  const sec = (titre: string, liens: Parent[], belleFamille = false) =>
+    liens.length > 0 ? section(titre, ...liens.map((l) => ligneElargie(l, belleFamille))) : null;
+  return [
+    sec('GRANDS-PARENTS', f.grandsParents),
+    sec('PETITS-ENFANTS', f.petitsEnfants),
+    sec('ONCLES ET TANTES', f.onclesTantes),
+    sec('NEVEUX ET NIÈCES', f.neveuxNieces),
+    sec('COUSINS ET COUSINES', f.cousins),
+    sec('BELLE-FAMILLE', f.belleFamille, true),
+  ];
 }
 
 /** Parents ou enfants d'un côté de la fiche ; rien n'est affiché s'il n'y en a pas. */
@@ -112,6 +150,7 @@ function ouvrirChoixProche(p: Personne): void {
 
 export function fiche(p: Personne): HTMLElement {
   const naissance = libelleNaissance(p.naissance, p.sexe);
+  const lien = lienMoi(p);
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
   const supprimer = async () => {
@@ -142,6 +181,7 @@ export function fiche(p: Personne): HTMLElement {
       { class: 'identite' },
       h('span', { class: 'avatar avatar-grand' }, initiales(p)),
       h('h1', {}, nomComplet(p)),
+      lien && h('span', { class: 'lien-moi' }, lien),
       naissance && h('span', { class: 'secondaire' }, naissance),
     ),
     h(
@@ -152,6 +192,7 @@ export function fiche(p: Personne): HTMLElement {
       sectionFiliation('ENFANTS', liensEnfants(lireDonnees(), p.id), p),
       ...sectionsFratrie(p),
       sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
+      ...sectionsElargies(p),
       h('button', { type: 'button', class: 'bouton', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
       erreur,

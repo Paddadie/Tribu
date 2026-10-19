@@ -48,6 +48,14 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Affichés séparément sur la fiche.
 - Ajouter un frère ou une sœur : la personne devient enfant des parents connus de la fiche, tous cochés d'office ; en décocher un donne un demi-frère ou une demi-sœur. Un seul type de lien pour tous les parents cochés. Aucun lien de fratrie n'est stocké.
 
+## Famille élargie et lien avec « Moi » (déduits)
+- Rien n'est stocké : tout se recalcule depuis les unions et filiations. Biologique et adoptif comptent pareil.
+- Sections de la fiche, après Parents, vides masquées : grands-parents, petits-enfants, oncles et tantes, neveux et nièces, cousins et cousines, belle-famille (parents du conjoint, puis enfants du conjoint qui ne sont pas les siens). Chacune du plus âgé au plus jeune.
+- Les oncles, tantes, neveux et nièces par alliance (conjoint d'un oncle, oncle du conjoint…) sont dans leur section avec l'étiquette « Par alliance ». L'alliance passe seulement par le conjoint actuel, sur un pas.
+- Sous le nom, une pastille donne le lien de la personne avec « Moi » : « Ta cousine », « Ton oncle par alliance », « C'est toi ». Accord selon le sexe ; sexe non précisé : forme neutre (« Ton beau-parent ») ou les deux formes (« Ton oncle ou ta tante »). Un lien sans nom usuel (cousin d'un parent, cousin issu de germain) n'affiche rien.
+- Sur la fiche des autres, la ligne de « Moi » porte l'étiquette « Toi ».
+- « Moi » se choisit dans les Réglages (section MOI, feuille avec recherche, « Ne plus choisir de fiche »). Si la fiche n'existe plus, c'est comme si rien n'était choisi, sans message.
+
 ## Écrans d'ajout (conjoint, parent, enfant, frère ou sœur)
 - Deux onglets : « Nouvelle personne » (ouvert d'abord, curseur dans le prénom) et « Personne existante ».
 - Nom prérempli, toujours modifiable. Enfant d'un couple homme-femme : nom du père, avec un bouton pour prendre celui de la mère ; sinon nom de la fiche ouverte, avec un bouton pour celui de l'autre parent coché. Parent, frère ou sœur : nom de la fiche ouverte.
@@ -74,6 +82,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Un échec s'affiche sous le bouton, dans l'écran.
 
 ## Réglages (écran ouvert par l'écrou)
+- Moi : ma fiche, qui sert au lien affiché sur chaque fiche. Mémorisée sur l'appareil, hors des données exportées.
 - Affichage : tri de la liste (prénom ou nom), thème (auto, clair, sombre). Mémorisés sur l'appareil, hors des données exportées.
 - Sauvegarde : export de toutes les données dans un fichier JSON `tribu-AAAA-MM-JJ.json`, par la feuille de partage du téléphone, sinon par téléchargement. Message selon l'issue : « Fichier partagé. », « Partage annulé : rien n’a été exporté. », « Téléchargement lancé : vérifiez le dossier Téléchargements. » ou « Export impossible sur cet appareil. »
 - Date du dernier export affichée sous le bouton (« Jamais », ou « jj/mm/aaaa · il y a N jours ») ; mémorisée avec les réglages, mise à jour sauf si le partage est annulé.

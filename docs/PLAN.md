@@ -77,10 +77,10 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] UX-14 : homonymes : créer une fiche de même prénom et même nom qu'une fiche existante demande confirmation (demande de Paul à la maquette).
   Terminé quand : l'enfant d'un couple s'ajoute aux deux parents en une saisie, nom prérempli ; un frère s'ajoute depuis la fiche.
 
-- [ ] **S3a. Parenté** — Modèle et tests d'abord (deductions.ts), puis maquette de la fiche.
-  - [ ] En début de session : décider où mémoriser « Moi » (réglages, hors export, ou données exportées) et que faire si la fiche disparaît après un import.
-  - [ ] FEAT-01 : réglage « Moi » (choisir sa fiche) ; chaque fiche affiche son lien avec moi (« ta cousine », « ton oncle par alliance »), accordé selon le sexe.
-  - [ ] FEAT-02 : sections déduites sur la fiche : grands-parents et petits-enfants, oncles et tantes, neveux et nièces, cousins et cousines, belle-famille (beaux-parents, enfants du conjoint). Sections vides masquées.
+- [x] **S3a. Parenté** — Modèle et tests d'abord (deductions.ts), puis maquette de la fiche.
+  - [x] En début de session : décider où mémoriser « Moi » (réglages, hors export, ou données exportées) et que faire si la fiche disparaît après un import.
+  - [x] FEAT-01 : réglage « Moi » (choisir sa fiche) ; chaque fiche affiche son lien avec moi (« ta cousine », « ton oncle par alliance »), accordé selon le sexe.
+  - [x] FEAT-02 : sections déduites sur la fiche : grands-parents et petits-enfants, oncles et tantes, neveux et nièces, cousins et cousines, belle-famille (beaux-parents, enfants du conjoint). Sections vides masquées.
   Terminé quand : sur une famille de test à 4 générations, chaque lien affiché est juste (testé).
 
 - [ ] **S3b. Mémo** — Maquette d'abord : accueil avec anniversaires, fiche avec décès et âge.
