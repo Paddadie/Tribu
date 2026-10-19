@@ -38,6 +38,7 @@ const TRACES = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   retour: '<path d="M15 5l-7 7 7 7"/>',
   crayon: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/>',
+  coche: '<path d="M5 12l5 5 9-10"/>',
   corbeille: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
 } as const;
 

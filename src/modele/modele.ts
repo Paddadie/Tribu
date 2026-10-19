@@ -106,6 +106,10 @@ export function ajouterUnion(
       (u.personneA === personneB && u.personneB === personneA),
   );
   if (doublon) throw new Error('Ces deux personnes sont déjà en couple');
+  const aDejaUnConjoint = (id: string) => d.unions.some((u) => u.personneA === id || u.personneB === id);
+  if (aDejaUnConjoint(personneA) || aDejaUnConjoint(personneB)) {
+    throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
+  }
   const union: Union = { id: nouvelId(), personneA, personneB, marie };
   return { donnees: { ...d, unions: [...d.unions, union] }, union };
 }

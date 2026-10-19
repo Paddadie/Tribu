@@ -475,3 +475,115 @@ fieldset.champ legend {
 .champ select {
   appearance: auto;
 }
+
+/* ——— Conjoint et union ——— */
+
+.ligne-union {
+  padding-right: 4px;
+}
+
+.ligne-lien {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.etiquette {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.zone-conjoint {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.champ-filtre-forme {
+  margin: 0;
+}
+
+.ligne-choix {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ligne-choix:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ligne-choix.choisie {
+  background: var(--accent-clair);
+  color: var(--accent);
+}
+
+.interrupteur {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.bascule {
+  appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 50px;
+  height: 30px;
+  margin: 0;
+  border-radius: 15px;
+  background: var(--bord-champ);
+  cursor: pointer;
+}
+
+.bascule::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+
+.bascule:checked {
+  background: var(--accent);
+}
+
+.bascule:checked::after {
+  left: 23px;
+}
+
+.bascule:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.resume-union {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bascule::after {
+    transition: none;
+  }
+}

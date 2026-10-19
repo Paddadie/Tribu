@@ -2,13 +2,17 @@ import "@fontsource-variable/figtree";
 import "./style.css";
 import { initPwa } from "./pwa";
 import { accueil } from "./ui/accueil";
+import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { lireDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
+import { ecranUnion } from "./ui/union";
 
 // Routage par hash (compatible GitHub Pages) :
 //   #/                 liste          #/personne/<id>   fiche
 //   #/nouveau          création       #/modifier/<id>   modification
+//   #/conjoint/<id>    ajout d'un conjoint à la personne
+//   #/union/<id>       union de la personne (marié, fin d'union)
 const app = document.querySelector<HTMLElement>("#app");
 
 /** Remplace la route courante : le bouton Retour ne revient pas sur l'écran quitté. */
@@ -20,6 +24,8 @@ function vue(route: string): HTMLElement {
   if (section === "nouveau") return formulaire(undefined, remplacer);
   if (section === "personne" && personne) return fiche(personne, remplacer);
   if (section === "modifier" && personne) return formulaire(personne, remplacer);
+  if (section === "conjoint" && personne) return ajoutConjoint(personne, remplacer);
+  if (section === "union" && personne) return ecranUnion(personne, remplacer);
   // Route inconnue ou personne introuvable (supprimée) : retour à la liste.
   if (route !== "#/" && route !== "" && route !== "#") remplacer("#/");
   return accueil();

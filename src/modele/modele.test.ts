@@ -73,11 +73,19 @@ describe('unions', () => {
     expect(() => ajouterUnion(donnees, ids[1], ids[0])).toThrow();
   });
 
-  it('autorise plusieurs unions pour une même personne', () => {
+  it('refuse un second conjoint, de l’un ou l’autre côté', () => {
     const { d, ids } = avec('A', 'B', 'C');
-    const r1 = ajouterUnion(d, ids[0], ids[1]);
-    const r2 = ajouterUnion(r1.donnees, ids[0], ids[2]);
-    expect(r2.donnees.unions).toHaveLength(2);
+    const { donnees } = ajouterUnion(d, ids[0], ids[1]);
+    expect(() => ajouterUnion(donnees, ids[0], ids[2])).toThrow('seul conjoint');
+    expect(() => ajouterUnion(donnees, ids[2], ids[1])).toThrow('seul conjoint');
+  });
+
+  it('permet un nouveau conjoint après la fin de l’union', () => {
+    const { d, ids } = avec('A', 'B', 'C');
+    const { donnees, union } = ajouterUnion(d, ids[0], ids[1]);
+    const apres = ajouterUnion(supprimerUnion(donnees, union.id), ids[0], ids[2]).donnees;
+    expect(apres.unions).toHaveLength(1);
+    expect(apres.unions[0]).toMatchObject({ personneA: ids[0], personneB: ids[2] });
   });
 
   it('modifie puis supprime une union', () => {
@@ -126,10 +134,10 @@ describe('filiations', () => {
 
 describe('suppression d’une personne', () => {
   it('retire aussi ses unions et filiations (comme parent et comme enfant)', () => {
-    const { d, ids } = avec('Grand-parent', 'Parent', 'Conjoint', 'Enfant', 'Autre');
-    const [gp, p, c, e, a] = ids;
+    const { d, ids } = avec('Grand-parent', 'Parent', 'Conjoint', 'Enfant', 'Autre', 'Voisine');
+    const [gp, p, c, e, a, v] = ids;
     let cur = ajouterUnion(d, p, c).donnees;
-    cur = ajouterUnion(cur, a, c).donnees;
+    cur = ajouterUnion(cur, a, v).donnees;
     cur = ajouterFiliation(cur, gp, p, 'biologique').donnees;
     cur = ajouterFiliation(cur, p, e, 'biologique').donnees;
     cur = ajouterFiliation(cur, a, e, 'adoptif').donnees;
@@ -137,7 +145,7 @@ describe('suppression d’une personne', () => {
     const apres = supprimerPersonne(cur, p);
     expect(apres.personnes.map((x) => x.id)).not.toContain(p);
     expect(apres.unions).toHaveLength(1);
-    expect(apres.unions[0]).toMatchObject({ personneA: a, personneB: c });
+    expect(apres.unions[0]).toMatchObject({ personneA: a, personneB: v });
     expect(apres.filiations).toHaveLength(1);
     expect(apres.filiations[0]).toMatchObject({ parent: a, enfant: e });
   });

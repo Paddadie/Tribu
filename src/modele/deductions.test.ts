@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conjoints, enfants, enfantsDuCouple, fratrie, parents } from './deductions';
+import { conjoint, enfants, enfantsDuCouple, fratrie, parents } from './deductions';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, TypeFiliation } from './types';
 
@@ -29,13 +29,14 @@ function monde() {
 const prenoms = (l: { prenom: string }[]) => l.map((p) => p.prenom);
 
 describe('conjoints, parents, enfants', () => {
-  it('liste les conjoints, quel que soit le côté de l’union, y compris plusieurs', () => {
+  it('donne le conjoint et son union, quel que soit le côté de l’union', () => {
     const m = monde();
     ['Anne', 'Bob', 'Cléo'].forEach((p) => m.pers(p));
     m.union('Anne', 'Bob');
-    m.union('Cléo', 'Anne');
-    expect(prenoms(conjoints(m.d, m.id.Anne)).sort()).toEqual(['Bob', 'Cléo']);
-    expect(prenoms(conjoints(m.d, m.id.Bob))).toEqual(['Anne']);
+    expect(conjoint(m.d, m.id.Anne)?.personne.prenom).toBe('Bob');
+    expect(conjoint(m.d, m.id.Bob)?.personne.prenom).toBe('Anne');
+    expect(conjoint(m.d, m.id.Bob)?.union).toBe(m.d.unions[0]);
+    expect(conjoint(m.d, m.id.Cléo)).toBeUndefined();
   });
 
   it('liste les parents biologiques et adoptifs', () => {

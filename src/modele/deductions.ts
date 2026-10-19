@@ -1,7 +1,7 @@
 // Liens déduits à partir des unions et filiations. Rien n'est stocké : tout se
 // recalcule depuis les données.
 
-import type { Donnees, Personne } from './types';
+import type { Donnees, Personne, Union } from './types';
 
 function parId(d: Donnees, ids: Iterable<string>): Personne[] {
   const voulus = new Set(ids);
@@ -20,11 +20,13 @@ export function comparerParNaissance(a: Personne, b: Personne): number {
   return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr');
 }
 
-export function conjoints(d: Donnees, id: string): Personne[] {
-  const ids = d.unions
-    .filter((u) => u.personneA === id || u.personneB === id)
-    .map((u) => (u.personneA === id ? u.personneB : u.personneA));
-  return parId(d, ids);
+/** Conjoint actuel : une personne n'a qu'une union à la fois (une séparation efface l'union). */
+export function conjoint(d: Donnees, id: string): { union: Union; personne: Personne } | undefined {
+  const union = d.unions.find((u) => u.personneA === id || u.personneB === id);
+  if (!union) return undefined;
+  const idConjoint = union.personneA === id ? union.personneB : union.personneA;
+  const personne = d.personnes.find((p) => p.id === idConjoint);
+  return personne && { union, personne };
 }
 
 export function parents(d: Donnees, id: string): Personne[] {

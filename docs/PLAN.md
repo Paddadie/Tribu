@@ -11,10 +11,10 @@
 - [x] **3. Maquettes** — Écrans liste et fiche, publiés pour validation.
   Terminé quand : Paul a validé les maquettes.
 
-- [ ] **4. Liste et fiche personne** — Créer, modifier, supprimer (avec confirmation) ; filtre de la liste par nom.
+- [x] **4. Liste et fiche personne** — Créer, modifier, supprimer (avec confirmation) ; filtre de la liste par nom.
   Terminé quand : sur le téléphone, une personne créée persiste après fermeture de l'appli.
 
-- [ ] **5. Couples** — Ajouter un conjoint (existant ou nouveau), indicateur marié, unions multiples.
+- [x] **5. Couples** — Ajouter un conjoint (existant ou nouveau), indicateur marié, un seul conjoint à la fois (séparation = union effacée).
   Terminé quand : la fiche affiche ses conjoints et un toucher ouvre la fiche du conjoint.
 
 - [ ] **6. Parents et enfants** — Ajouter parent ou enfant, lien biologique ou adoptif.

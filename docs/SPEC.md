@@ -17,7 +17,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Sexe : homme (par défaut) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas et s'affichent « né(e) » jusqu'à leur modification.
 - Date de naissance (facultative), éventuellement partielle : année seule, mois et année, ou date complète.
 - Note libre.
-- Sections affichées, dans cet ordre : conjoints, enfants, frères et sœurs (puis demi-frères et demi-sœurs), parents.
+- Sections affichées, dans cet ordre : conjoint, enfants, frères et sœurs (puis demi-frères et demi-sœurs), parents.
 - Une section vide n'est pas affichée. Un bouton « Ajouter un proche » en bas de fiche permet de créer un lien dans une catégorie absente.
 - Chaque proche affiché est touchable et ouvre sa fiche.
 - Étiquettes sur les proches : « Marié » (conjoint), « Adoptif » (parent ou enfant) ; le lien biologique n'est pas étiqueté.
@@ -25,8 +25,9 @@ V1 : moi seul. Partage avec des proches : plus tard.
 ## Couples (unions)
 - Une union relie deux personnes ayant chacune leur fiche.
 - Indicateur « marié » oui/non.
-- Une personne peut avoir plusieurs unions (remariage, séparation).
-- Ajouter un conjoint : choisir une personne existante ou en créer une.
+- Une personne n'a qu'un seul conjoint à la fois. Une séparation efface l'union (les deux fiches restent) ; on peut ensuite en ajouter une autre.
+- Ajouter un conjoint : choisir une personne existante (hors personnes déjà en couple) ou en créer une.
+- Modifier l'indicateur « marié » ou mettre fin à l'union (avec confirmation) : depuis le crayon à côté du conjoint sur la fiche.
 
 ## Parents et enfants
 - Lien parent → enfant, de type biologique ou adoptif.
