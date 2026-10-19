@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import {
+  CLE_SECOURS,
   CLE_STOCKAGE,
   charger,
   estDonneesValides,
   exporterJson,
   importerJson,
   nomFichierExport,
+  nomFichierSecours,
   sauvegarder,
 } from './stockage';
 import type { Donnees } from './types';
@@ -34,14 +36,14 @@ function exemple(): Donnees {
 
 describe('localStorage', () => {
   it('renvoie des données vides quand rien n’est stocké', () => {
-    expect(charger(faux())).toEqual(donneesVides());
+    expect(charger(faux())).toEqual({ lisible: true, donnees: donneesVides() });
   });
 
   it('persiste puis recharge à l’identique', () => {
     const magasin = faux();
     const d = exemple();
     sauvegarder(magasin, d);
-    expect(charger(magasin)).toEqual(d);
+    expect(charger(magasin)).toEqual({ lisible: true, donnees: d });
   });
 
   it('écrit sous la clé prévue', () => {
@@ -50,12 +52,30 @@ describe('localStorage', () => {
     expect(magasin.getItem(CLE_STOCKAGE)).not.toBeNull();
   });
 
-  it('retombe sur des données vides si le contenu est corrompu', () => {
+  it('signale un contenu illisible sans l’écraser et le copie en secours', () => {
+    for (const brut of ['{pas du json', JSON.stringify({ version: 1, personnes: 'non' })]) {
+      const magasin = faux();
+      magasin.setItem(CLE_STOCKAGE, brut);
+      expect(charger(magasin)).toEqual({ lisible: false, brut });
+      expect(magasin.getItem(CLE_STOCKAGE)).toBe(brut);
+      expect(magasin.getItem(CLE_SECOURS)).toBe(brut);
+    }
+  });
+
+  it('ne touche pas à la clé de secours quand le contenu est lisible', () => {
+    const magasin = faux();
+    magasin.setItem(CLE_SECOURS, 'ancien');
+    sauvegarder(magasin, exemple());
+    charger(magasin);
+    expect(magasin.getItem(CLE_SECOURS)).toBe('ancien');
+  });
+
+  it('signale le contenu illisible même si la copie de secours échoue', () => {
     const magasin = faux();
     magasin.setItem(CLE_STOCKAGE, '{pas du json');
-    expect(charger(magasin)).toEqual(donneesVides());
-    magasin.setItem(CLE_STOCKAGE, JSON.stringify({ version: 1, personnes: 'non' }));
-    expect(charger(magasin)).toEqual(donneesVides());
+    const plein = { ...magasin, setItem: () => { throw new Error('quota'); } };
+    expect(charger(plein)).toEqual({ lisible: false, brut: '{pas du json' });
+    expect(magasin.getItem(CLE_STOCKAGE)).toBe('{pas du json');
   });
 });
 
@@ -138,6 +158,10 @@ describe('nomFichierExport', () => {
     expect(nomFichierExport(new Date(2026, 0, 5, 23, 59))).toBe('tribu-2026-01-05.json');
     expect(nomFichierExport(new Date(2026, 9, 19))).toBe('tribu-2026-10-19.json');
   });
+
+  it('nomme le fichier de secours en texte', () => {
+    expect(nomFichierSecours(new Date(2026, 9, 19))).toBe('tribu-secours-2026-10-19.txt');
+  });
 });
 
 describe('aller-retour export / import', () => {
@@ -146,6 +170,6 @@ describe('aller-retour export / import', () => {
     const texte = exporterJson(d);
     const vide = faux();
     sauvegarder(vide, importerJson(texte));
-    expect(charger(vide)).toEqual(d);
+    expect(charger(vide)).toEqual({ lisible: true, donnees: d });
   });
 });

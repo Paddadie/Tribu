@@ -1,15 +1,21 @@
-// Écran Réglages : affichage (tri de la liste, thème), sauvegarde (export et import
-// JSON avec confirmation avant écrasement), effacement des données, version.
+// Écran Réglages : affichage (tri de la liste, thème), sauvegarde (export par
+// partage ou téléchargement, import JSON avec confirmation avant écrasement),
+// effacement des données, version. Import et effacement sont annulables.
 
 import type { Tri } from '../modele/liste';
 import { donneesVides } from '../modele/modele';
-import type { Theme } from '../modele/reglages';
+import { libelleDernierExport, type Theme } from '../modele/reglages';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
+import { changerAvecAnnulation } from './annulation';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
-import { lireDonnees, lireReglages, modifierDonnees, modifierReglages } from './etat';
+import { lireDonnees, lireReglages, modifierReglages } from './etat';
+import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
-const pluriel = (n: number) => `${n} ${n > 1 ? 'personnes' : 'personne'}`;
+export const pluriel = (n: number) => `${n} ${n > 1 ? 'personnes' : 'personne'}`;
+
+/** « 3 personnes importées. » */
+export const messageImport = (n: number) => `${pluriel(n)} importée${n > 1 ? 's' : ''}.`;
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
 function choix<T extends string>(nom: string, legende: string, options: [T, string][], actuel: T, choisir: (v: T) => void): HTMLElement {
@@ -24,14 +30,13 @@ function choix<T extends string>(nom: string, legende: string, options: [T, stri
   return h('fieldset', { class: 'champ' }, h('legend', {}, legende), h('div', { class: 'choix-groupe' }, ...boutons));
 }
 
-/** Déclenche le téléchargement d'un fichier JSON. */
-function telecharger(nom: string, contenu: string): void {
-  const url = URL.createObjectURL(new Blob([contenu], { type: 'application/json' }));
-  const lien = h('a', { href: url, download: nom });
-  document.body.append(lien);
-  lien.click();
-  lien.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+/** Avertissement avant un import qui remplace `n` personnes (n ≥ 1). */
+function avertissementRemplacement(fichier: string, importees: number, actuelles: number): string {
+  const perte =
+    actuelles > 1
+      ? `Vos ${actuelles} personnes actuelles seront perdues, sauf si vous les avez exportées.`
+      : 'Votre personne actuelle sera perdue, sauf si vous l’avez exportée.';
+  return `Le fichier ${fichier} contient ${pluriel(importees)}. ${perte}`;
 }
 
 export function ecranReglages(): HTMLElement {
@@ -40,21 +45,32 @@ export function ecranReglages(): HTMLElement {
 
   const messageExport = h('p', { class: 'secondaire', role: 'status' });
   const erreurImport = h('p', { class: 'erreur', role: 'alert', hidden: true });
-  const succesImport = h('p', { class: 'succes', role: 'status', hidden: true });
   const erreurEffacement = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const resumeExport = h('p', { class: 'secondaire' });
+  const dateExport = h('b', {});
+  const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
+  const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
 
-  const majResume = () => {
-    resumeExport.textContent = `Enregistre ${pluriel(lireDonnees().personnes.length)} et leurs liens dans ${nomFichierExport(new Date())}.`;
+  /** Met à jour ce qui dépend des données et des réglages (après export, import, effacement, annulation). */
+  const maj = () => {
+    const n = lireDonnees().personnes.length;
+    resumeExport.textContent = `Enregistre ${pluriel(n)} et leurs liens dans ${nomFichierExport(new Date())}.`;
+    dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
+    boutonEffacer.disabled = n === 0;
+    aideEffacer.hidden = n > 0;
   };
-  majResume();
+  maj();
 
-  const exporter = () => {
+  const exporter = async () => {
     try {
-      telecharger(nomFichierExport(new Date()), exporterJson(lireDonnees()));
-      messageExport.textContent = 'Fichier enregistré dans vos téléchargements.';
+      const issue = await exporterFichier(nomFichierExport(new Date()), exporterJson(lireDonnees()));
+      messageExport.textContent = MESSAGES_EXPORT[issue];
+      messageExport.className = issue === 'annule' ? 'secondaire' : 'succes';
+      if (issue !== 'annule') modifierReglages({ dernierExport: new Date().toISOString() });
+      maj();
     } catch {
-      messageExport.textContent = 'Export impossible sur cet appareil.';
+      messageExport.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
+      messageExport.className = 'erreur';
     }
   };
 
@@ -63,19 +79,13 @@ export function ecranReglages(): HTMLElement {
     const choisi = fichier.files?.[0];
     fichier.value = '';
     erreurImport.hidden = true;
-    succesImport.hidden = true;
     if (!choisi) return;
     try {
       const importees = importerJson(await choisi.text());
       const actuelles = lireDonnees().personnes.length;
-      if (actuelles > 0) {
-        const message = `Le fichier ${choisi.name} contient ${pluriel(importees.personnes.length)}. Vos ${pluriel(actuelles)} actuelles seront perdues, sauf si vous les avez exportées.`;
-        if (!(await confirmer(message, 'Remplacer'))) return;
-      }
-      modifierDonnees(() => importees);
-      majResume();
-      succesImport.textContent = `${pluriel(importees.personnes.length)} importée${importees.personnes.length > 1 ? 's' : ''}.`;
-      succesImport.hidden = false;
+      if (actuelles > 0 && !(await confirmer(avertissementRemplacement(choisi.name, importees.personnes.length, actuelles), 'Remplacer'))) return;
+      changerAvecAnnulation(() => importees, messageImport(importees.personnes.length), 'Import annulé.');
+      maj();
     } catch (e) {
       erreurImport.textContent = e instanceof Error ? `${e.message}. Vos données n’ont pas été modifiées.` : 'Import impossible. Vos données n’ont pas été modifiées.';
       erreurImport.hidden = false;
@@ -87,11 +97,10 @@ export function ecranReglages(): HTMLElement {
     if (n === 0) return;
     const message = `Effacer toutes les données ? ${pluriel(n)} et tous leurs liens seront supprimés de cet appareil. Pensez à exporter d’abord.`;
     if (!(await confirmer(message, 'Effacer'))) return;
+    erreurEffacement.hidden = true;
     try {
-      modifierDonnees(() => donneesVides());
-      majResume();
-      succesImport.hidden = true;
-      erreurEffacement.hidden = true;
+      changerAvecAnnulation(() => donneesVides(), 'Données effacées.', 'Effacement annulé.');
+      maj();
     } catch (e) {
       erreurEffacement.textContent = e instanceof Error ? e.message : 'Effacement impossible';
       erreurEffacement.hidden = false;
@@ -134,8 +143,9 @@ export function ecranReglages(): HTMLElement {
             'div',
             { class: 'reglage' },
             h('h3', {}, 'Exporter'),
+            h('p', { class: 'date-export' }, h('span', { class: 'secondaire' }, 'Dernier export'), dateExport),
             resumeExport,
-            h('button', { type: 'button', class: 'bouton bouton-plein', onclick: exporter }, 'Exporter mes données'),
+            h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporter() }, 'Exporter mes données'),
             messageExport,
           ),
           h(
@@ -146,7 +156,6 @@ export function ecranReglages(): HTMLElement {
             h('button', { type: 'button', class: 'bouton', onclick: () => fichier.click() }, 'Choisir un fichier…'),
             fichier,
             erreurImport,
-            succesImport,
           ),
         ),
       ),
@@ -154,7 +163,8 @@ export function ecranReglages(): HTMLElement {
         'section',
         { class: 'groupe-reglages' },
         h('h2', { class: 'titre-section' }, 'DONNÉES'),
-        h('button', { type: 'button', class: 'bouton bouton-danger', onclick: effacer }, 'Effacer toutes les données'),
+        boutonEffacer,
+        aideEffacer,
         erreurEffacement,
       ),
       h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),

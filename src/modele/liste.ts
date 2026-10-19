@@ -87,10 +87,25 @@ export const MOIS = [
  * « 1961 » → « née en 1961 ». Accord selon le sexe (« né(e) » si non précisé) ;
  * chaîne vide sans date exploitable.
  */
+/** Forme masculine, féminine, ou mixte quand le sexe n'est pas précisé. */
+function accorder(sexe: Sexe | undefined, masculin: string, feminin: string, mixte: string): string {
+  return sexe === 'F' ? feminin : sexe === 'M' ? masculin : mixte;
+}
+
+/** Étiquette d'un conjoint marié, accordée à la personne affichée. */
+export function libelleMarie(sexe?: Sexe): string {
+  return accorder(sexe, 'Marié', 'Mariée', 'Marié(e)');
+}
+
+/** Étiquette d'un parent ou enfant adoptif, accordée à la personne affichée. */
+export function libelleAdoptif(sexe?: Sexe): string {
+  return accorder(sexe, 'Adoptif', 'Adoptive', 'Adoptif(ve)');
+}
+
 export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
   const m = naissance?.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
   if (!m) return '';
-  const ne = sexe === 'F' ? 'née' : sexe === 'M' ? 'né' : 'né(e)';
+  const ne = accorder(sexe, 'né', 'née', 'né(e)');
   if (m[2] === undefined) return `${ne} en ${m[1]}`;
   const mois = MOIS[Number(m[2]) - 1];
   if (!mois) return '';

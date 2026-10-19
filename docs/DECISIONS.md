@@ -65,3 +65,11 @@
 2026-10-19 | Date de décès, âge et prochains anniversaires ajoutés ; aucun autre champ (surnom, nom de naissance, lieu, recherche dans la note) | FEAT-04, FEAT-05, FEAT-07
 2026-10-19 | Anciennes unions conservées (S3b) : une séparation passe l'union au statut « séparés » au lieu de l'effacer, la fiche affiche les ex-conjoints ; toujours un seul conjoint actuel. Remplacera la décision 35, avec la migration v2 | FEAT-06, demande de Paul ; utile au partage
 2026-10-19 | Mini-arbre, photos et GEDCOM restent « Plus tard » | FEAT-09, FEAT-10
+2026-10-19 | Données illisibles : le brut est copié sous `tribu:secours` (jamais sous `tribu:donnees`), seul l'écran « Données illisibles » s'affiche, toute écriture est refusée jusqu'à « Repartir à vide » (confirmé) ; export du brut en `tribu-secours-AAAA-MM-JJ.txt`, car il n'est pas du JSON valide | DATA-01, maquette S1 validée
+2026-10-19 | Annulation d'un import ou d'un effacement : copie de l'état d'avant en mémoire seulement (perdue si l'appli est fermée) ; bandeau en bas d'écran, un seul à la fois, 8 s ; l'écran courant se redessine par l'événement `tribu:rafraichir` | DATA-02 ; le bandeau n'était pas dans la maquette, codé dans le style de l'appli
+2026-10-19 | Date du dernier export mise à jour après un partage ou un téléchargement lancé, pas après un partage annulé ni un échec | DATA-04, DATA-05 ; le téléchargement ne prouve pas l'enregistrement, son message le dit
+2026-10-19 | Restauration depuis l'accueil vide sans confirmation, annulable par le bandeau | UX-08 ; rien à écraser
+2026-10-19 | Accords si le sexe n'est pas renseigné : « Marié(e) », « Adoptif(ve) » ; précise la décision 23 | CODE-04
+2026-10-19 | « Effacer les données » réellement désactivé quand il n'y a personne, avec une aide ; remplace « grisé de fait » de la décision 51 | UX-10
+2026-10-19 | CSP en balise meta injectée au build seulement (plugin Vite dans `vite.config.ts`) ; le dev reste sans CSP | SEC-02 ; Vite dev injecte des styles en ligne et un websocket
+2026-10-19 | Échec d'écriture : stockage plein → « Stockage du téléphone plein : la modification n’a pas été enregistrée », données en mémoire inchangées ; erreurs affichées dans l'écran, plus d'`alert()` | CODE-03

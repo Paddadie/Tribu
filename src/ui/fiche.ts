@@ -1,7 +1,7 @@
 // Fiche d'une personne : identité, conjoint, enfants, frères et sœurs, parents, note, modification, suppression avec confirmation.
 
 import { conjoint, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien } from '../modele/deductions';
-import { initiales, libelleNaissance, nomComplet } from '../modele/liste';
+import { initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
 import { supprimerPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { confirmer } from './confirmer';
@@ -64,7 +64,7 @@ function sectionFiliation(titre: string, liens: Lien[], p: Personne): HTMLElemen
     ...liens.map(({ filiation, personne }) =>
       ligneProche(
         personne,
-        h('span', { class: `etiquette${filiation.type === 'adoptif' ? ' etiquette-adoptif' : ''}` }, filiation.type === 'adoptif' ? 'Adoptif' : 'Biologique'),
+        filiation.type === 'adoptif' && h('span', { class: 'etiquette etiquette-adoptif' }, libelleAdoptif(personne.sexe)),
         `#/lien/${filiation.id}/${p.id}`,
         'Modifier le lien',
       ),
@@ -77,7 +77,7 @@ function sectionConjoint(p: Personne): HTMLElement | null {
   const lien = conjoint(lireDonnees(), p.id);
   if (!lien) return null;
   const { union, personne: c } = lien;
-  return section('CONJOINT', ligneProche(c, union.marie && h('span', { class: 'etiquette' }, 'Marié'), `#/union/${p.id}`, 'Modifier l’union'));
+  return section('CONJOINT', ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${p.id}`, 'Modifier l’union'));
 }
 
 /** Feuille « Ajouter un proche » : conjoint, parent ou enfant. Le conjoint est grisé s'il y en a déjà un. */
@@ -116,6 +116,7 @@ function ouvrirChoixProche(p: Personne): void {
 
 export function fiche(p: Personne, naviguer: (route: string) => void): HTMLElement {
   const naissance = libelleNaissance(p.naissance, p.sexe);
+  const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
   const supprimer = async () => {
     const d = lireDonnees();
@@ -124,10 +125,12 @@ export function fiche(p: Personne, naviguer: (route: string) => void): HTMLEleme
       d.filiations.some((f) => f.parent === p.id || f.enfant === p.id);
     const message = `Supprimer ${nomComplet(p)} ?` + (aDesLiens ? ' Ses liens familiaux seront aussi supprimés.' : '');
     if (!(await confirmer(message, 'Supprimer'))) return;
+    erreur.hidden = true;
     try {
       modifierDonnees((x) => supprimerPersonne(x, p.id));
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Suppression impossible');
+      erreur.textContent = e instanceof Error ? e.message : 'Suppression impossible';
+      erreur.hidden = false;
       return;
     }
     naviguer('#/');
@@ -157,8 +160,9 @@ export function fiche(p: Personne, naviguer: (route: string) => void): HTMLEleme
       ...sectionsFratrie(p),
       sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
       h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
-      p.note &&h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
+      p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
+      erreur,
     ),
   );
 }

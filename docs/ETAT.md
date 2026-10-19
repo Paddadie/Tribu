@@ -1,21 +1,28 @@
 # État en cours
 
-**V1 terminée. V2 planifiée** après l'audit du 19/10/2026 : 6 sessions dans PLAN.md (section V2), décisions 52 et suivantes dans DECISIONS.md. Aucune session V2 commencée, aucun code modifié depuis la V1.
+**V2, session S1 Robustesse : code terminé**, non commité. Les 15 lignes sont cochées dans PLAN.md. Le titre S1 reste ouvert jusqu'au test sur téléphone. 115 tests verts, `tsc` et build propres. Build vérifié sous CSP (service worker, police, aucune erreur console).
 
-## Prochaine action
-Session **S1 Robustesse** : lire seulement la section S1 de PLAN.md.
-1. Maquette d'abord : écran « Données illisibles », Réglages (date du dernier export, export par partage, Effacer désactivé), accueil vide. La publier, laisser Paul réagir, coder seulement après sa validation.
-2. Commencer le code par DATA-01 et TEST-02 (risque de perte de données).
+## Avant S2a
+- Paul : commiter S1, déployer, puis tester sur iPhone et Android. Critère de fin : un export partagé depuis le téléphone se réimporte. Si c'est bon, cocher le titre S1 dans PLAN.md.
+- Ensuite `/clear`, puis session **S2a Socle** : lire seulement la section S2a de PLAN.md (pas de maquette, aucun changement visible). Commencer par TEST-01 (happy-dom, tests d'écran).
 
-## Repères pour S1
-- Le risque : `charger()` (src/modele/stockage.ts) renvoie des données vides si le contenu est invalide ; src/ui/etat.ts charge à l'import du module, puis `modifierDonnees` réécrit la clé `tribu:donnees`.
-- Export actuel : `<a download>` sur un blob dans src/ui/reglages.ts ; le message de succès est affiché sans preuve.
-- Réglages sous `tribu:reglages` (src/modele/reglages.ts, chargement tolérant champ par champ) : la date du dernier export peut y vivre.
-- L'étiquette « Biologique » et l'`alert()` de suppression sont dans src/ui/fiche.ts.
-- Départ : 97 tests Vitest verts, `tsc` et build propres.
+## Repères pour S2a
+- Nouveaux modules de S1 :
+  - src/ui/fichier.ts : export par partage, repli téléchargement ;
+  - src/ui/bandeau.ts : bandeau temporaire, à réutiliser pour UX-07 ;
+  - src/ui/annulation.ts : `changerAvecAnnulation` et `rafraichirEcran` ;
+  - src/ui/illisible.ts : écran « Données illisibles ».
+- src/ui/etat.ts :
+  - refuse toute écriture tant que les données sont illisibles ;
+  - `modifierDonneesAnnulable` renvoie la fonction d'annulation ;
+  - les tests rechargent le module avec `vi.resetModules()` (voir src/ui/etat.test.ts).
+- Vitest tourne en environnement « node » : happy-dom reste à ajouter (TEST-01).
 
 ## Points ouverts
 - S3a : où mémoriser « Moi » (réglages ou données), à décider en début de session.
 - Un parent déjà ancêtre de l'enfant n'est pas grisé : le refus « boucle » s'affiche à l'enregistrement.
-- `npm test` échoue parfois au premier lancement d'une session ; relancé, tout passe (enquête en S1, TEST-03).
+- TEST-03 non reproduit en S1. Pistes :
+  - `npm test` lancé en même temps qu'un build ou que l'extension Vitest de VS Code ;
+  - cache `node_modules/.vite`.
+  À la prochaine occurrence, copier toute la sortie, y compris la première erreur avant le résumé.
 - Icônes provisoires (S4).

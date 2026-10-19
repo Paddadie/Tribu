@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLE_REGLAGES, REGLAGES_PAR_DEFAUT, chargerReglages, sauvegarderReglages } from './reglages';
+import { CLE_REGLAGES, REGLAGES_PAR_DEFAUT, chargerReglages, libelleDernierExport, sauvegarderReglages } from './reglages';
 
 function magasin(contenu?: string) {
   const m = new Map<string, string>(contenu === undefined ? [] : [[CLE_REGLAGES, contenu]]);
@@ -11,16 +11,20 @@ function magasin(contenu?: string) {
 
 describe('réglages', () => {
   it('donne les valeurs par défaut quand rien n\'est stocké', () => {
-    expect(chargerReglages(magasin())).toEqual({ tri: 'prenom', theme: 'auto' });
+    expect(chargerReglages(magasin())).toEqual({ tri: 'prenom', theme: 'auto', dernierExport: null });
   });
   it('relit ce qui a été sauvegardé', () => {
     const m = magasin();
-    sauvegarderReglages(m, { tri: 'nom', theme: 'sombre' });
-    expect(chargerReglages(m)).toEqual({ tri: 'nom', theme: 'sombre' });
+    sauvegarderReglages(m, { tri: 'nom', theme: 'sombre', dernierExport: '2026-10-12T09:30:00.000Z' });
+    expect(chargerReglages(m)).toEqual({ tri: 'nom', theme: 'sombre', dernierExport: '2026-10-12T09:30:00.000Z' });
   });
   it('remplace chaque valeur inconnue par son défaut, sans toucher à l\'autre', () => {
-    expect(chargerReglages(magasin('{"tri":"age","theme":"clair"}'))).toEqual({ tri: 'prenom', theme: 'clair' });
-    expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({ tri: 'nom', theme: 'auto' });
+    expect(chargerReglages(magasin('{"tri":"age","theme":"clair"}'))).toEqual({ tri: 'prenom', theme: 'clair', dernierExport: null });
+    expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({ tri: 'nom', theme: 'auto', dernierExport: null });
+  });
+  it('ignore une date de dernier export invalide', () => {
+    expect(chargerReglages(magasin('{"dernierExport":"hier"}')).dernierExport).toBeNull();
+    expect(chargerReglages(magasin('{"dernierExport":42}')).dernierExport).toBeNull();
   });
   it('tolère un contenu illisible ou d\'un autre type', () => {
     expect(chargerReglages(magasin('{pas du json'))).toEqual(REGLAGES_PAR_DEFAUT);
@@ -30,5 +34,17 @@ describe('réglages', () => {
   it('tolère un localStorage inaccessible', () => {
     const casse = { getItem: () => { throw new Error('refusé'); }, setItem: () => {} };
     expect(chargerReglages(casse)).toEqual(REGLAGES_PAR_DEFAUT);
+  });
+});
+
+describe('libelleDernierExport', () => {
+  const maintenant = new Date(2026, 9, 19, 8, 0);
+  it('affiche « Jamais » sans export', () => {
+    expect(libelleDernierExport(null, maintenant)).toBe('Jamais');
+  });
+  it('compte les jours en dates locales', () => {
+    expect(libelleDernierExport(new Date(2026, 9, 19, 7, 0).toISOString(), maintenant)).toBe('19/10/2026 · aujourd’hui');
+    expect(libelleDernierExport(new Date(2026, 9, 18, 23, 59).toISOString(), maintenant)).toBe('18/10/2026 · hier');
+    expect(libelleDernierExport(new Date(2026, 9, 12, 21, 0).toISOString(), maintenant)).toBe('12/10/2026 · il y a 7 jours');
   });
 });

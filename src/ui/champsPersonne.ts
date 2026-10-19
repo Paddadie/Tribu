@@ -30,8 +30,9 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   );
   const annee = h('input', { id: 'annee', type: 'text', inputmode: 'numeric', maxlength: 4, placeholder: 'AAAA', value: date.annee, autocomplete: 'off' });
 
-  // Homme par défaut (création, et personnes enregistrées avant l'ajout du champ), sauf `sexeParDefaut`.
-  const sexeInitial: Sexe = existante?.sexe ?? sexeParDefaut;
+  // Création : `sexeParDefaut` (Homme sauf indication). Fiche existante : son sexe,
+  // ou rien de coché si elle date d'avant l'ajout du champ (il reste alors non précisé).
+  const sexeInitial: Sexe | undefined = existante ? existante.sexe : sexeParDefaut;
   const radios = (
     [
       ['M', 'Homme'],
@@ -63,7 +64,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
       prenom: prenom.value,
       nom: nom.value,
       naissance: assemblerDate({ jour: jour.value, mois: mois.value, annee: annee.value }),
-      sexe: radios.find((r) => r.radio.checked)?.valeur ?? 'M',
+      sexe: radios.find((r) => r.radio.checked)?.valeur,
       note: avecNote ? note.value : (existante?.note ?? ''),
     }),
   };

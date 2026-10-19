@@ -1,11 +1,35 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import { VitePWA } from "vite-plugin-pwa";
 
 const pkg = JSON.parse(
   readFileSync(fileURLToPath(new URL("package.json", import.meta.url)), "utf-8"),
 ) as { version: string };
+
+// Politique de sécurité du contenu : tout vient de l'appli elle-même (scripts,
+// styles, police, service worker). Ajoutée au build seulement : en dev, Vite
+// injecte des styles en ligne et ouvre un websocket de rechargement.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join("; ");
+
+const cspAuBuild: Plugin = {
+  name: "tribu-csp",
+  apply: "build",
+  transformIndexHtml: () => [{ tag: "meta", attrs: { "http-equiv": "Content-Security-Policy", content: CSP }, injectTo: "head-prepend" }],
+};
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -21,6 +45,7 @@ export default defineConfig({
   },
 
   plugins: [
+    cspAuBuild,
     VitePWA({
       // Mise à jour silencieuse : le nouveau service worker prend la main tout
       // de suite et la page se recharge (contrairement à YamsApp, qui affiche

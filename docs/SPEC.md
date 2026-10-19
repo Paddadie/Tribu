@@ -11,16 +11,19 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - PWA installée sur téléphone, utilisable hors ligne.
 - Données uniquement sur l'appareil, aucune base distante ni compte.
 - Mise à jour automatique de l'appli à l'ouverture.
+- Stockage persistant demandé au navigateur au lancement, sans message.
+- Politique de sécurité du contenu (CSP) : tout vient de l'appli elle-même (ajoutée au build).
+- Une modification qui échoue (stockage plein) affiche un message en français ; rien n'est modifié.
 
 ## Fiche personne
 - Prénom, nom.
-- Sexe : homme (par défaut) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas et s'affichent « né(e) » jusqu'à leur modification.
+- Sexe : homme (par défaut à la création) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas : elles s'affichent « né(e) » et rien n'est présélectionné en modification.
 - Date de naissance (facultative), éventuellement partielle : année seule, mois et année, ou date complète.
 - Note libre.
 - Sections affichées, dans cet ordre : conjoint, enfants, frères et sœurs (puis demi-frères et demi-sœurs), parents.
 - Une section vide n'est pas affichée. Un bouton « Ajouter un proche » en bas de fiche permet de créer un lien dans une catégorie absente.
 - Chaque proche affiché est touchable et ouvre sa fiche.
-- Étiquettes sur les proches : « Marié » (conjoint), « Adoptif » (parent ou enfant) ; le lien biologique n'est pas étiqueté.
+- Étiquettes sur les proches, accordées selon le proche affiché : « Marié / Mariée » (conjoint), « Adoptif / Adoptive » (parent ou enfant) ; « Marié(e) » et « Adoptif(ve) » si son sexe n'est pas renseigné. Le lien biologique n'est pas étiqueté.
 
 ## Couples (unions)
 - Une union relie deux personnes ayant chacune leur fiche.
@@ -34,7 +37,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Un enfant peut avoir jusqu'à deux parents par type.
 - Ajouter un parent ou un enfant : personne existante ou nouvelle.
 - Enfants triés par date de naissance (sans date : en fin de liste).
-- Enfants d'un couple : déduits des parents communs, jamais ressaisis.
+- Enfants d'un couple : déduits des parents communs, jamais ressaisis. Pas encore affichés en tant que tels (prévu en V2, session S2b).
 
 ## Frères et sœurs (déduits)
 - Frères et sœurs : mêmes parents.
@@ -46,16 +49,26 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Un écrou en haut à droite ouvre les Réglages.
 - Champ de filtre par nom (prénom ou nom).
 - Bouton « + » pour créer une personne.
+- Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
 
 ## Suppression
 - Confirmation obligatoire.
 - Supprimer une personne retire aussi ses unions et filiations.
+- Un échec s'affiche sous le bouton, dans l'écran.
 
 ## Réglages (écran ouvert par l'écrou)
 - Affichage : tri de la liste (prénom ou nom), thème (auto, clair, sombre). Mémorisés sur l'appareil, hors des données exportées.
-- Sauvegarde : export de toutes les données dans un fichier JSON `tribu-AAAA-MM-JJ.json` ; import d'un fichier JSON, validé avant toute écriture, avec confirmation avant d'écraser des données existantes.
-- Données : effacement de toutes les données, avec confirmation.
+- Sauvegarde : export de toutes les données dans un fichier JSON `tribu-AAAA-MM-JJ.json`, par la feuille de partage du téléphone, sinon par téléchargement. Message selon l'issue : « Fichier partagé. », « Partage annulé : rien n’a été exporté. », « Téléchargement lancé : vérifiez le dossier Téléchargements. » ou « Export impossible sur cet appareil. »
+- Date du dernier export affichée sous le bouton (« Jamais », ou « jj/mm/aaaa · il y a N jours ») ; mémorisée avec les réglages, mise à jour sauf si le partage est annulé.
+- Import d'un fichier JSON, validé avant toute écriture, avec confirmation avant d'écraser des données existantes.
+- Données : effacement de toutes les données, avec confirmation ; bouton grisé quand il n'y a personne.
+- Import et effacement sont annulables quelques secondes : un bandeau « Annuler » en bas d'écran rétablit l'état d'avant (copie en mémoire seulement).
 - Version de l'appli et date du build.
+
+## Données illisibles
+- Si les données stockées ne se lisent plus, l'appli ne les écrase jamais : elle en garde une copie sous une clé de secours et n'affiche qu'un écran « Données illisibles ».
+- Cet écran propose d'exporter le contenu brut (`tribu-secours-AAAA-MM-JJ.txt`) et de « Repartir à vide… », sur confirmation ; la copie de secours reste sur le téléphone.
+- Aucune modification n'est enregistrée tant que Paul n'a pas choisi.
 
 ## Hors V1 (plus tard)
 - Vue arbre graphique.

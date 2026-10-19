@@ -4,9 +4,11 @@ import { initPwa } from "./pwa";
 import { accueil } from "./ui/accueil";
 import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
-import { appliquerTheme, lireDonnees } from "./ui/etat";
+import { EVENEMENT_RAFRAICHIR } from "./ui/annulation";
+import { appliquerTheme, lireBrutIllisible, lireDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
+import { ecranIllisible } from "./ui/illisible";
 import { ecranLien } from "./ui/lien";
 import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
@@ -25,6 +27,9 @@ const app = document.querySelector<HTMLElement>("#app");
 const remplacer = (route: string) => location.replace(route);
 
 function vue(route: string): HTMLElement {
+  // Données illisibles : cet écran remplace tous les autres jusqu'au choix de Paul.
+  const brut = lireBrutIllisible();
+  if (brut !== null) return ecranIllisible(brut, () => (route === "#/" ? afficher() : remplacer("#/")));
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
@@ -51,6 +56,10 @@ function afficher() {
 
 appliquerTheme();
 window.addEventListener("hashchange", afficher);
+// Après une annulation : même écran redessiné, sans remonter en haut.
+window.addEventListener(EVENEMENT_RAFRAICHIR, () => app?.replaceChildren(vue(location.hash)));
+// Demande au navigateur de ne pas purger le stockage sous contrainte d'espace (silencieux).
+void navigator.storage?.persist?.().catch(() => {});
 afficher();
 
 initPwa();

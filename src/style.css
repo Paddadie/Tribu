@@ -247,6 +247,35 @@ a {
   color: var(--secondaire);
 }
 
+.accueil-vide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 28px 32px;
+  text-align: center;
+}
+
+.accueil-vide h2 {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.accueil-vide > .secondaire {
+  max-width: 30ch;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.accueil-vide-actions {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  text-align: left;
+}
+
 .version {
   padding: 0 20px 24px;
   text-align: center;
@@ -577,6 +606,107 @@ fieldset.champ legend {
 
 .succes[hidden] {
   display: none;
+}
+
+.date-export {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fond);
+  font-size: 14px;
+}
+
+.date-export b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.bouton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ——— Bandeau temporaire (« Annuler ») ——— */
+
+.bandeau {
+  position: fixed;
+  z-index: 2;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  max-width: 568px;
+  margin: 0 auto;
+  min-height: 56px;
+  padding: 8px 8px 8px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 14px;
+  background: var(--encre);
+  color: var(--fond);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px var(--ombre-bouton);
+}
+
+.bandeau-action {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  color: var(--accent-clair);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* ——— Données illisibles ——— */
+
+.illisible {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 56px 22px 28px;
+}
+
+.pictogramme {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--erreur-fond);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illisible h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.illisible > p:not(.version) {
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.illisible-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.illisible .version {
+  padding: 0;
 }
 
 /* ——— Conjoint et union ——— */

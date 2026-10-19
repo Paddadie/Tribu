@@ -35,21 +35,21 @@ Fin de session : cocher ici, réécrire ETAT.md, ajouter les décisions, mettre 
 Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête.
 
 - [ ] **S1. Robustesse** — Maquette d'abord : écran « Données illisibles », Réglages (date du dernier export, export par partage), accueil vide.
-  - [ ] DATA-01 : `charger()` (stockage.ts) ne renvoie plus des données vides en silence. Contenu invalide → brut copié sous une clé de secours (`tribu:secours`), écran « Données illisibles » (exporter le brut, repartir à vide sur confirmation), jamais d'écriture automatique par-dessus.
-  - [ ] TEST-02 : test « chargement invalide puis modification » : l'original reste récupérable.
-  - [ ] DATA-02 : copie de l'état avant import ou effacement ; bandeau « Annuler » quelques secondes après. Composant de bandeau réutilisé en S2b (UX-07).
-  - [ ] DATA-03 : `navigator.storage.persist()` au lancement, silencieux.
-  - [ ] DATA-04 : date du dernier export mémorisée dans les réglages et affichée dans Réglages. Pas de bandeau sur l'accueil.
-  - [ ] DATA-05 : export par `navigator.share` avec fichier (iPhone et Android), repli sur le téléchargement ; message exact, jamais « enregistré » sans preuve.
-  - [ ] UX-10 : « Effacer les données » désactivé quand il n'y a personne.
-  - [ ] UX-08 : accueil vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
-  - [ ] CODE-03 : erreurs toujours dans le bloc d'erreur de l'écran (plus d'`alert()` dans fiche.ts) ; message français si le stockage est plein.
-  - [ ] CODE-04 : textes : « Vos 1 personne actuelles » (import), accords Marié/Mariée et Adoptif/Adoptive selon la personne affichée ; une fiche ancienne sans sexe n'a pas « Homme » présélectionné en modification.
-  - [ ] UX-11 : retirer l'étiquette « Biologique » de fiche.ts (conforme à la décision 23).
-  - [ ] SEC-02 : CSP en balise meta, en vérifiant service worker, police et build.
-  - [ ] TEST-03 : enquête limitée à 30 min sur le premier `npm test` de session qui échoue (4 fichiers « failed », aucun test exécuté).
-  - [ ] DOC-01 : README court : présentation, commandes, déploiement, format JSON des sauvegardes.
-  - [ ] DOC-02 : SPEC et DECISIONS alignées sur le code (étiquette Biologique, effacement « grisé », enfants du couple affichés en S2b).
+  - [x] DATA-01 : `charger()` (stockage.ts) ne renvoie plus des données vides en silence. Contenu invalide → brut copié sous une clé de secours (`tribu:secours`), écran « Données illisibles » (exporter le brut, repartir à vide sur confirmation), jamais d'écriture automatique par-dessus.
+  - [x] TEST-02 : test « chargement invalide puis modification » : l'original reste récupérable.
+  - [x] DATA-02 : copie de l'état avant import ou effacement ; bandeau « Annuler » quelques secondes après. Composant de bandeau réutilisé en S2b (UX-07).
+  - [x] DATA-03 : `navigator.storage.persist()` au lancement, silencieux.
+  - [x] DATA-04 : date du dernier export mémorisée dans les réglages et affichée dans Réglages. Pas de bandeau sur l'accueil.
+  - [x] DATA-05 : export par `navigator.share` avec fichier (iPhone et Android), repli sur le téléchargement ; message exact, jamais « enregistré » sans preuve.
+  - [x] UX-10 : « Effacer les données » désactivé quand il n'y a personne.
+  - [x] UX-08 : accueil vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
+  - [x] CODE-03 : erreurs toujours dans le bloc d'erreur de l'écran (plus d'`alert()` dans fiche.ts) ; message français si le stockage est plein.
+  - [x] CODE-04 : textes : « Vos 1 personne actuelles » (import), accords Marié/Mariée et Adoptif/Adoptive selon la personne affichée ; une fiche ancienne sans sexe n'a pas « Homme » présélectionné en modification.
+  - [x] UX-11 : retirer l'étiquette « Biologique » de fiche.ts (conforme à la décision 23).
+  - [x] SEC-02 : CSP en balise meta, en vérifiant service worker, police et build.
+  - [x] TEST-03 : enquête limitée à 30 min sur le premier `npm test` de session qui échoue (4 fichiers « failed », aucun test exécuté). Non reproduit en S1 (lancement à froid et `npm test` verts) ; consigne dans ETAT.md.
+  - [x] DOC-01 : README court : présentation, commandes, déploiement, format JSON des sauvegardes.
+  - [x] DOC-02 : SPEC et DECISIONS alignées sur le code (étiquette Biologique, effacement « grisé », enfants du couple affichés en S2b).
   Terminé quand : des données stockées invalides ne sont jamais écrasées sans action de Paul, et un export partagé depuis le téléphone se réimporte.
 
 - [ ] **S2a. Socle** — Aucun changement visible, pas de maquette.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assemblerDate, comparateur, comparerParNom, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleNaissance, nomComplet, nomListe } from './liste';
+import { assemblerDate, comparateur, comparerParNom, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe } from './liste';
 import type { Personne } from './types';
 
 let n = 0;
@@ -170,5 +170,12 @@ describe('decouperDate / assemblerDate', () => {
   it('refuse les saisies non numériques', () => {
     expect(() => assemblerDate({ jour: '', mois: '', annee: '19a1' })).toThrow();
     expect(() => assemblerDate({ jour: 'x', mois: '5', annee: '1961' })).toThrow();
+  });
+});
+
+describe('accords des étiquettes', () => {
+  it('accorde « Marié » et « Adoptif » selon le sexe de la personne affichée', () => {
+    expect([libelleMarie('M'), libelleMarie('F'), libelleMarie()]).toEqual(['Marié', 'Mariée', 'Marié(e)']);
+    expect([libelleAdoptif('M'), libelleAdoptif('F'), libelleAdoptif()]).toEqual(['Adoptif', 'Adoptive', 'Adoptif(ve)']);
   });
 });

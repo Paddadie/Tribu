@@ -5,6 +5,8 @@ import { donneesVides } from './modele';
 import type { Donnees } from './types';
 
 export const CLE_STOCKAGE = 'tribu:donnees';
+/** Copie d'un contenu illisible trouvé sous CLE_STOCKAGE. */
+export const CLE_SECOURS = 'tribu:secours';
 
 type Magasin = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -58,16 +60,34 @@ export function estDonneesValides(v: unknown): v is Donnees {
   return true;
 }
 
-/** Charge les données ; données vides si rien n'est stocké ou si le contenu est illisible. */
-export function charger(magasin: Magasin): Donnees {
-  const brut = magasin.getItem(CLE_STOCKAGE);
-  if (brut === null) return donneesVides();
+/** Résultat du chargement : les données, ou le contenu brut s'il est illisible. */
+export type Chargement = { lisible: true; donnees: Donnees } | { lisible: false; brut: string };
+
+function lire(brut: string): Donnees | null {
   try {
     const lu: unknown = JSON.parse(brut);
-    return estDonneesValides(lu) ? lu : donneesVides();
+    return estDonneesValides(lu) ? lu : null;
   } catch {
-    return donneesVides();
+    return null;
   }
+}
+
+/**
+ * Charge les données ; données vides si rien n'est stocké. Un contenu illisible
+ * est copié tel quel sous CLE_SECOURS et n'est jamais remplacé ici : c'est à
+ * l'appelant de bloquer les écritures jusqu'à une décision de l'utilisateur.
+ */
+export function charger(magasin: Magasin): Chargement {
+  const brut = magasin.getItem(CLE_STOCKAGE);
+  if (brut === null) return { lisible: true, donnees: donneesVides() };
+  const donnees = lire(brut);
+  if (donnees) return { lisible: true, donnees };
+  try {
+    magasin.setItem(CLE_SECOURS, brut);
+  } catch {
+    // Copie impossible (stockage plein) : l'original reste sous CLE_STOCKAGE, non écrasé.
+  }
+  return { lisible: false, brut };
 }
 
 export function sauvegarder(magasin: Magasin, donnees: Donnees): void {
@@ -78,10 +98,20 @@ export function exporterJson(donnees: Donnees): string {
   return JSON.stringify(donnees, null, 2);
 }
 
+/** « 2026-10-19 », date locale. */
+function jour(date: Date): string {
+  const deux = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}`;
+}
+
 /** « tribu-2026-10-19.json », avec la date locale du jour. */
 export function nomFichierExport(date: Date): string {
-  const deux = (n: number) => String(n).padStart(2, '0');
-  return `tribu-${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}.json`;
+  return `tribu-${jour(date)}.json`;
+}
+
+/** « tribu-secours-2026-10-19.txt » : le contenu brut n'est pas forcément du JSON. */
+export function nomFichierSecours(date: Date): string {
+  return `tribu-secours-${jour(date)}.txt`;
 }
 
 /** Lève une Error si le texte n'est pas un JSON Tribu valide (rien n'est alors écrasé). */
