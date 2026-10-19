@@ -91,17 +91,17 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   Terminé quand : un export v1 s'importe dans la v2 sans perte, une séparation laisse l'ex-conjoint visible sur la fiche, et l'accueil montre les anniversaires à venir.
 
 - [ ] **S4. Identité visuelle** — Maquette complète d'abord (direction A).
-  - [ ] UI-01 : direction « sobre affiné » : vert calmé, Figtree seule (UI-08).
-  - [ ] UI-02 : une teinte d'avatar par nom de famille.
-  - [ ] UI-03 : échelle de 5 tailles de texte, espacements différenciés, nom de la fiche plus affirmé.
-  - [ ] UI-04 : accent réservé à ce qui se touche ; titres de section en gris chaud, capitales en CSS.
-  - [ ] UI-05 : un seul bouton plein par écran.
-  - [ ] UI-06 : état appuyé et anneau de focus identiques partout.
-  - [ ] UI-07 : icône définitive (3 propositions, Paul choisit) ; favicon à la teinte de `theme_color`.
-  - [ ] ANIM-01 : glissement latéral entre écrans (View Transitions, moins de 250 ms), sens inverse au retour.
-  - [ ] ANIM-02 : montée de la feuille, voile en fondu, léger zoom des confirmations.
-  - [ ] ANIM-03 : surbrillance brève de la ligne ajoutée ou modifiée au retour sur la fiche.
-  - [ ] ANIM-04 : retours tactiles : appui, coche de sélection.
+  - [x] UI-01 : direction « sobre affiné » : vert calmé, Figtree seule (UI-08).
+  - [x] UI-02 : une teinte d'avatar par nom de famille.
+  - [x] UI-03 : échelle de 5 tailles de texte, espacements différenciés, nom de la fiche plus affirmé.
+  - [x] UI-04 : accent réservé à ce qui se touche ; titres de section en gris chaud, capitales en CSS.
+  - [x] UI-05 : un seul bouton plein par écran.
+  - [x] UI-06 : état appuyé et anneau de focus identiques partout.
+  - [x] UI-07 : icône définitive (3 propositions, Paul choisit) ; favicon à la teinte de `theme_color`.
+  - [x] ANIM-01 : glissement latéral entre écrans (View Transitions, moins de 250 ms), sens inverse au retour.
+  - [x] ANIM-02 : montée de la feuille, voile en fondu, léger zoom des confirmations.
+  - [x] ANIM-03 : surbrillance brève de la ligne ajoutée ou modifiée au retour sur la fiche.
+  - [x] ANIM-04 : retours tactiles : appui, coche de sélection.
   Terminé quand : toutes les animations sont coupées si le téléphone demande moins de mouvement, et Paul valide le rendu sur son téléphone.
 
 ## Plus tard

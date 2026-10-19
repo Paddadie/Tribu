@@ -11,6 +11,7 @@ import type { Donnees, Personne, Sexe } from '../modele/types';
 import { accepterHomonyme, champsIdentite } from './champsPersonne';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
+import { signaler } from './surbrillance';
 import { contenuLigne } from './lignePersonne';
 
 type Mode = 'existante' | 'nouvelle';
@@ -121,8 +122,8 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     const lignesReste = reste.map((c) => ligne(c, raisons.get(c.id), raisons.get(c.id) !== undefined));
     if (enTete.length === 0) return [h('div', { class: 'carte' }, ...lignesReste)];
     return [
-      bloc(enTete.length > 1 ? 'SUGGESTIONS' : 'SUGGESTION', enTete.map((c) => ligne(c, suggerees.get(c.id), false))),
-      reste.length > 0 && bloc('TOUTES LES PERSONNES', lignesReste),
+      bloc(enTete.length > 1 ? 'Suggestions' : 'Suggestion', enTete.map((c) => ligne(c, suggerees.get(c.id), false))),
+      reste.length > 0 && bloc('Toutes les personnes', lignesReste),
     ].filter((x): x is HTMLElement => x !== false);
   };
 
@@ -180,15 +181,19 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
         if (!choisie) throw new Error('Choisissez une personne');
         const autre = choisie;
         modifierDonnees((d) => o.lier(d, autre));
+        signaler(autre);
       } else {
         const champs = identite.lire();
         // Saisie vérifiée avant de parler d'homonyme.
         creerPersonne(lireDonnees(), champs);
         if (!(await accepterHomonyme(lireDonnees().personnes, champs, 'Pour relier celle qui existe, choisissez-la dans « Personne existante ».'))) return;
+        let idNouvelle = '';
         modifierDonnees((d) => {
           const nouvelle = creerPersonne(d, champs);
+          idNouvelle = nouvelle.personne.id;
           return o.lier(nouvelle.donnees, nouvelle.personne.id);
         });
+        signaler(idNouvelle);
       }
       o.apres();
     } catch (err) {

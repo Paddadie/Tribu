@@ -142,11 +142,11 @@ export function ecranReglages(): HTMLElement {
     h(
       'div',
       { class: 'contenu' },
-      h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'MOI'), carteMoi, aideMoi),
+      h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Moi'), carteMoi, aideMoi),
       h(
         'section',
         { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'AFFICHAGE'),
+        h('h2', { class: 'titre-section' }, 'Affichage'),
         h(
           'div',
           { class: 'carte bloc-reglages' },
@@ -157,7 +157,7 @@ export function ecranReglages(): HTMLElement {
       h(
         'section',
         { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'SAUVEGARDE'),
+        h('h2', { class: 'titre-section' }, 'Sauvegarde'),
         h(
           'div',
           { class: 'carte bloc-reglages' },
@@ -184,7 +184,7 @@ export function ecranReglages(): HTMLElement {
       h(
         'section',
         { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'DONNÉES'),
+        h('h2', { class: 'titre-section' }, 'Données'),
         boutonEffacer,
         aideEffacer,
         erreurEffacement,

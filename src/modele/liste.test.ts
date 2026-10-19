@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assemblerDate, comparateur, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe } from './liste';
+import { assemblerDate, comparateur, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe, teinteFamille } from './liste';
 import type { Personne } from './types';
 
 let n = 0;
@@ -19,6 +19,22 @@ describe('nomComplet et initiales', () => {
     expect(initiales(p('marie', 'girard'))).toBe('MG');
     expect(initiales(p('Élodie', ''))).toBe('É');
     expect(initiales(p('', ''))).toBe('?');
+  });
+});
+
+describe('teinteFamille', () => {
+  it('est stable pour un même nom, sans tenir compte de la casse, des accents ni des espaces', () => {
+    expect(teinteFamille('Lefèvre')).toBe(teinteFamille('  LEFEVRE '));
+    expect(teinteFamille('Martin')).toBe(teinteFamille('Martin'));
+  });
+  it("n'en donne aucune pour un nom vide", () => {
+    expect(teinteFamille('')).toBeUndefined();
+    expect(teinteFamille(' - ')).toBeUndefined();
+  });
+  it('répartit des noms variés sur plusieurs teintes', () => {
+    const noms = ['Martin', 'Roux', 'Benali', 'Lefèvre', 'Moreau', 'Dubois', 'Girard', 'Bernard', 'Petit', 'Durand'];
+    const teintes = new Set(noms.map(teinteFamille));
+    expect(teintes.size).toBeGreaterThanOrEqual(5);
   });
 });
 

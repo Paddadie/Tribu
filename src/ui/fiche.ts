@@ -3,7 +3,7 @@
 
 import { detailPersonne, libelleAge, libelleAgeDeces } from '../modele/age';
 import { conjoint, enfantsDuCouple, exConjoints, familleElargie, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
-import { avecDe, enumerer, initiales, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
+import { avecDe, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
 import { aDesLiens, enCouple, supprimerPersonne } from '../modele/modele';
 import { libelleRelation, lienAvecMoi } from '../modele/parente';
 import { ficheMoi } from '../modele/reglages';
@@ -11,8 +11,9 @@ import type { Personne, Union } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
-import { contenuLigne } from './lignePersonne';
+import { avatarPersonne, contenuLigne } from './lignePersonne';
 import { lienRetour, remplacer } from './navigation';
+import { eclairer } from './surbrillance';
 
 /** Ligne touchable vers la fiche d'une personne, avec une étiquette et un crayon vers l'écran de gestion du lien. */
 function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libelleModifier: string, detail?: string): HTMLElement {
@@ -37,8 +38,8 @@ function sectionsFratrie(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
   const { freresSoeurs, demis } = fratrie(d, p.id);
   return [
-    freresSoeurs.length > 0 ? section('FRÈRES ET SŒURS', ...freresSoeurs.map((f) => ligneFratrie(f))) : null,
-    demis.length > 0 ? section('DEMI-FRÈRES ET DEMI-SŒURS', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null,
+    freresSoeurs.length > 0 ? section('Frères et sœurs', ...freresSoeurs.map((f) => ligneFratrie(f))) : null,
+    demis.length > 0 ? section('Demi-frères et demi-sœurs', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null,
   ];
 }
 
@@ -73,12 +74,12 @@ function sectionsElargies(p: Personne): (HTMLElement | null)[] {
   const sec = (titre: string, liens: Parent[], belleFamille = false) =>
     liens.length > 0 ? section(titre, ...liens.map((l) => ligneElargie(l, belleFamille))) : null;
   return [
-    sec('GRANDS-PARENTS', f.grandsParents),
-    sec('PETITS-ENFANTS', f.petitsEnfants),
-    sec('ONCLES ET TANTES', f.onclesTantes),
-    sec('NEVEUX ET NIÈCES', f.neveuxNieces),
-    sec('COUSINS ET COUSINES', f.cousins),
-    sec('BELLE-FAMILLE', f.belleFamille, true),
+    sec('Grands-parents', f.grandsParents),
+    sec('Petits-enfants', f.petitsEnfants),
+    sec('Oncles et tantes', f.onclesTantes),
+    sec('Neveux et nièces', f.neveuxNieces),
+    sec('Cousins et cousines', f.cousins),
+    sec('Belle-famille', f.belleFamille, true),
   ];
 }
 
@@ -111,8 +112,8 @@ function sectionsConjoint(p: Personne): (HTMLElement | null)[] {
   const actuel = conjoint(d, p.id);
   const ex = exConjoints(d, p.id);
   return [
-    actuel ? section('CONJOINT', ligneUnion(p, actuel)) : null,
-    ex.length > 0 ? section(ex.length > 1 ? 'EX-CONJOINTS' : 'EX-CONJOINT', ...ex.map((e) => ligneUnion(p, e))) : null,
+    actuel ? section('Conjoint', ligneUnion(p, actuel)) : null,
+    ex.length > 0 ? section(ex.length > 1 ? 'Ex-conjoints' : 'Ex-conjoint', ...ex.map((e) => ligneUnion(p, e))) : null,
   ];
 }
 
@@ -181,7 +182,7 @@ export function fiche(p: Personne): HTMLElement {
     remplacer('#/');
   };
 
-  return h(
+  const ecran = h(
     'div',
     { class: 'ecran' },
     h(
@@ -193,7 +194,7 @@ export function fiche(p: Personne): HTMLElement {
     h(
       'div',
       { class: 'identite' },
-      h('span', { class: 'avatar avatar-grand' }, initiales(p)),
+      avatarPersonne(p, true),
       h('h1', {}, nomComplet(p)),
       lien && h('span', { class: 'lien-moi' }, lien),
       dates.length > 0 && h('span', { class: 'dates secondaire' }, ...dates),
@@ -201,15 +202,17 @@ export function fiche(p: Personne): HTMLElement {
     h(
       'div',
       { class: 'contenu' },
-      p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
+      p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'Note'), h('p', {}, p.note)),
       ...sectionsConjoint(p),
-      sectionFiliation('ENFANTS', liensEnfants(lireDonnees(), p.id), p),
+      sectionFiliation('Enfants', liensEnfants(lireDonnees(), p.id), p),
       ...sectionsFratrie(p),
-      sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
+      sectionFiliation('Parents', liensParents(lireDonnees(), p.id), p),
       ...sectionsElargies(p),
-      h('button', { type: 'button', class: 'bouton', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
+      h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
       erreur,
     ),
   );
+  eclairer(ecran);
+  return ecran;
 }

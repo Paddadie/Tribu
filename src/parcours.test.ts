@@ -171,7 +171,11 @@ describe('ajout d’un lien', () => {
     expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: ids.Anne, enfant: ids.Denis, type: 'adoptif' }));
     expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: ids.Bruno, enfant: ids.Denis, type: 'adoptif' }));
     expect(location.hash).toBe(`#/personne/${ids.Anne}`);
-    expect(trouver('section', 'ENFANTS').textContent).toContain('Denis Martin');
+    expect(trouver('section', 'Enfants').textContent).toContain('Denis Martin');
+    // ANIM-03 : seule la ligne ajoutée s'éclaire au retour sur la fiche.
+    const eclairees = [...ecran().querySelectorAll('.ligne.nouvelle')];
+    expect(eclairees).toHaveLength(1);
+    expect(eclairees[0].textContent).toContain('Denis Martin');
   });
 
   it('conjoint marié créé depuis l’écran d’ajout, de sexe opposé par défaut', async () => {
@@ -190,7 +194,7 @@ describe('ajout d’un lien', () => {
     const fanny = enregistrees().personnes.find((p) => p.prenom === 'Fanny')!;
     expect(fanny.sexe).toBe('F');
     expect(enregistrees().unions).toContainEqual(expect.objectContaining({ personneA: ids.Denis, personneB: fanny.id, marie: true }));
-    expect(trouver('section', 'CONJOINT').textContent).toContain('Fanny Roux');
+    expect(trouver('section', 'Conjoint').textContent).toContain('Fanny Roux');
   });
 
   it('parent créé depuis l’écran d’ajout', async () => {
@@ -205,7 +209,7 @@ describe('ajout d’un lien', () => {
     const elise = enregistrees().personnes.find((p) => p.prenom === 'Élise')!;
     expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: elise.id, enfant: ids.Denis, type: 'biologique' }));
     expect(location.hash).toBe(`#/personne/${ids.Denis}`);
-    expect(trouver('section', 'PARENTS').textContent).toContain('Élise Durand');
+    expect(trouver('section', 'Parents').textContent).toContain('Élise Durand');
   });
 
   it('s’ouvre sur « Nouvelle personne », le curseur dans le prénom', async () => {
@@ -232,7 +236,7 @@ describe('ajout d’un lien', () => {
     const jules = enregistrees().personnes.find((p) => p.prenom === 'Jules')!;
     expect(jules.nom).toBe('Dubois');
     expect(enregistrees().filiations.filter((f) => f.enfant === jules.id).map((f) => f.parent)).toEqual([lea.personne.id, thomas.personne.id]);
-    expect(trouver('section', 'CONJOINT').textContent).toContain('1 enfant ensemble');
+    expect(trouver('section', 'Conjoint').textContent).toContain('1 enfant ensemble');
   });
 
   it('frère ou sœur depuis la fiche : un seul parent coché donne un demi-frère', async () => {
@@ -251,7 +255,7 @@ describe('ajout d’un lien', () => {
     const hugo = enregistrees().personnes.find((p) => p.prenom === 'Hugo')!;
     expect(enregistrees().filiations.filter((f) => f.enfant === hugo.id).map((f) => f.parent)).toEqual([ids.Anne]);
     expect(location.hash).toBe(`#/personne/${ids.Chloé}`);
-    expect(trouver('section', 'DEMI-FRÈRES').textContent).toContain('Hugo Martin');
+    expect(trouver('section', 'Demi-frères').textContent).toContain('Hugo Martin');
   });
 
   it('frère ou sœur : décocher un parent avec une date incomplète met à jour le bouton', async () => {
@@ -350,8 +354,8 @@ describe('retrait sans confirmation, annulable', () => {
     expect(bandeau()!.textContent).toContain('Séparation d’avec Bruno enregistrée.');
     // Plus de conjoint actuel, un ex-conjoint.
     const titres = [...ecran().querySelectorAll('.titre-section')].map((t) => t.textContent);
-    expect(titres).toContain('EX-CONJOINT');
-    expect(titres).not.toContain('CONJOINT');
+    expect(titres).toContain('Ex-conjoint');
+    expect(titres).not.toContain('Conjoint');
 
     await toucher(trouver('.bandeau button', 'Annuler'));
     expect(enregistrees().unions).toEqual(donnees.unions);
@@ -620,14 +624,14 @@ describe('« Moi » et parenté', () => {
 
     await demarrer(d, `#/personne/${ids.Chloé}`, { moi: ids.Chloé });
     const titres = [...ecran().querySelectorAll('h2.titre-section')].map((e) => e.textContent);
-    expect(titres).toEqual(['PARENTS', 'GRANDS-PARENTS', 'ONCLES ET TANTES']);
-    expect(trouver('section', 'GRANDS-PARENTS', ecran()).textContent).toContain('Eva Martin');
-    expect(trouver('section', 'ONCLES ET TANTES', ecran()).textContent).toContain('Hugo Martin');
+    expect(titres).toEqual(['Parents', 'Grands-parents', 'Oncles et tantes']);
+    expect(trouver('section', 'Grands-parents', ecran()).textContent).toContain('Eva Martin');
+    expect(trouver('section', 'Oncles et tantes', ecran()).textContent).toContain('Hugo Martin');
 
     // Depuis Hugo, Chloé est une nièce, et c'est moi : étiquette « Toi ».
     await demarrer(d, `#/personne/${ids.Hugo}`, { moi: ids.Chloé });
     expect(lienMoi()).toBe('Ton oncle');
-    expect(trouver('section', 'NEVEUX ET NIÈCES', ecran()).textContent).toContain('Toi');
+    expect(trouver('section', 'Neveux et nièces', ecran()).textContent).toContain('Toi');
 
     // Chez Denis, sans lien : aucune section déduite.
     await demarrer(d, `#/personne/${ids.Denis}`, { moi: ids.Chloé });

@@ -30,6 +30,18 @@ export function initiales(p: Pick<Personne, 'prenom' | 'nom'>): string {
   return lettres.toLocaleUpperCase('fr') || '?';
 }
 
+/** Teintes (en degrés) des avatars : assez écartées pour qu'on distingue deux familles voisines. */
+const TEINTES = [28, 205, 45, 285, 335, 170, 100, 245, 8, 190];
+
+/** Teinte d'avatar d'un nom de famille : toujours la même pour un nom donné, sans tenir compte des accents ni de la casse. Aucune pour un nom vide. */
+export function teinteFamille(nom: string): number | undefined {
+  const cle = simplifier(nom).replace(/[^a-z0-9]/g, '');
+  if (!cle) return undefined;
+  let somme = 0;
+  for (const c of cle) somme = (somme * 31 + c.charCodeAt(0)) >>> 0;
+  return TEINTES[somme % TEINTES.length];
+}
+
 /** Minuscules, sans accents : « Éloïse » → « eloise ». */
 function simplifier(texte: string): string {
   return texte.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr');

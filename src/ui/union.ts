@@ -8,6 +8,7 @@ import type { Personne } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
+import { signaler } from './surbrillance';
 import { lienRetour, remplacer, revenir } from './navigation';
 
 /** Écran de l'union `idUnion`, ouvert depuis la fiche de `p`. */
@@ -35,6 +36,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
   const enregistrer = () => {
     try {
       modifierDonnees((x) => modifierUnion(x, union.id, marie.checked));
+      signaler(autre.id);
       revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Enregistrement impossible');
@@ -53,6 +55,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
   const retablir = () => {
     try {
       modifierDonnees((x) => retablirUnion(x, union.id));
+      signaler(autre.id);
       revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Rétablissement impossible');

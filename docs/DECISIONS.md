@@ -104,3 +104,10 @@
 2026-10-19 | Décès : champ facultatif sous la naissance, rempli comme elle ; date partielle admise ; décès avant naissance refusé (comparaison sur la précision commune) | FEAT-04 ; maquette validée par Paul
 2026-10-19 | Âge par bornes de dates partielles ; quand elles ne tranchent pas, âge le plus probable (milieu des périodes) précédé de « environ » ; « moins d'un an » sous 1 an | FEAT-04 ; la maquette montrait le plus bas, jugé moins juste
 2026-10-19 | Liste : décédé « 1941 – 2024 » ; anniversaires : naissance complète exigée, pas de décédés, pas d'âge 0, 3 maximum sous 30 jours, tri par jours puis nom | FEAT-05, FEAT-04 ; maquette validée par Paul
+2026-10-19 | Accent #2F6F5E (plus gris que #1B6B58), aussi `theme_color` ; pastilles et titre d'accueil neutres, titres de section en gris chaud | UI-01, UI-04 ; maquette S4 validée par Paul
+2026-10-19 | Teinte d'avatar = hachage du nom de famille simplifié sur 10 teintes écartées ; vert par défaut si nom vide ; avatars en `hsl(var(--h) …)` avec jetons clair/sombre | UI-02
+2026-10-19 | Échelle de texte 12/14/16/20/28 px en jetons `--t1`…`--t5`, plus aucune taille en dur | UI-03
+2026-10-19 | Titres de section écrits en casse normale dans le code, capitales en CSS (tests mis à jour) | UI-04
+2026-10-19 | Glissement entre écrans : View Transitions, sens déduit de la profondeur d'historique (avant, arrière ; rien pour un remplacement) ; repli sans animation si l'API manque ou si moins de mouvement est demandé | ANIM-01
+2026-10-19 | Surbrillance : l'écran qui enregistre appelle `signaler(idAutrePersonne)` ; la fiche éclaire cette ligne une seule fois (`surbrillance.ts`) | ANIM-03
+2026-10-19 | Icône définitive : « Les anneaux » (choix de Paul) ; PNG générés depuis le SVG avec Edge headless, maskable avec anneaux à 80 % | UI-07

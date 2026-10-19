@@ -36,6 +36,11 @@ function noterEntree(): void {
   history.replaceState({ route: location.hash, profondeur } satisfies Entree, '');
 }
 
+/** Profondeur de l'écran courant : plus grande qu'avant = on avance, plus petite = on revient. */
+export function profondeurCourante(): number {
+  return profondeur;
+}
+
 /** Lance la navigation : `rendu` dessine l'écran de la route courante, maintenant et à chaque changement. */
 export function demarrerNavigation(rendu: () => void): void {
   // Chaque nouvel écran repart sans garde ; il pose la sienne en se construisant.

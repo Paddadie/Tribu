@@ -2,13 +2,13 @@
 // filtre par nom, bouton +. Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
 
 import { libelleDelai, prochainsAnniversaires, type Anniversaire } from '../modele/age';
-import { filtrerParNom, grouperParLettre, groupeVise, initiales, lettresIndex, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
+import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
 import type { Personne } from '../modele/types';
 import { importerJson } from '../modele/stockage';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
-import { contenuLigne } from './lignePersonne';
+import { avatarPersonne, contenuLigne } from './lignePersonne';
 import { messageImport } from './reglages';
 
 // Le filtre survit à l'aller-retour liste → fiche → liste.
@@ -112,7 +112,7 @@ function ligneAnniversaire({ personne, dans, age, date }: Anniversaire): HTMLEle
   return h(
     'a',
     { class: dans === 0 ? 'ligne aujourdhui' : 'ligne', href: `#/personne/${personne.id}` },
-    h('span', { class: 'avatar' }, initiales(personne)),
+    avatarPersonne(personne),
     h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(personne)), h('span', { class: 'secondaire' }, date)),
     h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), h('span', { class: 'etiquette' }, `${age} ans`)),
   );
@@ -124,7 +124,7 @@ function blocAnniversaires(): HTMLElement {
   return h(
     'section',
     { class: 'anniversaires', hidden: proches.length === 0 },
-    h('h2', { class: 'titre-section' }, 'PROCHAINS ANNIVERSAIRES'),
+    h('h2', { class: 'titre-section' }, 'Prochains anniversaires'),
     h('div', { class: 'carte' }, ...proches.map(ligneAnniversaire)),
   );
 }

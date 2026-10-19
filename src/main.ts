@@ -10,7 +10,7 @@ import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
 import { ecranIllisible } from "./ui/illisible";
 import { ecranLien } from "./ui/lien";
-import { demarrerNavigation, remplacer } from "./ui/navigation";
+import { demarrerNavigation, profondeurCourante, remplacer } from "./ui/navigation";
 import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
 
@@ -62,12 +62,28 @@ const estListe = (route: string | undefined) => route === "#/" || route === "" |
 let routeAffichee: string | undefined;
 let defilementListe = 0;
 
+// Glissement latéral (ANIM-01) : sens déduit de la profondeur d'historique, sans animation si le téléphone demande moins de mouvement.
+let profondeurAffichee = -1;
+const peutAnimer = () =>
+  typeof document.startViewTransition === "function" && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function afficher() {
   if (!app) return;
   if (estListe(routeAffichee)) defilementListe = window.scrollY;
-  app.replaceChildren(vue(location.hash));
-  routeAffichee = location.hash;
-  window.scrollTo(0, estListe(routeAffichee) ? defilementListe : 0);
+  const dessiner = () => {
+    app.replaceChildren(vue(location.hash));
+    routeAffichee = location.hash;
+    window.scrollTo(0, estListe(routeAffichee) ? defilementListe : 0);
+  };
+  const profondeur = profondeurCourante();
+  const sens = profondeur > profondeurAffichee ? "avant" : profondeur < profondeurAffichee ? "arriere" : null;
+  const premier = routeAffichee === undefined;
+  profondeurAffichee = profondeur;
+  if (premier || sens === null || !peutAnimer()) return dessiner();
+  const classe = `nav-${sens}`;
+  document.documentElement.classList.add(classe);
+  const fin = () => document.documentElement.classList.remove(classe);
+  document.startViewTransition(dessiner).finished.then(fin, fin);
 }
 
 appliquerTheme();

@@ -7,6 +7,7 @@ import type { Personne, TypeFiliation } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
+import { signaler } from './surbrillance';
 import { lienRetour, remplacer, revenir } from './navigation';
 
 export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
@@ -39,6 +40,7 @@ export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
   const enregistrer = () => {
     try {
       modifierDonnees((x) => modifierFiliation(x, filiation.id, type));
+      signaler(depuis.id === parent.id ? enfant.id : parent.id);
       revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Enregistrement impossible');

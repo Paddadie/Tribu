@@ -1,10 +1,22 @@
 :root {
+  /* Échelle de texte : 5 tailles, pas d'autre. */
+  --t1: 12px;
+  --t2: 14px;
+  --t3: 16px;
+  --t4: 20px;
+  --t5: 28px;
+  --av-sat: 38%;
+  --av-fond: 88%;
+  --av-sat-texte: 42%;
+  --av-texte: 26%;
   --fond: #f3f6f4;
   --encre: #1f2a27;
   --secondaire: #56635f;
-  --accent: #1b6b58;
+  --accent: #2f6f5e;
   --accent-clair: #dcebe5;
-  --accent-texte: #14503f;
+  --accent-texte: #1f5546;
+  --chaud: #766b5f;
+  --pastille: #ebe8e3;
   --carte: #ffffff;
   --bord: #e1e8e4;
   --bord-champ: #c9d3cf;
@@ -22,12 +34,18 @@
    « Sombre » ou pour « Auto » quand le téléphone est en sombre. */
 :root[data-theme="sombre"] {
   color-scheme: dark;
+  --av-sat: 24%;
+  --av-fond: 24%;
+  --av-sat-texte: 55%;
+  --av-texte: 82%;
   --fond: #121a17;
   --encre: #e6eeea;
   --secondaire: #9aaba5;
-  --accent: #4cc0a0;
+  --accent: #62bfa4;
   --accent-clair: #1f3b33;
-  --accent-texte: #8fdcc4;
+  --accent-texte: #9fdcc9;
+  --chaud: #a89e91;
+  --pastille: #26302c;
   --carte: #1b2622;
   --bord: #2a3833;
   --bord-champ: #3d4d47;
@@ -88,7 +106,7 @@ a {
 }
 
 .secondaire {
-  font-size: 14px;
+  font-size: var(--t2);
   color: var(--secondaire);
 }
 
@@ -122,10 +140,9 @@ a {
 }
 
 .entete-ligne h1 {
-  font-size: 30px;
+  font-size: var(--t4);
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--accent);
+  letter-spacing: -0.01em;
 }
 
 .champ-filtre {
@@ -147,7 +164,7 @@ a {
   outline: 0;
   background: transparent;
   font: inherit;
-  font-size: 16px;
+  font-size: var(--t3);
   color: var(--encre);
 }
 
@@ -157,7 +174,7 @@ a {
 }
 
 .groupe {
-  margin-bottom: 6px;
+  margin-bottom: 16px;
 }
 
 /* Prochains anniversaires : au-dessus de la liste, même marges (place de l'index à droite). */
@@ -171,15 +188,15 @@ a {
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
-  font-size: 14px;
+  font-size: var(--t2);
 }
 
 .anniversaires .quand strong {
-  color: var(--accent-texte);
+  color: var(--encre);
 }
 
 .anniversaires .aujourdhui {
-  background: var(--accent-clair);
+  background: var(--pastille);
 }
 
 /* Dates de la fiche : l'âge, sur sa propre ligne, ressort. */
@@ -206,7 +223,7 @@ a {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: var(--t1);
   font-weight: 700;
   color: var(--accent);
   touch-action: none;
@@ -233,7 +250,7 @@ a {
   border-radius: 18px;
   background: var(--accent);
   color: var(--sur-accent);
-  font-size: 36px;
+  font-size: var(--t5);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -246,11 +263,12 @@ a {
 }
 
 .titre-section {
-  padding: 10px 4px 6px;
-  font-size: 13px;
+  padding: 0 4px 8px;
+  font-size: var(--t1);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--accent);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--chaud);
 }
 
 .carte {
@@ -265,7 +283,7 @@ a {
 .ligne {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-height: 64px;
   padding: 10px 16px;
   color: var(--secondaire);
@@ -284,7 +302,7 @@ a {
 }
 
 .ligne-nom {
-  font-size: 17px;
+  font-size: var(--t3);
   font-weight: 600;
   color: var(--encre);
   white-space: nowrap;
@@ -297,19 +315,20 @@ a {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: var(--accent-clair);
-  color: var(--accent-texte);
+  /* Teinte du nom de famille (--h), vert par défaut. */
+  background: hsl(var(--h, 160) var(--av-sat) var(--av-fond));
+  color: hsl(var(--h, 160) var(--av-sat-texte) var(--av-texte));
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--t3);
 }
 
 .avatar-grand {
-  width: 84px;
-  height: 84px;
-  font-size: 30px;
+  width: 88px;
+  height: 88px;
+  font-size: var(--t5);
   font-weight: 700;
 }
 
@@ -329,13 +348,13 @@ a {
 }
 
 .accueil-vide h2 {
-  font-size: 21px;
+  font-size: var(--t4);
   font-weight: 700;
 }
 
 .accueil-vide > .secondaire {
   max-width: 30ch;
-  font-size: 15px;
+  font-size: var(--t2);
   line-height: 1.45;
 }
 
@@ -351,7 +370,7 @@ a {
 .version {
   padding: 0 20px 24px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--t1);
   color: var(--secondaire);
 }
 
@@ -400,21 +419,21 @@ a {
 
 .identite h1 {
   margin-top: 8px;
-  font-size: 28px;
+  font-size: var(--t5);
   font-weight: 700;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
 .identite .secondaire {
-  font-size: 16px;
+  font-size: var(--t2);
 }
 
 .contenu {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 0 20px 32px;
+  gap: 24px;
+  padding: 0 20px 40px;
 }
 
 .note {
@@ -428,7 +447,7 @@ a {
 }
 
 .note p {
-  font-size: 16px;
+  font-size: var(--t3);
   line-height: 1.4;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -445,7 +464,7 @@ a {
   border-radius: 14px;
   background: var(--carte);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--t3);
   font-weight: 600;
   color: var(--accent);
   cursor: pointer;
@@ -454,7 +473,7 @@ a {
 .bouton-pilule {
   min-height: 44px;
   border-radius: 22px;
-  font-size: 15px;
+  font-size: var(--t2);
 }
 
 .bouton-plein {
@@ -465,7 +484,8 @@ a {
 
 .bouton-danger {
   margin-top: 4px;
-  border-color: var(--danger-bord);
+  border-color: transparent;
+  background: transparent;
   color: var(--danger);
 }
 
@@ -478,7 +498,7 @@ a {
 .titre-formulaire {
   flex-grow: 1;
   padding-left: 8px;
-  font-size: 24px;
+  font-size: var(--t4);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -495,7 +515,7 @@ a {
 
 .champ label {
   padding: 0 4px;
-  font-size: 14px;
+  font-size: var(--t2);
   font-weight: 600;
   color: var(--secondaire);
 }
@@ -510,7 +530,7 @@ a {
   border-radius: 14px;
   background: var(--carte);
   font: inherit;
-  font-size: 16px; /* évite le zoom automatique d'iOS */
+  font-size: var(--t3); /* évite le zoom automatique d'iOS */
   color: var(--encre);
 }
 
@@ -519,7 +539,7 @@ a {
 .champ textarea:focus,
 .champ-filtre:focus-within {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .champ textarea {
@@ -555,7 +575,7 @@ a {
 }
 
 .confirmation p {
-  font-size: 17px;
+  font-size: var(--t3);
   line-height: 1.4;
 }
 
@@ -578,7 +598,7 @@ fieldset.champ {
 
 fieldset.champ legend {
   padding: 0 4px 6px;
-  font-size: 14px;
+  font-size: var(--t2);
   font-weight: 600;
   color: var(--secondaire);
 }
@@ -611,7 +631,7 @@ fieldset.champ legend {
   border: 1px solid var(--bord-champ);
   border-radius: 14px;
   background: var(--carte);
-  font-size: 15px;
+  font-size: var(--t3);
   font-weight: 600;
   color: var(--encre);
   text-align: center;
@@ -625,7 +645,7 @@ fieldset.champ legend {
 
 .choix input:focus-visible + span {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .date-groupe {
@@ -664,7 +684,7 @@ fieldset.champ legend {
 
 .reglage h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--t3);
   font-weight: 700;
 }
 
@@ -688,7 +708,7 @@ fieldset.champ legend {
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--fond);
-  font-size: 14px;
+  font-size: var(--t2);
 }
 
 .date-export b {
@@ -720,7 +740,7 @@ fieldset.champ legend {
   border-radius: 14px;
   background: var(--encre);
   color: var(--fond);
-  font-size: 15px;
+  font-size: var(--t2);
   font-weight: 600;
   box-shadow: 0 6px 16px var(--ombre-bouton);
 }
@@ -760,13 +780,13 @@ fieldset.champ legend {
 }
 
 .illisible h1 {
-  font-size: 26px;
+  font-size: var(--t4);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .illisible > p:not(.version) {
-  font-size: 16px;
+  font-size: var(--t3);
   line-height: 1.45;
 }
 
@@ -799,9 +819,9 @@ fieldset.champ legend {
   flex-shrink: 0;
   padding: 3px 10px;
   border-radius: 12px;
-  background: var(--accent-clair);
-  color: var(--accent-texte);
-  font-size: 13px;
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t1);
   font-weight: 600;
 }
 
@@ -832,6 +852,25 @@ fieldset.champ legend {
 .ligne-choix.choisie {
   background: var(--accent-clair);
   color: var(--accent);
+}
+
+/* Coche de la personne choisie, avec un léger rebond à l'apparition. */
+.ligne-choix.choisie::after {
+  content: "";
+  flex-shrink: 0;
+  width: 16px;
+  height: 8px;
+  margin-left: auto;
+  border-left: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  transform: translateY(-2px) rotate(-45deg);
+  animation: coche 200ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes coche {
+  from {
+    transform: translateY(-2px) rotate(-45deg) scale(0);
+  }
 }
 
 .interrupteur {
@@ -881,24 +920,20 @@ fieldset.champ legend {
 }
 
 .resume-union {
-  font-size: 17px;
+  font-size: var(--t3);
   font-weight: 600;
   text-align: center;
   overflow-wrap: anywhere;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bascule::after {
-    transition: none;
-  }
-}
+
 
 /* ——— Parents, enfants et feuille « Ajouter un proche » ——— */
 
 .etiquette-adoptif {
   background: transparent;
-  border: 1px solid var(--accent);
-  color: var(--accent);
+  border: 1px solid var(--bord-champ);
+  color: var(--secondaire);
 }
 
 .feuille {
@@ -927,7 +962,7 @@ fieldset.champ legend {
 
 .feuille-titre {
   padding: 4px 4px 2px;
-  font-size: 18px;
+  font-size: var(--t4);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -979,15 +1014,42 @@ fieldset.champ legend {
 
 .boite {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   margin: 0;
-  accent-color: var(--accent);
+  /* Case ronde dessinée à la main : la coche apparaît avec un léger rebond (ANIM-04). */
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--bord-champ);
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+
+.boite::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 2.5px solid var(--sur-accent);
+  border-bottom: 2.5px solid var(--sur-accent);
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.boite:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.boite:checked::after {
+  transform: translateY(-1px) rotate(-45deg) scale(1);
 }
 
 .aide {
   padding: 0 4px;
-  font-size: 14px;
+  font-size: var(--t2);
   color: var(--secondaire);
 }
 
@@ -1000,7 +1062,7 @@ fieldset.champ legend {
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--t2);
   font-weight: 600;
   color: var(--accent-texte);
   cursor: pointer;
@@ -1020,16 +1082,16 @@ fieldset.champ legend {
 .lien-moi {
   padding: 4px 14px;
   border-radius: 14px;
-  background: var(--accent);
-  color: var(--sur-accent);
-  font-size: 15px;
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t2);
   font-weight: 600;
 }
 
 /* Section MOI des réglages et feuille de choix de ma fiche. */
 .action-ligne {
   flex-shrink: 0;
-  font-size: 15px;
+  font-size: var(--t3);
   font-weight: 600;
   color: var(--accent);
 }
@@ -1047,4 +1109,166 @@ fieldset.champ legend {
 .feuille-liste {
   max-height: 45dvh;
   overflow-y: auto;
+}
+
+/* ——— États communs : appui et focus identiques partout (UI-06, ANIM-04) ——— */
+
+a,
+button,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bouton,
+.bouton-icone,
+.ajout,
+.option,
+.bouton-nom,
+.bandeau-action {
+  transition: transform 90ms ease-out, background-color 90ms ease-out;
+}
+
+.bouton:active,
+.bouton-icone:active,
+.ajout:active,
+.option:active,
+.bouton-nom:active,
+.bandeau-action:active {
+  transform: scale(0.97);
+}
+
+.ligne {
+  transition: background-color 90ms ease-out;
+}
+
+a.ligne:active,
+button.ligne:active,
+.ligne:has(> .ligne-lien:active),
+.case:active,
+.option:active {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+/* ——— Animations (ANIM-01 à ANIM-04), coupées si le téléphone demande moins de mouvement ——— */
+
+@keyframes surbrillance {
+  from {
+    background: var(--accent-clair);
+  }
+}
+
+.ligne.nouvelle {
+  animation: surbrillance 1.8s ease-out 150ms both;
+}
+
+@keyframes monter {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fondu {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes monter-bandeau {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.feuille[open] {
+  animation: monter 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.feuille[open]::backdrop,
+.confirmation[open]::backdrop {
+  animation: fondu 200ms ease-out;
+}
+
+.confirmation[open] {
+  animation: zoom 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bandeau {
+  animation: monter-bandeau 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Glissement latéral entre écrans (View Transitions) : l'écran quitté recule un peu, le nouveau arrive de la droite ; au retour, l'inverse. */
+@keyframes sortie-avant {
+  to {
+    transform: translateX(-24%);
+    opacity: 0.6;
+  }
+}
+
+@keyframes entree-avant {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sortie-arriere {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes entree-arriere {
+  from {
+    transform: translateX(-24%);
+    opacity: 0.6;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.3, 0.7, 0.2, 1);
+  animation-fill-mode: both;
+  mix-blend-mode: normal;
+}
+
+.nav-avant::view-transition-old(root) {
+  animation-name: sortie-avant;
+}
+
+.nav-avant::view-transition-new(root) {
+  animation-name: entree-avant;
+}
+
+.nav-arriere::view-transition-old(root) {
+  z-index: 2;
+  animation-name: sortie-arriere;
+}
+
+.nav-arriere::view-transition-new(root) {
+  animation-name: entree-arriere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+    transition: none !important;
+  }
 }

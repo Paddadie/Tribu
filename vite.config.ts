@@ -58,7 +58,7 @@ export default defineConfig({
         name: "Tribu — liens familiaux",
         short_name: "Tribu",
         description: "Noter les liens familiaux de mes proches.",
-        theme_color: "#1b6b58",
+        theme_color: "#2f6f5e",
         background_color: "#f3f6f4",
         display: "standalone",
         start_url: "/Tribu/",

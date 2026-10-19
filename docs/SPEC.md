@@ -77,6 +77,14 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Bouton « + » pour créer une personne.
 - Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
 
+## Identité visuelle
+- Vert calmé (#2F6F5E, aussi `theme_color`), Figtree seule, thèmes clair et sombre. Le vert ne marque que ce qui se touche (retour, boutons, +, choix, focus) ; les titres de section sont en gris chaud, capitales posées en CSS ; pastilles (« Ta cousine », « Marié(e) », « Adoptif(ve) ») neutres.
+- Cinq tailles de texte : 12, 14, 16, 20, 28 px (jetons `--t1` à `--t5`). Nom de la fiche en 28 px sous un avatar de 88 px.
+- Avatar : initiales sur une teinte tirée du nom de famille (stable, insensible à la casse et aux accents) ; vert par défaut si le nom est vide.
+- Un seul bouton plein par écran (fiche : « Ajouter un proche » ; accueil : le +) ; « Supprimer » est un texte rouge. Appui (léger rétrécissement ou voile vert) et anneau de focus identiques partout.
+- Animations, toutes coupées si le téléphone demande moins de mouvement : glissement latéral entre écrans (240 ms, sens inverse au retour), montée de la feuille et voile en fondu, léger zoom des confirmations, bandeau « Annuler » qui monte, ligne ajoutée ou modifiée qui s'éclaire au retour sur la fiche, coche des choix qui rebondit.
+- Icône : trois anneaux entrelacés, blanc cassé sur vert.
+
 ## Navigation
 - Retour (et Annuler) revient à l'écran précédent de l'appli ; si l'appli a été ouverte directement sur cet écran, il ouvre la liste (ou la fiche) à sa place. Il n'ajoute jamais d'entrée à l'historique du téléphone.
 - Un enregistrement (modification, ajout de conjoint, de parent ou d'enfant, union, lien) revient sur la fiche comme Retour. Une création remplace le formulaire par la nouvelle fiche ; une suppression remplace la fiche par la liste.
