@@ -2,10 +2,10 @@
 
 ## V1
 
-- [ ] **1. Squelette PWA** — Projet initialisé, déployé sur GitHub Pages, mise à jour auto à l'ouverture.
+- [x] **1. Squelette PWA** — Projet initialisé, déployé sur GitHub Pages, mise à jour auto à l'ouverture.
   Terminé quand : l'appli est installée sur le téléphone et une nouvelle version déployée apparaît à la réouverture.
 
-- [ ] **2. Modèle et stockage** — Personnes, unions, filiations dans localStorage ; déductions (enfants d'un couple, frères et sœurs, demi).
+- [x] **2. Modèle et stockage** — Personnes, unions, filiations dans localStorage ; déductions (enfants d'un couple, frères et sœurs, demi).
   Terminé quand : les tests Vitest couvrent création, persistance et déductions, et passent.
 
 - [ ] **3. Maquettes** — Écrans liste et fiche, publiés pour validation.

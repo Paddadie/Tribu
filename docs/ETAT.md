@@ -1,19 +1,19 @@
 # État en cours
 
-**Étape 1 — Squelette PWA**
-Projet initialisé, déployé sur GitHub Pages, mise à jour auto à l'ouverture.
-Terminé quand : l'appli est installée sur le téléphone et une nouvelle version déployée apparaît à la réouverture.
+**Étape 3 — Maquettes**
+Écrans liste et fiche, publiés pour validation par Paul avant de coder l'interface.
+Terminé quand : Paul a réagi aux maquettes et les a validées (ou demandé des ajustements pris en compte).
 
 ## Fait
-- Cadrage terminé : docs/SPEC.md, PLAN.md, DECISIONS.md rédigés.
-- Squelette codé : Vite + TS + vite-plugin-pwa (autoUpdate), page d'accueil affichant version + date de build, icônes provisoires (public/), workflow .github/workflows/deploy.yml.
-- `npm run build` OK (SW avec skipWaiting + clientsClaim vérifié) ; `npm test` OK (aucun test pour l'instant, `--passWithNoTests`).
+- Étape 1 terminée et validée : squelette PWA (Vite + TS + vite-plugin-pwa en autoUpdate), déployé sur GitHub Pages. Config : `base` `/Tribu/`, `.npmrc` `legacy-peer-deps=true`.
+- Étape 2 terminée et validée par Paul (41 tests Vitest verts, `tsc` propre), règle des demi-frères/sœurs comprise. Code dans `src/modele/` :
+  - `types.ts` : Personne, Union, Filiation, Donnees.
+  - `modele.ts` : création/modification/suppression (cascade des unions et filiations), règles (pas de doublon, max 2 parents par type).
+  - `deductions.ts` : conjoints, parents, enfants, enfantsDuCouple, fratrie (frères/sœurs + demis), tri par naissance.
+  - `stockage.ts` : charger/sauvegarder (localStorage injecté), exporterJson/importerJson, validation.
 
 ## Prochaine action
-Paul : créer le dépôt GitHub « Tribu » (sinon adapter `base` et `start_url`/`scope` dans vite.config.ts), activer Pages (Settings > Pages > Source : GitHub Actions), commiter et pousser sur `main`.
-Puis valider sur le téléphone : installer, redéployer une modif, rouvrir et vérifier que la date de build change. Cocher alors l'étape 1 dans PLAN.md.
+Lire docs/PLAN.md (étape 3) puis SPEC.md (sections fiche, accueil), concevoir les maquettes liste + fiche, les publier, laisser Paul réagir librement (pas de QCM). Ne rien coder de visible avant validation.
 
 ## Points ouverts
-- Dépôt GitHub distant à créer par Paul.
-- Icônes provisoires (3 cercles reliés), à remplacer plus tard si souhaité.
-- Test sur téléphone non fait (nécessite le déploiement).
+- Icônes de l'appli provisoires (3 cercles reliés), à remplacer si souhaité.
