@@ -83,11 +83,11 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] FEAT-02 : sections déduites sur la fiche : grands-parents et petits-enfants, oncles et tantes, neveux et nièces, cousins et cousines, belle-famille (beaux-parents, enfants du conjoint). Sections vides masquées.
   Terminé quand : sur une famille de test à 4 générations, chaque lien affiché est juste (testé).
 
-- [ ] **S3b. Mémo** — Maquette d'abord : accueil avec anniversaires, fiche avec décès et âge.
-  - [ ] FEAT-06 : garder les anciennes unions. Une séparation ne supprime plus l'union : elle passe au statut « séparés » ; la fiche affiche « Ex-conjoint » sous le conjoint actuel ; toujours un seul conjoint actuel. Remplace la décision 35, dans la même migration que FEAT-04 (les unions v1 deviennent des unions actuelles).
-  - [ ] FEAT-04 : date de décès facultative, partielle comme la naissance ; âge (« 34 ans ») ou « mort à 82 ans » sur la fiche.
-  - [ ] DATA-07 : premier changement de format : `migrer()` v1 → v2 appelée avant la validation, testée ; les anciens exports restent importables.
-  - [ ] FEAT-05 : prochains anniversaires en haut de l'accueil : les 3 prochains dans les 30 jours, avec l'âge atteint ; pas pour les personnes décédées.
+- [x] **S3b. Mémo** — Maquette d'abord : accueil avec anniversaires, fiche avec décès et âge.
+  - [x] FEAT-06 : garder les anciennes unions. Une séparation ne supprime plus l'union : elle passe au statut « séparés » ; la fiche affiche « Ex-conjoint » sous le conjoint actuel ; toujours un seul conjoint actuel. Remplace la décision 35, dans la même migration que FEAT-04 (les unions v1 deviennent des unions actuelles).
+  - [x] FEAT-04 : date de décès facultative, partielle comme la naissance ; âge (« 34 ans ») ou « mort à 82 ans » sur la fiche.
+  - [x] DATA-07 : premier changement de format : `migrer()` v1 → v2 appelée avant la validation, testée ; les anciens exports restent importables.
+  - [x] FEAT-05 : prochains anniversaires en haut de l'accueil : les 3 prochains dans les 30 jours, avec l'âge atteint ; pas pour les personnes décédées.
   Terminé quand : un export v1 s'importe dans la v2 sans perte, une séparation laisse l'ex-conjoint visible sur la fiche, et l'accueil montre les anniversaires à venir.
 
 - [ ] **S4. Identité visuelle** — Maquette complète d'abord (direction A).

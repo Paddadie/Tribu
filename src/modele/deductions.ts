@@ -24,13 +24,26 @@ export function comparerParNaissance(a: Personne, b: Personne): number {
   return parPrenom(a, b);
 }
 
-/** Conjoint actuel : une personne n'a qu'une union à la fois (une séparation efface l'union). */
-export function conjoint(d: Donnees, id: string): { union: Union; personne: Personne } | undefined {
-  const union = d.unions.find((u) => u.personneA === id || u.personneB === id);
-  if (!union) return undefined;
-  const idConjoint = union.personneA === id ? union.personneB : union.personneA;
-  const personne = d.personnes.find((p) => p.id === idConjoint);
+function autreDeLUnion(d: Donnees, union: Union, id: string): { union: Union; personne: Personne } | undefined {
+  const idAutre = union.personneA === id ? union.personneB : union.personneA;
+  const personne = d.personnes.find((p) => p.id === idAutre);
   return personne && { union, personne };
+}
+
+/**
+ * Conjoint actuel : une personne n'a qu'une union actuelle à la fois. Les unions séparées n'en font pas
+ * partie : c'est ce qui empêche un ex de devenir de la famille par alliance (voir `exConjoints`).
+ */
+export function conjoint(d: Donnees, id: string): { union: Union; personne: Personne } | undefined {
+  const union = d.unions.find((u) => u.statut === 'actuelle' && (u.personneA === id || u.personneB === id));
+  return union && autreDeLUnion(d, union, id);
+}
+
+/** Ex-conjoints (unions séparées), dans l'ordre des unions ; purement informatif, sans effet sur la parenté. */
+export function exConjoints(d: Donnees, id: string): { union: Union; personne: Personne }[] {
+  return d.unions
+    .filter((u) => u.statut === 'separee' && (u.personneA === id || u.personneB === id))
+    .flatMap((u) => autreDeLUnion(d, u, id) ?? []);
 }
 
 export interface Lien {

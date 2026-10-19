@@ -12,9 +12,14 @@ export interface Personne {
   nom: string;
   /** Date ISO facultative, éventuellement partielle : « AAAA », « AAAA-MM » ou « AAAA-MM-JJ ». */
   naissance?: string;
+  /** Date de décès facultative, de la même forme que la naissance. Absente = vivante. */
+  deces?: string;
   sexe?: Sexe;
   note: string;
 }
+
+/** `actuelle` : le couple de maintenant (un seul par personne) ; `separee` : un ex, gardé pour l'historique. */
+export type StatutUnion = 'actuelle' | 'separee';
 
 /** Couple : relie deux personnes distinctes. */
 export interface Union {
@@ -22,6 +27,7 @@ export interface Union {
   personneA: string;
   personneB: string;
   marie: boolean;
+  statut: StatutUnion;
 }
 
 /** Lien parent → enfant. */
@@ -33,7 +39,7 @@ export interface Filiation {
 }
 
 export interface Donnees {
-  version: 1;
+  version: 2;
   personnes: Personne[];
   unions: Union[];
   filiations: Filiation[];

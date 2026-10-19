@@ -19,6 +19,8 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Prénom, nom.
 - Sexe : homme (par défaut à la création) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas : elles s'affichent « né(e) » et rien n'est présélectionné en modification.
 - Date de naissance (facultative), éventuellement partielle : année seule, mois et année, ou date complète.
+- Date de décès (facultative), partielle comme la naissance, sous la naissance dans le formulaire ; elle ne peut pas précéder la naissance. La fiche affiche « Décédé(e) le … » et l'âge : « 34 ans » pour un vivant, « Mort(e) à 82 ans » pour un décédé. Si les dates sont trop partielles pour trancher, l'âge le plus probable est précédé de « environ ».
+- Dans les listes, un décédé s'affiche « 1941 – 2024 » (« décédé(e) en 2024 » sans naissance) ; un vivant, sa naissance et son âge.
 - Note libre.
 - Ordre de la fiche : identité, note, puis les proches (conjoint, enfants, frères et sœurs, demi-frères et demi-sœurs, parents), le bouton « Ajouter un proche » (style secondaire), et enfin la suppression.
 - Une section vide n'est pas affichée. « Ajouter un proche » ouvre une feuille : un conjoint (grisé s'il y en a déjà un), un parent, un enfant, un frère ou une sœur (grisé avec « Ajoutez d'abord un parent » tant qu'aucun parent n'est connu).
@@ -29,9 +31,12 @@ V1 : moi seul. Partage avec des proches : plus tard.
 ## Couples (unions)
 - Une union relie deux personnes ayant chacune leur fiche.
 - Indicateur « marié » oui/non.
-- Une personne n'a qu'un seul conjoint à la fois. Une séparation efface l'union (les deux fiches restent) ; on peut ensuite en ajouter une autre.
+- Une personne n'a qu'un seul conjoint actuel à la fois. Une union a un statut : actuelle ou séparée.
+- « Se sont séparés » passe l'union au statut séparé ; la fiche affiche l'ex-conjoint dans une section « Ex-conjoint » sous le conjoint actuel. « Rétablir le couple » la remet en actuelle (refusé si l'un des deux a déjà un autre conjoint). Un ex n'est jamais de la famille par alliance.
+- « Supprimer l'union » l'efface pour de bon (une erreur de saisie). Séparation, rétablissement et suppression sont sans confirmation, annulables par le bandeau.
+- Deux personnes n'ont qu'une union entre elles : pour un retour ensemble, on rétablit l'ancienne.
 - Ajouter un conjoint : choisir une personne existante (hors personnes déjà en couple) ou en créer une.
-- Modifier l'indicateur « marié » ou mettre fin à l'union (sans confirmation, annulable par le bandeau) : depuis le crayon à côté du conjoint sur la fiche.
+- Modifier « marié », séparer, rétablir ou supprimer : depuis le crayon à côté du conjoint ou de l'ex-conjoint sur la fiche (`#/union/<union>/<personne>`).
 
 ## Parents et enfants
 - Lien parent → enfant, de type biologique ou adoptif.
@@ -67,6 +72,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Liste de toutes les personnes, regroupée par lettre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
 - Un écrou en haut à droite ouvre les Réglages.
 - Champ de filtre par nom (prénom ou nom).
+- En haut, « Prochains anniversaires » : les 3 prochains dans les 30 jours (aujourd'hui compris), avec « Aujourd'hui », « Demain » ou « Dans N jours » et l'âge atteint. Il faut une naissance complète ; pas pour les décédés ni pour un âge de 0 an. Un 29 février tombe le 28 les années non bissextiles. Bloc absent s'il n'y en a pas, masqué pendant un filtrage.
 - Index alphabétique sur le bord droit : les 26 lettres, les absentes estompées. Toucher ou glisser fait défiler jusqu'à la lettre (sinon la suivante présente), affichée en grand pendant le geste. Masqué pendant un filtrage.
 - Bouton « + » pour créer une personne.
 - Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
@@ -95,6 +101,10 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Si les données stockées ne se lisent plus, l'appli ne les écrase jamais : elle en garde une copie sous une clé de secours et n'affiche qu'un écran « Données illisibles ».
 - Cet écran propose d'exporter le contenu brut (`tribu-secours-AAAA-MM-JJ.txt`) et de « Repartir à vide… », sur confirmation ; la copie de secours reste sur le téléphone.
 - Aucune modification n'est enregistrée tant que Paul n'a pas choisi.
+
+## Format des données (version 2)
+- `Personne.deces` facultatif ; `Union.statut` « actuelle » ou « separee » ; une seule union actuelle par personne.
+- Un export v1 s'importe : `migrer()` le convertit avant la validation (unions v1 → actuelles ; si une personne en avait deux, la seconde devient séparée). Rien n'est perdu.
 
 ## Hors V1 (plus tard)
 - Vue arbre graphique.

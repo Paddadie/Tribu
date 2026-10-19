@@ -73,7 +73,7 @@ describe('unions', () => {
     expect(() => ajouterUnion(d, ids[0], ids[0])).toThrow();
     expect(() => ajouterUnion(d, ids[0], 'inconnu')).toThrow();
     const { donnees } = ajouterUnion(d, ids[0], ids[1]);
-    expect(() => ajouterUnion(donnees, ids[1], ids[0])).toThrow('déjà en couple');
+    expect(() => ajouterUnion(donnees, ids[1], ids[0])).toThrow('déjà une union');
   });
 
   it('refuse un second conjoint, de l’un ou l’autre côté', () => {

@@ -122,7 +122,7 @@ export const MOIS = [
  * chaîne vide sans date exploitable.
  */
 /** Forme masculine, féminine, ou mixte quand le sexe n'est pas précisé. */
-function accorder(sexe: Sexe | undefined, masculin: string, feminin: string, mixte: string): string {
+export function accorder(sexe: Sexe | undefined, masculin: string, feminin: string, mixte: string): string {
   return sexe === 'F' ? feminin : sexe === 'M' ? masculin : mixte;
 }
 
@@ -136,16 +136,27 @@ export function libelleAdoptif(sexe?: Sexe): string {
   return accorder(sexe, 'Adoptif', 'Adoptive', 'Adoptif(ve)');
 }
 
-export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
-  const m = naissance?.match(MOTIF_DATE);
+/** « le 14 mai 1961 », « en mai 1961 » ou « en 1961 » ; chaîne vide sans date exploitable. */
+function formulerDate(date: string | undefined): string {
+  const m = date?.match(MOTIF_DATE);
   if (!m) return '';
-  const ne = accorder(sexe, 'né', 'née', 'né(e)');
-  if (m[2] === undefined) return `${ne} en ${m[1]}`;
+  if (m[2] === undefined) return `en ${m[1]}`;
   const mois = MOIS[Number(m[2]) - 1];
   if (!mois) return '';
-  if (m[3] === undefined) return `${ne} en ${mois} ${m[1]}`;
+  if (m[3] === undefined) return `en ${mois} ${m[1]}`;
   const jour = Number(m[3]);
-  return `${ne} le ${jour === 1 ? '1er' : jour} ${mois} ${m[1]}`;
+  return `le ${jour === 1 ? '1er' : jour} ${mois} ${m[1]}`;
+}
+
+export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
+  const date = formulerDate(naissance);
+  return date && `${accorder(sexe, 'né', 'née', 'né(e)')} ${date}`;
+}
+
+/** « décédée le 14 janvier 2024 », accordé selon le sexe ; chaîne vide sans date de décès exploitable. */
+export function libelleDeces(deces: string | undefined, sexe?: Sexe): string {
+  const date = formulerDate(deces);
+  return date && `${accorder(sexe, 'décédé', 'décédée', 'décédé(e)')} ${date}`;
 }
 
 export interface ChampsDate {
@@ -166,18 +177,19 @@ export function decouperDate(naissance: string | undefined): ChampsDate {
  * Assemble les champs de saisie en date partielle (chaîne vide si tout est vide).
  * Lève une Error si l'année manque alors qu'un jour ou un mois est saisi, ou si le jour est sans mois.
  * La validité calendaire (30 février…) est vérifiée ensuite par le modèle.
+ * `de` complète les messages d'erreur (« de naissance », « de décès »).
  */
-export function assemblerDate({ jour, mois, annee }: ChampsDate): string {
+export function assemblerDate({ jour, mois, annee }: ChampsDate, de = 'de naissance'): string {
   const [j, m, a] = [jour.trim(), mois.trim(), annee.trim()];
   if (!j && !m && !a) return '';
-  if (!a) throw new Error("Indiquez l'année de naissance");
-  if (!/^\d{1,4}$/.test(a) || Number(a) < 1) throw new Error('Année de naissance invalide');
-  if (j && !m) throw new Error('Indiquez le mois de naissance');
+  if (!a) throw new Error(`Indiquez l'année ${de}`);
+  if (!/^\d{1,4}$/.test(a) || Number(a) < 1) throw new Error(`Année ${de} invalide`);
+  if (j && !m) throw new Error(`Indiquez le mois ${de}`);
   const annee4 = a.padStart(4, '0');
   if (!m) return annee4;
-  if (!/^\d{1,2}$/.test(m)) throw new Error('Mois de naissance invalide');
+  if (!/^\d{1,2}$/.test(m)) throw new Error(`Mois ${de} invalide`);
   const mois2 = m.padStart(2, '0');
   if (!j) return `${annee4}-${mois2}`;
-  if (!/^\d{1,2}$/.test(j)) throw new Error('Jour de naissance invalide');
+  if (!/^\d{1,2}$/.test(j)) throw new Error(`Jour ${de} invalide`);
   return `${annee4}-${mois2}-${j.padStart(2, '0')}`;
 }

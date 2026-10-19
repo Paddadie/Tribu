@@ -142,7 +142,7 @@ describe('relation', () => {
 
   it('se termine sur une boucle de filiations venue d’un import', () => {
     const d: Donnees = {
-      version: 1,
+      version: 2,
       personnes: [
         { id: 'a', prenom: 'A', nom: 'X', note: '' },
         { id: 'b', prenom: 'B', nom: 'X', note: '' },

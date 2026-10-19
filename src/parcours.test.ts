@@ -327,17 +327,43 @@ describe('retrait sans confirmation, annulable', () => {
     expect(bandeau()!.textContent).toContain('Lien rétabli.');
   });
 
-  it('fin d’union, puis rétablie par le bandeau', async () => {
+  it('suppression d’une union saisie par erreur, puis rétablie par le bandeau', async () => {
     const { donnees, ids } = famille();
-    await demarrer(donnees, `#/union/${ids.Anne}`);
+    await demarrer(donnees, `#/union/${donnees.unions[0].id}/${ids.Anne}`);
 
-    await toucher(trouver('button', 'Mettre fin à l’union'));
+    await toucher(trouver('button', 'Supprimer l’union'));
     expect(dialogue()).toBeNull();
     expect(enregistrees().unions).toHaveLength(0);
-    expect(bandeau()!.textContent).toContain('Union avec Bruno terminée.');
+    expect(bandeau()!.textContent).toContain('Union avec Bruno supprimée.');
 
     await toucher(trouver('.bandeau button', 'Annuler'));
     expect(enregistrees().unions).toEqual(donnees.unions);
+  });
+
+  it('séparation : l’union est gardée, l’ex-conjoint reste sur la fiche, annulable par le bandeau', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/union/${donnees.unions[0].id}/${ids.Anne}`);
+
+    await toucher(trouver('button', 'Se sont séparés'));
+    expect(dialogue()).toBeNull();
+    expect(enregistrees().unions).toEqual([{ ...donnees.unions[0], statut: 'separee' }]);
+    expect(bandeau()!.textContent).toContain('Séparation d’avec Bruno enregistrée.');
+    // Plus de conjoint actuel, un ex-conjoint.
+    const titres = [...ecran().querySelectorAll('.titre-section')].map((t) => t.textContent);
+    expect(titres).toContain('EX-CONJOINT');
+    expect(titres).not.toContain('CONJOINT');
+
+    await toucher(trouver('.bandeau button', 'Annuler'));
+    expect(enregistrees().unions).toEqual(donnees.unions);
+  });
+
+  it('rétablit un couple séparé depuis l’écran de l’ex-conjoint', async () => {
+    const { donnees, ids } = famille();
+    const separes = { ...donnees, unions: donnees.unions.map((u) => ({ ...u, statut: 'separee' as const })) };
+    await demarrer(separes, `#/union/${donnees.unions[0].id}/${ids.Anne}`);
+
+    await toucher(trouver('button', 'Rétablir le couple'));
+    expect(enregistrees().unions[0].statut).toBe('actuelle');
   });
 });
 
@@ -617,5 +643,103 @@ describe('« Moi » et parenté', () => {
     expect(ecran().textContent).toContain('Choisir ma fiche');
     await toucher(trouver('button', 'Annuler', bandeau()!));
     expect(ecran().textContent).toContain('Chloé Martin');
+  });
+});
+
+describe('mémo : décès, âge et anniversaires', () => {
+  const deux = (n: number) => String(n).padStart(2, '0');
+  /** Date dans `jours` jours, née `ans` ans plus tôt, au format « AAAA-MM-JJ ». */
+  const dans = (jours: number, ans: number) => {
+    const j = new Date();
+    j.setDate(j.getDate() + jours);
+    return `${j.getFullYear() - ans}-${deux(j.getMonth() + 1)}-${deux(j.getDate())}`;
+  };
+  const avec = (...champs: { prenom: string; naissance?: string; deces?: string }[]) => {
+    let d = donneesVides();
+    const ids: Record<string, string> = {};
+    for (const c of champs) {
+      const r = creerPersonne(d, { nom: 'Test', sexe: 'F', ...c });
+      d = r.donnees;
+      ids[c.prenom] = r.personne.id;
+    }
+    return { donnees: d, ids };
+  };
+
+  it('l’accueil montre les prochains anniversaires, sans les décédés, et les masque pendant un filtrage', async () => {
+    const { donnees } = avec(
+      { prenom: 'Léa', naissance: dans(0, 8) },
+      { prenom: 'Paulette', naissance: dans(5, 67) },
+      { prenom: 'Mort', naissance: dans(2, 50), deces: '2020' },
+      { prenom: 'Loin', naissance: dans(60, 40) },
+    );
+    await demarrer(donnees);
+    const bloc = ecran().querySelector<HTMLElement>('.anniversaires')!;
+    expect(bloc.hidden).toBe(false);
+    const lignes = [...bloc.querySelectorAll('.ligne')].map((l) => l.textContent);
+    expect(lignes).toHaveLength(2);
+    expect(lignes[0]).toContain('Léa Test');
+    expect(lignes[0]).toContain('Aujourd’hui');
+    expect(lignes[0]).toContain('8 ans');
+    expect(lignes[1]).toContain('Paulette Test');
+    expect(lignes[1]).toContain('Dans 5 jours');
+    expect(lignes[1]).toContain('67 ans');
+    expect(bloc.textContent).not.toContain('Mort');
+
+    const champ = ecran().querySelector<HTMLInputElement>('input[type=search]')!;
+    champ.value = 'Léa';
+    champ.dispatchEvent(new Event('input'));
+    expect(bloc.hidden).toBe(true);
+    champ.value = '';
+    champ.dispatchEvent(new Event('input'));
+    expect(bloc.hidden).toBe(false);
+  });
+
+  it('l’accueil n’a pas de bloc quand personne n’a d’anniversaire proche', async () => {
+    const { donnees } = avec({ prenom: 'Loin', naissance: dans(60, 40) }, { prenom: 'Sans' });
+    await demarrer(donnees);
+    expect(ecran().querySelector<HTMLElement>('.anniversaires')!.hidden).toBe(true);
+  });
+
+  it('la fiche affiche l’âge d’une personne vivante, et décès puis « Morte à … » pour une décédée', async () => {
+    const { donnees, ids } = avec(
+      { prenom: 'Vivante', naissance: dans(-40, 34) },
+      { prenom: 'Disparue', naissance: '1941-05-03', deces: '2024-01-14' },
+    );
+    await demarrer(donnees, `#/personne/${ids.Vivante}`);
+    expect(ecran().querySelector('.dates .age')!.textContent).toBe('34 ans');
+
+    await demarrer(donnees, `#/personne/${ids.Disparue}`);
+    const dates = [...ecran().querySelectorAll('.dates span')].map((s) => s.textContent);
+    expect(dates).toEqual(['Née le 3 mai 1941', 'Décédée le 14 janvier 2024', 'Morte à 82 ans']);
+  });
+
+  it('une ligne de liste d’une personne décédée affiche ses années de vie', async () => {
+    const { donnees } = avec({ prenom: 'Disparue', naissance: '1941-05-03', deces: '2024-01-14' });
+    await demarrer(donnees);
+    expect(trouver('a.ligne', 'Disparue').textContent).toContain('1941 – 2024');
+  });
+
+  it('le formulaire enregistre la date de décès et refuse un décès avant la naissance', async () => {
+    const { donnees, ids } = avec({ prenom: 'Anne', naissance: '1941-05-03' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    saisir('annee-deces', '1940');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(ecran().textContent).toContain('Le décès ne peut pas précéder la naissance');
+    expect(enregistrees().personnes[0].deces).toBeUndefined();
+
+    saisir('annee-deces', '2024');
+    ecran().querySelector<HTMLSelectElement>('#mois-deces')!.value = '1';
+    saisir('jour-deces', '14');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(enregistrees().personnes[0].deces).toBe('2024-01-14');
+    expect(location.hash).toBe(`#/personne/${ids.Anne}`);
+  });
+
+  it('une date de décès incomplète est signalée avec « de décès »', async () => {
+    const { donnees, ids } = avec({ prenom: 'Anne' });
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    saisir('jour-deces', '14');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(ecran().textContent).toContain('de décès');
   });
 });

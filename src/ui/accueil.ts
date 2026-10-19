@@ -1,7 +1,8 @@
 // Écran d'accueil : liste des personnes (par lettre), index alphabétique sur le bord droit,
 // filtre par nom, bouton +. Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
 
-import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, nomListe, type Groupe, type Tri } from '../modele/liste';
+import { libelleDelai, prochainsAnniversaires, type Anniversaire } from '../modele/age';
+import { filtrerParNom, grouperParLettre, groupeVise, initiales, lettresIndex, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
 import type { Personne } from '../modele/types';
 import { importerJson } from '../modele/stockage';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
@@ -107,6 +108,27 @@ function indexLettres(groupes: Groupe[], zoneListe: HTMLElement, entete: HTMLEle
   return { index, bulle };
 }
 
+function ligneAnniversaire({ personne, dans, age, date }: Anniversaire): HTMLElement {
+  return h(
+    'a',
+    { class: dans === 0 ? 'ligne aujourdhui' : 'ligne', href: `#/personne/${personne.id}` },
+    h('span', { class: 'avatar' }, initiales(personne)),
+    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(personne)), h('span', { class: 'secondaire' }, date)),
+    h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), h('span', { class: 'etiquette' }, `${age} ans`)),
+  );
+}
+
+/** Les 3 prochains anniversaires des 30 jours à venir, au-dessus de la liste ; le bloc est vide s'il n'y en a pas. */
+function blocAnniversaires(): HTMLElement {
+  const proches = prochainsAnniversaires(lireDonnees().personnes, new Date());
+  return h(
+    'section',
+    { class: 'anniversaires', hidden: proches.length === 0 },
+    h('h2', { class: 'titre-section' }, 'PROCHAINS ANNIVERSAIRES'),
+    h('div', { class: 'carte' }, ...proches.map(ligneAnniversaire)),
+  );
+}
+
 export function accueil(): HTMLElement {
   const total = lireDonnees().personnes.length;
   const titre = h(
@@ -123,8 +145,13 @@ export function accueil(): HTMLElement {
   if (total === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, titre), accueilVide());
 
   const zoneListe = h('div', { class: 'liste' }, ...liste());
-  // Pendant un filtrage, la liste est courte : l'index disparaît.
-  const masquerIndex = () => (index.hidden = filtre.trim() !== '');
+  const anniversaires = blocAnniversaires();
+  const avecAnniversaires = !anniversaires.hidden;
+  // Pendant un filtrage, la liste est courte : l'index et les anniversaires disparaissent.
+  const masquerIndex = () => {
+    index.hidden = filtre.trim() !== '';
+    anniversaires.hidden = !avecAnniversaires || filtre.trim() !== '';
+  };
 
   const champ = h('input', {
     type: 'search',
@@ -151,6 +178,7 @@ export function accueil(): HTMLElement {
     'div',
     { class: 'ecran' },
     entete,
+    anniversaires,
     zoneListe,
     index,
     bulle,

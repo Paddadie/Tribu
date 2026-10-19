@@ -1,12 +1,13 @@
 // Fiche d'une personne : identité (avec le lien avec « Moi »), note, conjoint, enfants, frères et sœurs, parents,
 // famille élargie déduite, ajout d'un proche, modification, suppression avec confirmation.
 
-import { conjoint, enfantsDuCouple, familleElargie, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
-import { avecDe, enumerer, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
+import { detailPersonne, libelleAge, libelleAgeDeces } from '../modele/age';
+import { conjoint, enfantsDuCouple, exConjoints, familleElargie, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
+import { avecDe, enumerer, initiales, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
 import { aDesLiens, enCouple, supprimerPersonne } from '../modele/modele';
 import { libelleRelation, lienAvecMoi } from '../modele/parente';
 import { ficheMoi } from '../modele/reglages';
-import type { Personne } from '../modele/types';
+import type { Personne, Union } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
@@ -25,7 +26,7 @@ function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libel
 
 /** Ligne touchable d'un frère, d'une sœur ou d'un demi : déduite des parents, donc sans crayon. `via` = parents communs (demis). */
 function ligneFratrie(c: Personne, via: Personne[] = []): HTMLElement {
-  const detail = [libelleNaissance(c.naissance, c.sexe), via.length > 0 && `par ${via.map((x) => x.prenom || x.nom).join(' et ')}`]
+  const detail = [detailPersonne(c, new Date()), via.length > 0 && `par ${via.map((x) => x.prenom || x.nom).join(' et ')}`]
     .filter(Boolean)
     .join(' · ');
   return h('div', { class: 'ligne' }, h('a', { class: 'ligne-lien', href: `#/personne/${c.id}` }, ...contenuLigne(c, undefined, detail)));
@@ -97,15 +98,22 @@ function sectionFiliation(titre: string, liens: Lien[], p: Personne): HTMLElemen
   );
 }
 
-/** Conjoint actuel (un seul) touchable, avec accès à l'union et le nombre d'enfants du couple ; rien s'il n'y en a pas. */
-function sectionConjoint(p: Personne): HTMLElement | null {
+/** Ligne d'un conjoint ou d'un ex : naissance, âge, enfants du couple, étiquette « Marié(e) » ; le crayon ouvre l'union. */
+function ligneUnion(p: Personne, { union, personne: c }: { union: Union; personne: Personne }): HTMLElement {
+  const n = enfantsDuCouple(lireDonnees(), p.id, c.id).length;
+  const detail = [detailPersonne(c, new Date()), n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`].filter(Boolean).join(' · ');
+  return ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${union.id}/${p.id}`, 'Modifier l’union', detail);
+}
+
+/** Conjoint actuel (un seul) touchable, puis les ex-conjoints sous leur propre titre ; rien s'il n'y en a pas. */
+function sectionsConjoint(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
-  const lien = conjoint(d, p.id);
-  if (!lien) return null;
-  const { union, personne: c } = lien;
-  const n = enfantsDuCouple(d, p.id, c.id).length;
-  const detail = [libelleNaissance(c.naissance, c.sexe), n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`].filter(Boolean).join(' · ');
-  return section('CONJOINT', ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${p.id}`, 'Modifier l’union', detail));
+  const actuel = conjoint(d, p.id);
+  const ex = exConjoints(d, p.id);
+  return [
+    actuel ? section('CONJOINT', ligneUnion(p, actuel)) : null,
+    ex.length > 0 ? section(ex.length > 1 ? 'EX-CONJOINTS' : 'EX-CONJOINT', ...ex.map((e) => ligneUnion(p, e))) : null,
+  ];
 }
 
 /**
@@ -149,7 +157,13 @@ function ouvrirChoixProche(p: Personne): void {
 }
 
 export function fiche(p: Personne): HTMLElement {
-  const naissance = libelleNaissance(p.naissance, p.sexe);
+  const maintenant = new Date();
+  // Naissance, décès, puis âge (« 34 ans » ou « Morte à 82 ans ») sur sa propre ligne, plus appuyée.
+  const dates = [libelleNaissance(p.naissance, p.sexe), libelleDeces(p.deces, p.sexe)]
+    .filter(Boolean)
+    .map((t) => h('span', {}, majuscule(t)));
+  const age = p.deces ? libelleAgeDeces(p, maintenant) : libelleAge(p, maintenant);
+  if (age) dates.push(h('span', { class: 'age' }, majuscule(age)));
   const lien = lienMoi(p);
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
@@ -182,13 +196,13 @@ export function fiche(p: Personne): HTMLElement {
       h('span', { class: 'avatar avatar-grand' }, initiales(p)),
       h('h1', {}, nomComplet(p)),
       lien && h('span', { class: 'lien-moi' }, lien),
-      naissance && h('span', { class: 'secondaire' }, naissance),
+      dates.length > 0 && h('span', { class: 'dates secondaire' }, ...dates),
     ),
     h(
       'div',
       { class: 'contenu' },
       p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
-      sectionConjoint(p),
+      ...sectionsConjoint(p),
       sectionFiliation('ENFANTS', liensEnfants(lireDonnees(), p.id), p),
       ...sectionsFratrie(p),
       sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),

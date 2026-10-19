@@ -1,0 +1,33 @@
+// Changements de format des données. `migrer` amène un contenu lu (stockage ou import) à la
+// version courante, avant la validation : un ancien export reste donc importable.
+// Elle ne vérifie rien et ne lève jamais d'erreur : un contenu inconnu ressort tel quel et c'est
+// la validation qui le refuse.
+
+function estObjet(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * v1 → v2 : chaque union reçoit un statut. Elles étaient toutes « actuelles » en v1 (une séparation
+ * effaçait l'union) ; si une personne en avait pourtant plusieurs, seule la première reste actuelle,
+ * pour que le fichier reste lisible sans rien perdre.
+ */
+function v1versV2(v: Record<string, unknown>): Record<string, unknown> {
+  const unions = Array.isArray(v.unions) ? v.unions : [];
+  const enCouple = new Set<unknown>();
+  const migrees = unions.map((u) => {
+    if (!estObjet(u)) return u;
+    const libres = !enCouple.has(u.personneA) && !enCouple.has(u.personneB);
+    if (libres) {
+      enCouple.add(u.personneA);
+      enCouple.add(u.personneB);
+    }
+    return { ...u, statut: libres ? 'actuelle' : 'separee' };
+  });
+  return { ...v, version: 2, unions: migrees };
+}
+
+export function migrer(brut: unknown): unknown {
+  if (estObjet(brut) && brut.version === 1) return v1versV2(brut);
+  return brut;
+}

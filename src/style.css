@@ -160,6 +160,40 @@ a {
   margin-bottom: 6px;
 }
 
+/* Prochains anniversaires : au-dessus de la liste, même marges (place de l'index à droite). */
+.anniversaires {
+  padding: 0 28px 4px 20px;
+}
+
+.anniversaires .quand {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.anniversaires .quand strong {
+  color: var(--accent-texte);
+}
+
+.anniversaires .aujourdhui {
+  background: var(--accent-clair);
+}
+
+/* Dates de la fiche : l'âge, sur sa propre ligne, ressort. */
+.identite .dates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.identite .dates .age {
+  color: var(--encre);
+  font-weight: 600;
+}
+
 /* Index alphabétique : bord droit, entre l'en-tête et le bouton +. */
 .index {
   position: fixed;

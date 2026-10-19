@@ -103,7 +103,8 @@ describe('validation des données', () => {
   });
 
   it('refuse une mauvaise version', () => {
-    expect(estDonneesValides({ ...donneesVides(), version: 2 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 3 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 1 })).toBe(false);
   });
 
   it('refuse un lien vers une personne inexistante', () => {

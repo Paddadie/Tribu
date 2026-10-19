@@ -7,7 +7,7 @@ import type { Donnees, Filiation, Personne, Sexe, TypeFiliation, Union } from '.
 export const MAX_PARENTS_PAR_TYPE = 2;
 
 export function donneesVides(): Donnees {
-  return { version: 1, personnes: [], unions: [], filiations: [] };
+  return { version: 2, personnes: [], unions: [], filiations: [] };
 }
 
 function nouvelId(): string {
@@ -26,6 +26,7 @@ export interface ChampsPersonne {
   prenom: string;
   nom: string;
   naissance?: string;
+  deces?: string;
   sexe?: Sexe;
   note?: string;
 }
@@ -47,9 +48,15 @@ export function estDateValide(date: string): boolean {
   return jour >= 1 && jour <= joursDuMois(annee, mois);
 }
 
-function joursDuMois(annee: number, mois: number): number {
+export function joursDuMois(annee: number, mois: number): number {
   if (mois === 2) return (annee % 4 === 0 && annee % 100 !== 0) || annee % 400 === 0 ? 29 : 28;
   return [4, 6, 9, 11].includes(mois) ? 30 : 31;
+}
+
+/** Le décès ne précède pas la naissance ; deux dates partielles se comparent sur ce qu'elles ont en commun. */
+export function decesAvantNaissance(naissance: string, deces: string): boolean {
+  const n = Math.min(naissance.length, deces.length);
+  return deces.slice(0, n) < naissance.slice(0, n);
 }
 
 function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
@@ -60,6 +67,13 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
   if (naissance && !estDateValide(naissance)) {
     throw new Error('Date de naissance invalide (attendu : année, mois et année, ou date complète)');
   }
+  const deces = champs.deces?.trim();
+  if (deces && !estDateValide(deces)) {
+    throw new Error('Date de décès invalide (attendu : année, mois et année, ou date complète)');
+  }
+  if (naissance && deces && decesAvantNaissance(naissance, deces)) {
+    throw new Error('Le décès ne peut pas précéder la naissance');
+  }
   if (champs.sexe !== undefined && champs.sexe !== 'F' && champs.sexe !== 'M') {
     throw new Error('Sexe invalide');
   }
@@ -67,6 +81,7 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
     prenom,
     nom,
     ...(naissance ? { naissance } : {}),
+    ...(deces ? { deces } : {}),
     ...(champs.sexe ? { sexe: champs.sexe } : {}),
     note: champs.note ?? '',
   };
@@ -83,17 +98,17 @@ export function modifierPersonne(d: Donnees, id: string, champs: ChampsPersonne)
   return { ...d, personnes: d.personnes.map((p) => (p.id === id ? maj : p)) };
 }
 
-/** Retire la personne ainsi que toutes ses unions et filiations. */
-/** La personne a un conjoint (une seule union à la fois). */
+/** La personne a un conjoint actuel (une seule union actuelle à la fois ; les séparées ne comptent pas). */
 export function enCouple(d: Donnees, id: string): boolean {
-  return d.unions.some((u) => u.personneA === id || u.personneB === id);
+  return d.unions.some((u) => u.statut === 'actuelle' && (u.personneA === id || u.personneB === id));
 }
 
-/** La personne a au moins une union ou une filiation (parent ou enfant). */
+/** La personne a au moins une union (même séparée) ou une filiation (parent ou enfant). */
 export function aDesLiens(d: Donnees, id: string): boolean {
-  return enCouple(d, id) || d.filiations.some((f) => f.parent === id || f.enfant === id);
+  return d.unions.some((u) => u.personneA === id || u.personneB === id) || d.filiations.some((f) => f.parent === id || f.enfant === id);
 }
 
+/** Retire la personne ainsi que toutes ses unions et filiations. */
 export function supprimerPersonne(d: Donnees, id: string): Donnees {
   exigerPersonne(d, id);
   return {
@@ -118,17 +133,38 @@ export function ajouterUnion(
       (u.personneA === personneA && u.personneB === personneB) ||
       (u.personneA === personneB && u.personneB === personneA),
   );
-  if (doublon) throw new Error('Ces deux personnes sont déjà en couple');
+  if (doublon) throw new Error('Ces deux personnes ont déjà une union : rétablissez-la depuis leur fiche');
   if (enCouple(d, personneA) || enCouple(d, personneB)) {
     throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
   }
-  const union: Union = { id: nouvelId(), personneA, personneB, marie };
+  const union: Union = { id: nouvelId(), personneA, personneB, marie, statut: 'actuelle' };
   return { donnees: { ...d, unions: [...d.unions, union] }, union };
 }
 
+function exigerUnion(d: Donnees, id: string): Union {
+  const union = d.unions.find((u) => u.id === id);
+  if (!union) throw new Error(`Union introuvable : ${id}`);
+  return union;
+}
+
 export function modifierUnion(d: Donnees, id: string, marie: boolean): Donnees {
-  if (!d.unions.some((u) => u.id === id)) throw new Error(`Union introuvable : ${id}`);
+  exigerUnion(d, id);
   return { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, marie } : u)) };
+}
+
+/** Une séparation garde l'union, au statut « séparée » : la personne n'a plus de conjoint actuel. */
+export function separerUnion(d: Donnees, id: string): Donnees {
+  exigerUnion(d, id);
+  return { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, statut: 'separee' } : u)) };
+}
+
+/** Remet une union séparée en union actuelle, si aucun des deux n'a entre-temps un autre conjoint. */
+export function retablirUnion(d: Donnees, id: string): Donnees {
+  const union = exigerUnion(d, id);
+  if (enCouple(d, union.personneA) || enCouple(d, union.personneB)) {
+    throw new Error('L’un des deux a déjà un autre conjoint');
+  }
+  return { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, statut: 'actuelle' } : u)) };
 }
 
 export function supprimerUnion(d: Donnees, id: string): Donnees {

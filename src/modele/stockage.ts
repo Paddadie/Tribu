@@ -1,6 +1,7 @@
 // Persistance dans localStorage (une seule clé, JSON) et export/import de
 // fichier JSON. Le `Storage` est injecté pour pouvoir tester sans navigateur.
 
+import { migrer } from './migration';
 import { donneesVides, MAX_PARENTS_PAR_TYPE } from './modele';
 import type { Donnees } from './types';
 
@@ -19,7 +20,7 @@ function estObjet(v: unknown): v is Record<string, unknown> {
  * liens pointant vers des personnes existantes, règles de filiation.
  */
 export function estDonneesValides(v: unknown): v is Donnees {
-  if (!estObjet(v) || v.version !== 1) return false;
+  if (!estObjet(v) || v.version !== 2) return false;
   const { personnes, unions, filiations } = v;
   if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations)) return false;
 
@@ -28,16 +29,24 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (!estObjet(p) || typeof p.id !== 'string' || ids.has(p.id)) return false;
     if (typeof p.prenom !== 'string' || typeof p.nom !== 'string' || typeof p.note !== 'string') return false;
     if (p.naissance !== undefined && typeof p.naissance !== 'string') return false;
+    if (p.deces !== undefined && typeof p.deces !== 'string') return false;
     if (p.sexe !== undefined && p.sexe !== 'F' && p.sexe !== 'M') return false;
     ids.add(p.id);
   }
 
   const idsLiens = new Set<string>();
+  const enCouple = new Set<string>();
   for (const u of unions) {
     if (!estObjet(u) || typeof u.id !== 'string' || idsLiens.has(u.id)) return false;
     if (typeof u.marie !== 'boolean') return false;
+    if (u.statut !== 'actuelle' && u.statut !== 'separee') return false;
     if (typeof u.personneA !== 'string' || typeof u.personneB !== 'string') return false;
     if (!ids.has(u.personneA) || !ids.has(u.personneB) || u.personneA === u.personneB) return false;
+    // Un seul conjoint actuel par personne.
+    if (u.statut === 'actuelle') {
+      if (enCouple.has(u.personneA) || enCouple.has(u.personneB)) return false;
+      enCouple.add(u.personneA).add(u.personneB);
+    }
     idsLiens.add(u.id);
   }
 
@@ -65,7 +74,7 @@ export type Chargement = { lisible: true; donnees: Donnees } | { lisible: false;
 
 function lire(brut: string): Donnees | null {
   try {
-    const lu: unknown = JSON.parse(brut);
+    const lu = migrer(JSON.parse(brut));
     return estDonneesValides(lu) ? lu : null;
   } catch {
     return null;
@@ -118,7 +127,7 @@ export function nomFichierSecours(date: Date): string {
 export function importerJson(texte: string): Donnees {
   let lu: unknown;
   try {
-    lu = JSON.parse(texte);
+    lu = migrer(JSON.parse(texte));
   } catch {
     throw new Error("Le fichier n'est pas un JSON valide");
   }
