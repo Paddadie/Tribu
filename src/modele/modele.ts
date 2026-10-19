@@ -156,6 +156,18 @@ export function ajouterFiliation(
   return { donnees: { ...d, filiations: [...d.filiations, filiation] }, filiation };
 }
 
+/**
+ * Relie `enfant` à plusieurs parents d'un coup (enfant d'un couple, frère ou sœur), avec le même type.
+ * Un parent déjà relié à l'enfant est passé ; au moins un parent est demandé.
+ */
+export function ajouterFiliations(d: Donnees, parents: string[], enfant: string, type: TypeFiliation): Donnees {
+  if (parents.length === 0) throw new Error('Cochez au moins un parent');
+  return parents.reduce(
+    (x, parent) => (x.filiations.some((f) => f.parent === parent && f.enfant === enfant) ? x : ajouterFiliation(x, parent, enfant, type).donnees),
+    d,
+  );
+}
+
 /** Change le type (biologique/adoptif) d'un lien existant, sous la même limite de deux parents par type. */
 export function modifierFiliation(d: Donnees, id: string, type: TypeFiliation): Donnees {
   const lien = d.filiations.find((f) => f.id === id);

@@ -1,10 +1,10 @@
 // Gestion d'un lien parent-enfant depuis la fiche d'une des deux personnes : changer son type
-// (biologique ou adoptif) ou le retirer. Retirer le lien ne supprime aucune fiche.
+// (biologique ou adoptif) ou le retirer. Retirer le lien ne supprime aucune fiche ; le bandeau permet de l'annuler.
 
 import { nomComplet } from '../modele/liste';
 import { modifierFiliation, supprimerFiliation } from '../modele/modele';
 import type { Personne, TypeFiliation } from '../modele/types';
-import { confirmer } from './confirmer';
+import { changerAvecAnnulation } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
 import { lienRetour, remplacer, revenir } from './navigation';
@@ -45,11 +45,10 @@ export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
     }
   };
 
-  const retirer = async () => {
-    const message = `Retirer le lien entre ${nomComplet(parent)} et ${nomComplet(enfant)} ? Les deux fiches sont conservées.`;
-    if (!(await confirmer(message, 'Retirer'))) return;
+  const retirer = () => {
+    const autre = depuis.id === parent.id ? enfant : parent;
     try {
-      modifierDonnees((x) => supprimerFiliation(x, filiation.id));
+      changerAvecAnnulation((x) => supprimerFiliation(x, filiation.id), `Lien avec ${autre.prenom || autre.nom} retiré.`, 'Lien rétabli.');
       revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Suppression impossible');

@@ -20,8 +20,9 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Sexe : homme (par défaut à la création) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas : elles s'affichent « né(e) » et rien n'est présélectionné en modification.
 - Date de naissance (facultative), éventuellement partielle : année seule, mois et année, ou date complète.
 - Note libre.
-- Sections affichées, dans cet ordre : conjoint, enfants, frères et sœurs (puis demi-frères et demi-sœurs), parents.
-- Une section vide n'est pas affichée. Un bouton « Ajouter un proche » en bas de fiche permet de créer un lien dans une catégorie absente.
+- Ordre de la fiche : identité, note, puis les proches (conjoint, enfants, frères et sœurs, demi-frères et demi-sœurs, parents), le bouton « Ajouter un proche » (style secondaire), et enfin la suppression.
+- Une section vide n'est pas affichée. « Ajouter un proche » ouvre une feuille : un conjoint (grisé s'il y en a déjà un), un parent, un enfant, un frère ou une sœur (grisé avec « Ajoutez d'abord un parent » tant qu'aucun parent n'est connu).
+- Sous le conjoint, le nombre d'enfants du couple : « 1 enfant ensemble », « 3 enfants ensemble ».
 - Chaque proche affiché est touchable et ouvre sa fiche.
 - Étiquettes sur les proches, accordées selon le proche affiché : « Marié / Mariée » (conjoint), « Adoptif / Adoptive » (parent ou enfant) ; « Marié(e) » et « Adoptif(ve) » si son sexe n'est pas renseigné. Le lien biologique n'est pas étiqueté.
 
@@ -30,24 +31,35 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Indicateur « marié » oui/non.
 - Une personne n'a qu'un seul conjoint à la fois. Une séparation efface l'union (les deux fiches restent) ; on peut ensuite en ajouter une autre.
 - Ajouter un conjoint : choisir une personne existante (hors personnes déjà en couple) ou en créer une.
-- Modifier l'indicateur « marié » ou mettre fin à l'union (avec confirmation) : depuis le crayon à côté du conjoint sur la fiche.
+- Modifier l'indicateur « marié » ou mettre fin à l'union (sans confirmation, annulable par le bandeau) : depuis le crayon à côté du conjoint sur la fiche.
 
 ## Parents et enfants
 - Lien parent → enfant, de type biologique ou adoptif.
 - Un enfant peut avoir jusqu'à deux parents par type.
 - Ajouter un parent ou un enfant : personne existante ou nouvelle.
+- Ajouter un enfant depuis une personne en couple : case « Ajouter aussi <conjoint> comme parent », cochée d'office ; l'enfant (créé ou existant) est alors relié aux deux, avec le même type de lien.
+- Retirer un lien (crayon à côté du proche) : sans confirmation, annulable par le bandeau. Les deux fiches restent.
 - Enfants triés par date de naissance (sans date : en fin de liste).
-- Enfants d'un couple : déduits des parents communs, jamais ressaisis. Pas encore affichés en tant que tels (prévu en V2, session S2b).
+- Enfants d'un couple : déduits des parents communs, jamais ressaisis ; leur nombre s'affiche sous le conjoint.
 
 ## Frères et sœurs (déduits)
 - Frères et sœurs : mêmes parents.
 - Demi-frères et demi-sœurs : un seul parent en commun.
 - Affichés séparément sur la fiche.
+- Ajouter un frère ou une sœur : la personne devient enfant des parents connus de la fiche, tous cochés d'office ; en décocher un donne un demi-frère ou une demi-sœur. Un seul type de lien pour tous les parents cochés. Aucun lien de fratrie n'est stocké.
+
+## Écrans d'ajout (conjoint, parent, enfant, frère ou sœur)
+- Deux onglets : « Nouvelle personne » (ouvert d'abord, curseur dans le prénom) et « Personne existante ».
+- Nom prérempli, toujours modifiable. Enfant d'un couple homme-femme : nom du père, avec un bouton pour prendre celui de la mère ; sinon nom de la fiche ouverte, avec un bouton pour celui de l'autre parent coché. Parent, frère ou sœur : nom de la fiche ouverte.
+- Liste des personnes existantes : suggestions en tête avec leur raison (le conjoint d'un parent déjà saisi, les enfants du conjoint, l'autre parent de ses enfants), puis les autres, puis les personnes indisponibles grisées avec la raison (« Déjà en couple », « Déjà enfant »…).
+- Homonymes : créer une personne de même prénom et même nom qu'une fiche existante (casse, accents et espaces ignorés) demande confirmation. Vaut pour toute création, pas pour une modification.
+- Retour ou Annuler avec une saisie en cours (ici et dans le formulaire de fiche) demande « Abandonner la saisie ? ». Le geste ou le bouton Retour du téléphone n'est pas intercepté.
 
 ## Écran d'accueil
 - Liste de toutes les personnes, regroupée par lettre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
 - Un écrou en haut à droite ouvre les Réglages.
 - Champ de filtre par nom (prénom ou nom).
+- Index alphabétique sur le bord droit : les 26 lettres, les absentes estompées. Toucher ou glisser fait défiler jusqu'à la lettre (sinon la suivante présente), affichée en grand pendant le geste. Masqué pendant un filtrage.
 - Bouton « + » pour créer une personne.
 - Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
 

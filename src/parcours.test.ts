@@ -158,6 +158,7 @@ describe('ajout d’un lien', () => {
     await toucher(trouver('button', 'Ajouter un proche'));
     await toucher(trouver('dialog.feuille a', 'Un enfant'));
     expect(titre()).toBe('Ajouter un enfant');
+    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
     // Chloé est déjà sa fille : pas choisissable une seconde fois.
     expect(trouver('button.ligne-choix', 'Chloé').hasAttribute('disabled')).toBe(true);
 
@@ -165,7 +166,9 @@ describe('ajout d’un lien', () => {
     await toucher(trouver('button.ligne-choix', 'Denis'));
     await toucher(trouver('button', 'Ajouter cet enfant'));
 
+    // Bruno, conjoint d'Anne, est coché d'office comme second parent.
     expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: ids.Anne, enfant: ids.Denis, type: 'adoptif' }));
+    expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: ids.Bruno, enfant: ids.Denis, type: 'adoptif' }));
     expect(location.hash).toBe(`#/personne/${ids.Anne}`);
     expect(trouver('section', 'ENFANTS').textContent).toContain('Denis Martin');
   });
@@ -173,6 +176,7 @@ describe('ajout d’un lien', () => {
   it('conjoint marié créé depuis l’écran d’ajout, de sexe opposé par défaut', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/conjoint/${ids.Denis}`);
+    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
     expect(trouver('button.ligne-choix', 'Anne').textContent).toContain('Déjà en couple');
     expect(trouver('button.ligne-choix', 'Anne').hasAttribute('disabled')).toBe(true);
 
@@ -201,6 +205,155 @@ describe('ajout d’un lien', () => {
     expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: elise.id, enfant: ids.Denis, type: 'biologique' }));
     expect(location.hash).toBe(`#/personne/${ids.Denis}`);
     expect(trouver('section', 'PARENTS').textContent).toContain('Élise Durand');
+  });
+
+  it('s’ouvre sur « Nouvelle personne », le curseur dans le prénom', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/parent/${ids.Denis}`);
+    expect(trouver('label', 'Nouvelle personne').querySelector('input')!.checked).toBe(true);
+    expect(document.activeElement?.id).toBe('prenom');
+  });
+
+  it('enfant d’un couple : relié aux deux parents en une saisie, nom du père prérempli', async () => {
+    const lea = creerPersonne(donneesVides(), { prenom: 'Léa', nom: 'Dubois', sexe: 'F' });
+    const thomas = creerPersonne(lea.donnees, { prenom: 'Thomas', nom: 'Petit', sexe: 'M' });
+    const d = ajouterUnion(thomas.donnees, lea.personne.id, thomas.personne.id).donnees;
+    await demarrer(d, `#/enfant/${lea.personne.id}`);
+
+    expect(trouver('label.case', 'Ajouter aussi Thomas comme parent').querySelector('input')!.checked).toBe(true);
+    const nom = ecran().querySelector<HTMLInputElement>('#nom')!;
+    expect(nom.value).toBe('Petit');
+    await toucher(trouver('button.bouton-nom', 'Prendre Dubois, le nom de Léa'));
+    expect(nom.value).toBe('Dubois');
+
+    saisir('prenom', 'Jules');
+    await toucher(trouver('button', 'Créer et ajouter'));
+    const jules = enregistrees().personnes.find((p) => p.prenom === 'Jules')!;
+    expect(jules.nom).toBe('Dubois');
+    expect(enregistrees().filiations.filter((f) => f.enfant === jules.id).map((f) => f.parent)).toEqual([lea.personne.id, thomas.personne.id]);
+    expect(trouver('section', 'CONJOINT').textContent).toContain('1 enfant ensemble');
+  });
+
+  it('frère ou sœur depuis la fiche : un seul parent coché donne un demi-frère', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Chloé}`);
+    await toucher(trouver('button', 'Ajouter un proche'));
+    expect(trouver('dialog.feuille a', 'Un frère ou une sœur').textContent).toContain('Enfant d’Anne et Bruno');
+    await toucher(trouver('dialog.feuille a', 'Un frère ou une sœur'));
+    expect(titre()).toBe('Ajouter un frère ou une sœur');
+
+    await toucher(trouver('label.case', 'Bruno').querySelector('input')!);
+    expect(ecran().querySelector<HTMLInputElement>('#nom')!.value).toBe('Martin');
+    saisir('prenom', 'Hugo');
+    await toucher(trouver('button', 'Créer et ajouter'));
+
+    const hugo = enregistrees().personnes.find((p) => p.prenom === 'Hugo')!;
+    expect(enregistrees().filiations.filter((f) => f.enfant === hugo.id).map((f) => f.parent)).toEqual([ids.Anne]);
+    expect(location.hash).toBe(`#/personne/${ids.Chloé}`);
+    expect(trouver('section', 'DEMI-FRÈRES').textContent).toContain('Hugo Martin');
+  });
+
+  it('frère ou sœur : décocher un parent avec une date incomplète met à jour le bouton', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/frere/${ids.Chloé}`);
+    const mois = ecran().querySelector<HTMLSelectElement>('#mois')!;
+    mois.value = '5';
+    mois.dispatchEvent(new Event('change'));
+
+    await toucher(trouver('label.case', 'Anne').querySelector('input')!);
+    await toucher(trouver('label.case', 'Bruno').querySelector('input')!);
+    expect(trouver('button', 'Créer et ajouter').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('frère ou sœur : grisé dans la feuille tant qu’aucun parent n’est connu', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Denis}`);
+    await toucher(trouver('button', 'Ajouter un proche'));
+    const option = trouver('dialog.feuille .option', 'Un frère ou une sœur');
+    expect(option.tagName).toBe('DIV');
+    expect(option.textContent).toContain('Ajoutez d’abord un parent');
+  });
+
+  it('homonyme : la création demande confirmation', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/parent/${ids.Denis}`);
+    saisir('prenom', 'anne');
+    saisir('nom', 'MARTIN');
+
+    await toucher(trouver('button', 'Créer et ajouter'));
+    expect(dialogue()!.textContent).toContain('Une fiche « Anne Martin » existe déjà');
+    await toucher(trouver('dialog.confirmation button', 'Annuler'));
+    expect(enregistrees().personnes).toHaveLength(4);
+
+    await toucher(trouver('button', 'Créer et ajouter'));
+    await toucher(trouver('dialog.confirmation button', 'Créer quand même'));
+    expect(enregistrees().personnes).toHaveLength(5);
+    expect(location.hash).toBe(`#/personne/${ids.Denis}`);
+  });
+
+  it('Retour avec une saisie en cours demande confirmation', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Denis}`);
+    await toucher(trouver('button', 'Ajouter un proche'));
+    await toucher(trouver('dialog.feuille a', 'Un parent'));
+    saisir('prenom', 'Élise');
+
+    await retour();
+    await toucher(trouver('dialog.confirmation button', 'Continuer la saisie'));
+    expect(titre()).toBe('Ajouter un parent');
+
+    await retour();
+    await toucher(trouver('dialog.confirmation button', 'Abandonner'));
+    await pause();
+    expect(titre()).toBe('Denis Martin');
+    expect(enregistrees().personnes).toHaveLength(4);
+  });
+});
+
+describe('retrait sans confirmation, annulable', () => {
+  it('lien parent-enfant retiré, puis rétabli par le bandeau', async () => {
+    const { donnees, ids } = famille();
+    const lien = donnees.filiations.find((f) => f.parent === ids.Anne && f.enfant === ids.Chloé)!;
+    await demarrer(donnees, `#/lien/${lien.id}/${ids.Anne}`);
+
+    await toucher(trouver('button', 'Retirer ce lien'));
+    expect(dialogue()).toBeNull();
+    expect(enregistrees().filiations).not.toContainEqual(lien);
+    expect(bandeau()!.textContent).toContain('Lien avec Chloé retiré.');
+
+    await toucher(trouver('.bandeau button', 'Annuler'));
+    expect(enregistrees().filiations).toContainEqual(lien);
+    expect(bandeau()!.textContent).toContain('Lien rétabli.');
+  });
+
+  it('fin d’union, puis rétablie par le bandeau', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/union/${ids.Anne}`);
+
+    await toucher(trouver('button', 'Mettre fin à l’union'));
+    expect(dialogue()).toBeNull();
+    expect(enregistrees().unions).toHaveLength(0);
+    expect(bandeau()!.textContent).toContain('Union avec Bruno terminée.');
+
+    await toucher(trouver('.bandeau button', 'Annuler'));
+    expect(enregistrees().unions).toEqual(donnees.unions);
+  });
+});
+
+describe('index alphabétique', () => {
+  it('montre les 26 lettres, estompe les absentes, disparaît pendant un filtrage', async () => {
+    const { donnees } = famille();
+    await demarrer(donnees);
+    const index = ecran().querySelector<HTMLElement>('.index')!;
+    expect(index.children).toHaveLength(26);
+    const absentes = [...index.querySelectorAll('.absente')].map((e) => e.textContent);
+    expect(absentes).toContain('Z');
+    expect(absentes).not.toContain('A');
+
+    const champ = ecran().querySelector<HTMLInputElement>('input[type=search]')!;
+    champ.value = 'Ann';
+    champ.dispatchEvent(new Event('input'));
+    expect(index.hidden).toBe(true);
   });
 });
 

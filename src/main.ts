@@ -21,6 +21,7 @@ import { ecranUnion } from "./ui/union";
 //   #/conjoint/<id>    ajout d'un conjoint à la personne
 //   #/union/<id>       union de la personne (marié, fin d'union)
 //   #/parent/<id>      ajout d'un parent à la personne    #/enfant/<id>   ajout d'un enfant
+//   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
 const app = document.querySelector<HTMLElement>("#app");
 
@@ -36,7 +37,13 @@ function vue(route: string): HTMLElement {
   if (section === "modifier" && personne) return formulaire(personne);
   if (section === "conjoint" && personne) return ajoutConjoint(personne);
   if (section === "union" && personne) return ecranUnion(personne);
-  if ((section === "parent" || section === "enfant") && personne) return ajoutLien(personne, section);
+  if ((section === "parent" || section === "enfant") && personne) return ajoutLien(personne, section, lireDonnees());
+  if (section === "frere" && personne) {
+    // Sans parent connu, pas de fratrie à compléter : retour à la fiche.
+    if (lireDonnees().filiations.some((f) => f.enfant === personne.id)) return ajoutLien(personne, "frere", lireDonnees());
+    remplacer(`#/personne/${personne.id}`, false);
+    return fiche(personne);
+  }
   if (section === "lien") {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
     if (origine) return ecranLien(id, origine);

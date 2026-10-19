@@ -1,24 +1,35 @@
 // Champs d'identité d'une personne (prénom, nom, sexe, naissance, note), partagés
 // par le formulaire de fiche et l'ajout d'un conjoint à créer.
 
-import { assemblerDate, decouperDate, MOIS } from '../modele/liste';
+import { assemblerDate, decouperDate, homonymes, MOIS, nomComplet } from '../modele/liste';
 import type { ChampsPersonne } from '../modele/modele';
 import type { Personne, Sexe } from '../modele/types';
+import { confirmer } from './confirmer';
 import { h } from './dom';
 
 export interface ChampsIdentite {
   /** Contrôles à insérer dans un formulaire, dans l'ordre d'affichage. */
   noeuds: HTMLElement[];
   lire: () => ChampsPersonne;
+  /** Bloc du champ Nom, pour y ajouter un bouton. */
+  champNom: HTMLElement;
+  /** Nom saisi, tel quel (sans contrôle de la date, contrairement à `lire`). */
+  lireNom: () => string;
+  /** Remplace le nom sans compter comme une saisie. */
+  definirNom: (nom: string) => void;
+  /** Place le curseur dans le prénom (clavier ouvert). */
+  viserPrenom: () => void;
+  /** Un champ diffère de son contenu de départ. */
+  modifie: () => boolean;
 }
 
 const champ = (libelle: string, id: string, controle: HTMLElement) =>
   h('div', { class: 'champ' }, h('label', { for: id }, libelle), controle);
 
-/** `existante` préremplit les champs ; `avecNote` ajoute la note libre. */
-export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M'): ChampsIdentite {
+/** `existante` préremplit les champs ; `avecNote` ajoute la note libre ; `nomInitial` préremplit le nom d'une création. */
+export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M', nomInitial = ''): ChampsIdentite {
   const prenom = h('input', { id: 'prenom', type: 'text', value: existante?.prenom ?? '', autocomplete: 'off', autocapitalize: 'words' });
-  const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? '', autocomplete: 'off', autocapitalize: 'words' });
+  const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? nomInitial, autocomplete: 'off', autocapitalize: 'words' });
   // Date partielle possible : année seule, mois + année, ou date complète.
   const date = decouperDate(existante?.naissance);
   const jour = h('input', { id: 'jour', type: 'text', inputmode: 'numeric', maxlength: 2, placeholder: 'JJ', value: date.jour, autocomplete: 'off' });
@@ -46,11 +57,24 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   const choixSexe = radios.map(({ radio, libelle }) => h('label', { class: 'choix' }, radio, h('span', {}, libelle)));
 
   const note = h('textarea', { id: 'note', rows: 5, value: existante?.note ?? '' });
+  const champNom = champ('Nom', 'nom', nom);
+
+  // Contenu de départ, comparé à l'actuel pour savoir si une saisie serait perdue.
+  const valeurs = () => [prenom.value, nom.value, jour.value, mois.value, annee.value, radios.find((r) => r.radio.checked)?.valeur, note.value];
+  const depart = valeurs();
 
   return {
+    champNom,
+    lireNom: () => nom.value,
+    definirNom: (valeur) => {
+      nom.value = valeur;
+      depart[1] = valeur;
+    },
+    viserPrenom: () => prenom.focus(),
+    modifie: () => valeurs().some((v, i) => v !== depart[i]),
     noeuds: [
       champ('Prénom', 'prenom', prenom),
-      champ('Nom', 'nom', nom),
+      champNom,
       h('fieldset', { class: 'champ' }, h('legend', {}, 'Sexe'), h('div', { class: 'choix-groupe' }, ...choixSexe)),
       h(
         'fieldset',
@@ -68,4 +92,17 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
       note: avecNote ? note.value : (existante?.note ?? ''),
     }),
   };
+}
+
+/**
+ * Avant de créer `champs` : s'il existe déjà une fiche de même prénom et même nom, demande confirmation
+ * (deux personnes peuvent porter le même nom). `conseil` complète le message. Vrai si la création peut avoir lieu.
+ */
+export async function accepterHomonyme(personnes: Personne[], champs: ChampsPersonne, conseil = ''): Promise<boolean> {
+  const memes = homonymes(personnes, champs);
+  if (memes.length === 0) return true;
+  // Nom tel qu'écrit sur la fiche existante, pas tel que saisi (« anne MARTIN »).
+  const nom = `« ${nomComplet(memes[0])} »`;
+  const constat = memes.length === 1 ? `Une fiche ${nom} existe déjà.` : `${memes.length} fiches ${nom} existent déjà.`;
+  return confirmer(`${constat} Créer une autre personne avec le même prénom et le même nom ?${conseil && ` ${conseil}`}`, 'Créer quand même', 'Annuler', false);
 }

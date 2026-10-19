@@ -1,11 +1,11 @@
 // Gestion de l'union d'une personne : indicateur « marié » et fin de l'union (séparation).
-// Mettre fin à l'union l'efface ; les deux personnes restent dans la liste.
+// Mettre fin à l'union l'efface ; les deux personnes restent dans la liste et le bandeau permet de l'annuler.
 
 import { conjoint } from '../modele/deductions';
 import { nomComplet } from '../modele/liste';
 import { modifierUnion, supprimerUnion } from '../modele/modele';
 import type { Personne } from '../modele/types';
-import { confirmer } from './confirmer';
+import { changerAvecAnnulation } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
 import { lienRetour, remplacer, revenir } from './navigation';
@@ -37,11 +37,9 @@ export function ecranUnion(p: Personne): HTMLElement {
     }
   };
 
-  const finir = async () => {
-    const message = `Mettre fin à l’union de ${nomComplet(p)} et ${nomComplet(autre)} ? Les deux fiches sont conservées.`;
-    if (!(await confirmer(message, 'Mettre fin'))) return;
+  const finir = () => {
     try {
-      modifierDonnees((d) => supprimerUnion(d, union.id));
+      changerAvecAnnulation((d) => supprimerUnion(d, union.id), `Union avec ${autre.prenom || autre.nom} terminée.`, 'Union rétablie.');
       revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Suppression impossible');

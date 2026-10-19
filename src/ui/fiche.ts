@@ -1,7 +1,8 @@
-// Fiche d'une personne : identité, conjoint, enfants, frères et sœurs, parents, note, modification, suppression avec confirmation.
+// Fiche d'une personne : identité, note, conjoint, enfants, frères et sœurs, parents, ajout d'un proche,
+// modification, suppression avec confirmation.
 
-import { conjoint, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien } from '../modele/deductions';
-import { initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
+import { conjoint, enfantsDuCouple, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien } from '../modele/deductions';
+import { avecDe, enumerer, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
 import { aDesLiens, enCouple, supprimerPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { confirmer } from './confirmer';
@@ -11,11 +12,11 @@ import { contenuLigne } from './lignePersonne';
 import { lienRetour, remplacer } from './navigation';
 
 /** Ligne touchable vers la fiche d'une personne, avec une étiquette et un crayon vers l'écran de gestion du lien. */
-function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libelleModifier: string): HTMLElement {
+function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libelleModifier: string, detail?: string): HTMLElement {
   return h(
     'div',
     { class: 'ligne ligne-union' },
-    h('a', { class: 'ligne-lien', href: `#/personne/${c.id}` }, ...contenuLigne(c), etiquette),
+    h('a', { class: 'ligne-lien', href: `#/personne/${c.id}` }, ...contenuLigne(c, undefined, detail), etiquette),
     h('a', { class: 'bouton-icone', href: hrefModifier, 'aria-label': libelleModifier }, icone('crayon', 20)),
   );
 }
@@ -58,17 +59,25 @@ function sectionFiliation(titre: string, liens: Lien[], p: Personne): HTMLElemen
   );
 }
 
-/** Conjoint actuel (un seul) touchable, avec accès à l'union ; rien s'il n'y en a pas. */
+/** Conjoint actuel (un seul) touchable, avec accès à l'union et le nombre d'enfants du couple ; rien s'il n'y en a pas. */
 function sectionConjoint(p: Personne): HTMLElement | null {
-  const lien = conjoint(lireDonnees(), p.id);
+  const d = lireDonnees();
+  const lien = conjoint(d, p.id);
   if (!lien) return null;
   const { union, personne: c } = lien;
-  return section('CONJOINT', ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${p.id}`, 'Modifier l’union'));
+  const n = enfantsDuCouple(d, p.id, c.id).length;
+  const detail = [libelleNaissance(c.naissance, c.sexe), n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`].filter(Boolean).join(' · ');
+  return section('CONJOINT', ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${p.id}`, 'Modifier l’union', detail));
 }
 
-/** Feuille « Ajouter un proche » : conjoint, parent ou enfant. Le conjoint est grisé s'il y en a déjà un. */
+/**
+ * Feuille « Ajouter un proche » : conjoint, parent, enfant, frère ou sœur.
+ * Le conjoint est grisé s'il y en a déjà un ; le frère ou la sœur tant qu'aucun parent n'est connu.
+ */
 function ouvrirChoixProche(p: Personne): void {
-  const aConjoint = enCouple(lireDonnees(), p.id);
+  const d = lireDonnees();
+  const aConjoint = enCouple(d, p.id);
+  const parents = liensParents(d, p.id).map((l) => l.personne.prenom || l.personne.nom);
   const fermer = () => {
     dialogue.close();
     dialogue.remove();
@@ -89,6 +98,7 @@ function ouvrirChoixProche(p: Personne): void {
     option('Un conjoint', aConjoint ? 'Un seul conjoint à la fois' : 'Déjà dans la liste ou nouveau', 'coeur', `#/conjoint/${p.id}`, aConjoint),
     option('Un parent', 'Biologique ou adoptif', 'haut', `#/parent/${p.id}`),
     option('Un enfant', 'Biologique ou adoptif', 'bas', `#/enfant/${p.id}`),
+    option('Un frère ou une sœur', parents.length > 0 ? `Enfant ${avecDe(enumerer(parents))}` : 'Ajoutez d’abord un parent', 'cote', `#/frere/${p.id}`, parents.length === 0),
     h('button', { type: 'button', class: 'bouton', onclick: fermer }, 'Annuler'),
   );
   // Un toucher sur le fond (hors de la feuille) ferme aussi.
@@ -137,12 +147,12 @@ export function fiche(p: Personne): HTMLElement {
     h(
       'div',
       { class: 'contenu' },
+      p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
       sectionConjoint(p),
       sectionFiliation('ENFANTS', liensEnfants(lireDonnees(), p.id), p),
       ...sectionsFratrie(p),
       sectionFiliation('PARENTS', liensParents(lireDonnees(), p.id), p),
-      h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
-      p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'NOTE'), h('p', {}, p.note)),
+      h('button', { type: 'button', class: 'bouton', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: supprimer }, icone('corbeille', 18), 'Supprimer cette personne'),
       erreur,
     ),

@@ -78,3 +78,14 @@
 2026-10-19 | Tri des proches sur la fiche par le comparateur de la liste : une personne sans prénom se classe désormais sur son nom | CODE-02, comparateur unique
 2026-10-19 | Navigation : chaque entrée d'historique porte sa route et sa profondeur ; Retour = `history.back()` si l'écran précédent est dans l'appli, sinon remplacement par l'écran par défaut ; les liens Retour restent des `<a href>` interceptés ; un second toucher pendant le recul est ignoré | UX-01 ; `history.length` n'est pas fiable
 2026-10-19 | Défilement géré par l'appli (`scrollRestoration` manuel) : seule la liste retrouve sa position, les autres écrans s'ouvrent en haut | UX-02
+2026-10-19 | Maquette S2b validée par Paul, avec deux changements : onglet « Nouvelle personne » par défaut dans les écrans d'ajout, confirmation avant de créer un homonyme | UX-13, UX-14, demande de Paul
+2026-10-19 | Homonyme = même prénom et même nom, sans tenir compte de la casse, des accents ni des espaces ; on peut confirmer la création (deux personnes peuvent porter le même nom). Contrôle à chaque création : fiche, conjoint, parent, enfant, frère ou sœur ; pas à la modification | UX-14
+2026-10-19 | Retirer un lien ou mettre fin à une union se fait sans confirmation, annulable par le bandeau ; une fiche modifiée l'est aussi. La suppression d'une personne garde sa confirmation | UX-07, maquette S2b
+2026-10-19 | « Ajoutez d'abord un parent » (vouvoiement, comme le reste de l'appli) | FEAT-03
+2026-10-19 | Nom prérempli de l'enfant d'un couple homme-femme : nom du père, bouton pour celui de la mère ; sinon (un seul parent, sexe non précisé, même sexe) nom de la fiche ouverte, bouton pour celui du conjoint | UX-05, précise la décision sur le nom prérempli
+2026-10-19 | Frère ou sœur : un seul type de lien (biologique ou adoptif) appliqué à tous les parents cochés | FEAT-03
+2026-10-19 | Enfant ajouté depuis une personne en couple : il est aussi relié au conjoint (case cochée d'office), qu'il soit créé ou choisi parmi les personnes existantes | UX-04 ; change le comportement de l'ajout d'un enfant existant
+2026-10-19 | Le dialogue d'homonyme cite le nom tel qu'écrit sur la fiche existante, pas tel que saisi | UX-14
+2026-10-19 | `#/frere/<id>` sans parent connu ramène à la fiche (l'option est grisée dans la feuille) | FEAT-03
+2026-10-19 | Index alphabétique : les 26 lettres toujours affichées (plus « # » si besoin), les absentes estompées ; toucher une lettre absente mène à la suivante présente ; masqué pendant un filtrage ; réservé au doigt (`aria-hidden`), le filtre sert au clavier et au lecteur d'écran | UX-12
+2026-10-19 | Élision dans les textes construits : « d'Anne », « de Marc », « de Hugo » (pas d'élision devant h, souvent aspiré) | Qualité du français

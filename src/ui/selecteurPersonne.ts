@@ -1,12 +1,14 @@
-// Sélecteur de la personne à relier (conjoint, parent, enfant), commun aux
-// écrans d'ajout : onglets « Personne existante » / « Nouvelle personne »,
-// recherche, lignes choisissables, bouton de validation et erreur. La création
-// éventuelle et le lien sont enregistrés ensemble, en une seule modification.
+// Sélecteur de la personne à relier (conjoint, parent, enfant, frère ou sœur), commun aux
+// écrans d'ajout : onglets « Nouvelle personne » (ouvert d'abord) / « Personne existante »,
+// recherche, lignes choisissables (suggestions en tête, personnes indisponibles en fin),
+// bouton de validation et erreur. La création éventuelle et le lien sont enregistrés
+// ensemble, en une seule modification.
 
-import { comparateur, filtrerParNom, nomListe } from '../modele/liste';
+import { avecDe, comparateur, filtrerParNom, nomListe } from '../modele/liste';
 import { creerPersonne } from '../modele/modele';
+import type { NomPropose, Suggestion } from '../modele/saisie';
 import type { Donnees, Personne, Sexe } from '../modele/types';
-import { champsIdentite } from './champsPersonne';
+import { accepterHomonyme, champsIdentite } from './champsPersonne';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { contenuLigne } from './lignePersonne';
@@ -22,8 +24,14 @@ export interface OptionsSelecteur {
   libelleValider: string;
   /** Sexe coché d'avance pour une nouvelle personne. */
   sexeParDefaut?: Sexe;
+  /** Noms proposés pour une nouvelle personne : le premier est prérempli, un bouton passe au suivant. */
+  noms?: () => NomPropose[];
+  /** Personnes proposées en tête de liste, avec la raison. */
+  suggestions?: (d: Donnees) => Suggestion[];
   /** Raison affichée à la place de la naissance quand `c` n'est pas choisissable. */
   indisponible: (d: Donnees, c: Personne) => string | undefined;
+  /** Condition de l'écran en plus du choix d'une personne (au moins un parent coché). */
+  pret?: () => boolean;
   /** Relie la personne de départ à `autre` (id) ; lève une erreur si le lien est refusé. */
   lier: (d: Donnees, autre: string) => Donnees;
   /** Après un enregistrement réussi. */
@@ -36,57 +44,102 @@ export interface Selecteur {
   zone: HTMLElement;
   erreur: HTMLElement;
   valider: HTMLButtonElement;
+  /** À appeler quand un réglage de l'écran change (parents cochés) : liste, nom proposé et bouton. */
+  rafraichir: () => void;
+  /** Une saisie de nouvelle personne serait perdue. */
+  modifie: () => boolean;
 }
 
+const appel = (p: Personne) => p.prenom || p.nom;
+
 export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
-  let mode: Mode = 'existante';
+  let mode: Mode = 'nouvelle';
   let choisie: string | undefined;
   let filtre = '';
 
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const identite = champsIdentite(undefined, false, o.sexeParDefaut);
   const zone = h('div', { class: 'zone-conjoint' });
+  const liste = h('div', { class: 'liste-choix' });
   const valider = h('button', { type: 'button', class: 'bouton bouton-plein' });
 
-  const ligne = (c: Personne, raison: string | undefined, liste: HTMLElement): HTMLElement =>
+  // Nom prérempli : remplacé quand les parents changent, sauf s'il a été modifié à la main.
+  let rangNom = 0;
+  let nomAuto = '';
+  const boutonNom = h('button', { type: 'button', class: 'bouton-nom', hidden: true });
+  const poserNom = (forcer: boolean) => {
+    const noms = o.noms?.() ?? [];
+    if (rangNom >= noms.length) rangNom = 0;
+    if (forcer || identite.lireNom().trim() === nomAuto) {
+      nomAuto = noms[rangNom]?.nom ?? '';
+      identite.definirNom(nomAuto);
+    }
+    const suivant = noms[(rangNom + 1) % noms.length];
+    boutonNom.hidden = noms.length < 2;
+    if (suivant) boutonNom.replaceChildren(icone('echange', 16), `Prendre ${suivant.nom}, le nom ${avecDe(appel(suivant.de))}`);
+  };
+  boutonNom.addEventListener('click', () => {
+    rangNom += 1;
+    poserNom(true);
+  });
+  identite.champNom.append(boutonNom);
+
+  const ligne = (c: Personne, detail: string | undefined, inactive: boolean): HTMLElement =>
     h(
       'button',
       {
         type: 'button',
         class: `ligne ligne-choix${choisie === c.id ? ' choisie' : ''}`,
-        disabled: raison !== undefined,
+        disabled: inactive,
         'aria-pressed': choisie === c.id,
         onclick: () => {
           choisie = c.id;
-          liste.replaceChildren(...lignes(liste));
+          dessinerListe();
           majBouton();
         },
       },
-      ...contenuLigne(c, nomListe(c, lireReglages().tri), raison),
+      ...contenuLigne(c, nomListe(c, lireReglages().tri), detail),
       choisie === c.id && icone('coche', 22),
     );
 
-  const lignes = (liste: HTMLElement): HTMLElement[] => {
+  const bloc = (titre: string, lignes: HTMLElement[]) =>
+    h('section', { class: 'bloc-choix' }, h('h2', { class: 'titre-section' }, titre), h('div', { class: 'carte' }, ...lignes));
+
+  /** Suggestions en tête, puis les autres personnes choisissables, puis les indisponibles avec leur raison. */
+  const lignes = (): HTMLElement[] => {
     const d = lireDonnees();
     const autres = d.personnes.filter((c) => c.id !== o.personne.id).sort(comparateur(lireReglages().tri));
-    const trouvees = filtrerParNom(autres, filtre);
     if (autres.length === 0) return [h('p', { class: 'vide' }, 'Aucune autre personne. Créez-en une avec « Nouvelle personne ».')];
+    const trouvees = filtrerParNom(autres, filtre);
     if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];
-    return trouvees.map((c) => ligne(c, o.indisponible(d, c), liste));
+    const raisons = new Map(trouvees.map((c) => [c.id, o.indisponible(d, c)]));
+    const suggerees = new Map((o.suggestions?.(d) ?? []).map((s) => [s.personne.id, s.detail]));
+    if (choisie && raisons.get(choisie) !== undefined) choisie = undefined;
+
+    const enTete = trouvees.filter((c) => suggerees.has(c.id) && raisons.get(c.id) === undefined);
+    const reste = [...trouvees.filter((c) => !enTete.includes(c) && raisons.get(c.id) === undefined), ...trouvees.filter((c) => raisons.get(c.id) !== undefined)];
+    const lignesReste = reste.map((c) => ligne(c, raisons.get(c.id), raisons.get(c.id) !== undefined));
+    if (enTete.length === 0) return [h('div', { class: 'carte' }, ...lignesReste)];
+    return [
+      bloc(enTete.length > 1 ? 'SUGGESTIONS' : 'SUGGESTION', enTete.map((c) => ligne(c, suggerees.get(c.id), false))),
+      reste.length > 0 && bloc('TOUTES LES PERSONNES', lignesReste),
+    ].filter((x): x is HTMLElement => x !== false);
   };
+
+  const dessinerListe = () => liste.replaceChildren(...lignes());
 
   const majBouton = () => {
     valider.textContent = mode === 'existante' ? o.libelleValider : 'Créer et ajouter';
-    valider.disabled = mode === 'existante' && !choisie;
+    valider.disabled = (mode === 'existante' && !choisie) || o.pret?.() === false;
   };
 
   const dessiner = () => {
     erreur.hidden = true;
     if (mode === 'nouvelle') {
       zone.replaceChildren(...identite.noeuds);
+      queueMicrotask(identite.viserPrenom);
     } else {
-      const liste = h('div', { class: 'carte' });
-      liste.replaceChildren(...lignes(liste));
+      dessinerListe();
       const champ = h('input', {
         type: 'search',
         placeholder: 'Rechercher par prénom ou nom',
@@ -95,7 +148,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
         enterkeyhint: 'search',
         oninput: () => {
           filtre = champ.value;
-          liste.replaceChildren(...lignes(liste));
+          dessinerListe();
         },
       });
       zone.replaceChildren(h('label', { class: 'champ-filtre champ-filtre-forme' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Rechercher une personne'), champ), liste);
@@ -120,16 +173,23 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
       h('span', {}, libelle),
     );
 
-  valider.addEventListener('click', () => {
+  valider.addEventListener('click', async () => {
+    erreur.hidden = true;
     try {
-      modifierDonnees((d) => {
-        if (mode === 'existante') {
-          if (!choisie) throw new Error('Choisissez une personne');
-          return o.lier(d, choisie);
-        }
-        const nouvelle = creerPersonne(d, identite.lire());
-        return o.lier(nouvelle.donnees, nouvelle.personne.id);
-      });
+      if (mode === 'existante') {
+        if (!choisie) throw new Error('Choisissez une personne');
+        const autre = choisie;
+        modifierDonnees((d) => o.lier(d, autre));
+      } else {
+        const champs = identite.lire();
+        // Saisie vérifiée avant de parler d'homonyme.
+        creerPersonne(lireDonnees(), champs);
+        if (!(await accepterHomonyme(lireDonnees().personnes, champs, 'Pour relier celle qui existe, choisissez-la dans « Personne existante ».'))) return;
+        modifierDonnees((d) => {
+          const nouvelle = creerPersonne(d, champs);
+          return o.lier(nouvelle.donnees, nouvelle.personne.id);
+        });
+      }
       o.apres();
     } catch (err) {
       erreur.textContent = err instanceof Error ? err.message : 'Enregistrement impossible';
@@ -137,12 +197,19 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     }
   });
 
+  poserNom(true);
   dessiner();
 
   return {
-    onglets: h('div', { class: 'choix-groupe', role: 'radiogroup', 'aria-label': o.libelleOrigine }, onglet('existante', 'Personne existante'), onglet('nouvelle', 'Nouvelle personne')),
+    onglets: h('div', { class: 'choix-groupe', role: 'radiogroup', 'aria-label': o.libelleOrigine }, onglet('nouvelle', 'Nouvelle personne'), onglet('existante', 'Personne existante')),
     zone,
     erreur,
     valider,
+    rafraichir: () => {
+      majBouton();
+      poserNom(false);
+      if (mode === 'existante') dessinerListe();
+    },
+    modifie: () => mode === 'nouvelle' && identite.modifie(),
   };
 }

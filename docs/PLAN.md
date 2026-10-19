@@ -63,16 +63,18 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] UX-02 : position de défilement de la liste restaurée au retour (supprimer le `scrollTo(0,0)` systématique de main.ts).
   Terminé quand : tests verts ; liste → A → B → Retour revient sur A, puis sur la liste à la même position.
 
-- [ ] **S2b. Parcours** — Maquette d'abord : fiche, feuille « Ajouter un proche », écrans d'ajout, liste avec index.
-  - [ ] UX-03 : fiche : identité → note → proches → « Ajouter un proche » en style secondaire → suppression.
-  - [ ] UX-04 : ajout d'un enfant depuis une personne en couple : case « Ajouter aussi <conjoint> comme parent », cochée d'office.
-  - [ ] UX-05 : nom prérempli, toujours modifiable. Enfant : nom du père, bouton pour prendre celui de la mère si les deux sont connus, sinon nom de la fiche ouverte. Parent, frère ou sœur : nom de la fiche ouverte.
-  - [ ] FEAT-03 (option A) : « Un frère ou une sœur » dans la feuille. La personne devient enfant des parents connus (tous cochés ; en décocher un donne un demi). Grisé avec « Ajoute d'abord un parent » si aucun parent n'est connu. Aucun lien de fratrie stocké (décision 9).
-  - [ ] UX-06 : listes de choix : suggestions en tête (ex. le conjoint d'un parent déjà saisi), personnes grisées en fin de liste.
-  - [ ] UX-07 : bandeau bref « … · Annuler » après retrait d'un lien, fin d'union, modification (composant de S1). La suppression d'une personne garde sa confirmation.
-  - [ ] UX-09 : focus sur le prénom à la création ; confirmation avant d'abandonner un formulaire modifié.
-  - [ ] FEAT-08 : « N enfants ensemble » sous le conjoint (`enfantsDuCouple`).
-  - [ ] UX-12 : index alphabétique latéral sur la liste (100 à 200 fiches visées).
+- [x] **S2b. Parcours** — Maquette d'abord : fiche, feuille « Ajouter un proche », écrans d'ajout, liste avec index.
+  - [x] UX-03 : fiche : identité → note → proches → « Ajouter un proche » en style secondaire → suppression.
+  - [x] UX-04 : ajout d'un enfant depuis une personne en couple : case « Ajouter aussi <conjoint> comme parent », cochée d'office.
+  - [x] UX-05 : nom prérempli, toujours modifiable. Enfant : nom du père, bouton pour prendre celui de la mère si les deux sont connus, sinon nom de la fiche ouverte. Parent, frère ou sœur : nom de la fiche ouverte.
+  - [x] FEAT-03 (option A) : « Un frère ou une sœur » dans la feuille. La personne devient enfant des parents connus (tous cochés ; en décocher un donne un demi). Grisé avec « Ajoute d'abord un parent » si aucun parent n'est connu. Aucun lien de fratrie stocké (décision 9).
+  - [x] UX-06 : listes de choix : suggestions en tête (ex. le conjoint d'un parent déjà saisi), personnes grisées en fin de liste.
+  - [x] UX-07 : bandeau bref « … · Annuler » après retrait d'un lien, fin d'union, modification (composant de S1). La suppression d'une personne garde sa confirmation.
+  - [x] UX-09 : focus sur le prénom à la création ; confirmation avant d'abandonner un formulaire modifié.
+  - [x] FEAT-08 : « N enfants ensemble » sous le conjoint (`enfantsDuCouple`).
+  - [x] UX-12 : index alphabétique latéral sur la liste (100 à 200 fiches visées).
+  - [x] UX-13 : écrans d'ajout ouverts sur l'onglet « Nouvelle personne » (demande de Paul à la maquette).
+  - [x] UX-14 : homonymes : créer une fiche de même prénom et même nom qu'une fiche existante demande confirmation (demande de Paul à la maquette).
   Terminé quand : l'enfant d'un couple s'ajoute aux deux parents en une saisie, nom prérempli ; un frère s'ajoute depuis la fiche.
 
 - [ ] **S3a. Parenté** — Modèle et tests d'abord (deductions.ts), puis maquette de la fiche.

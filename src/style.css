@@ -152,11 +152,63 @@ a {
 }
 
 .liste {
-  padding: 0 20px 100px;
+  /* À droite, la place de l'index alphabétique. */
+  padding: 0 28px 100px 20px;
 }
 
 .groupe {
   margin-bottom: 6px;
+}
+
+/* Index alphabétique : bord droit, entre l'en-tête et le bouton +. */
+.index {
+  position: fixed;
+  z-index: 1;
+  top: 150px;
+  bottom: calc(max(28px, env(safe-area-inset-bottom)) + 76px);
+  right: max(2px, env(safe-area-inset-right));
+  width: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.index[hidden] {
+  display: none;
+}
+
+.index .absente {
+  opacity: 0.35;
+}
+
+.bulle {
+  position: fixed;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-radius: 18px;
+  background: var(--accent);
+  color: var(--sur-accent);
+  font-size: 36px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bulle[hidden] {
+  display: none;
 }
 
 .titre-section {
@@ -414,7 +466,7 @@ a {
   color: var(--secondaire);
 }
 
-.champ input:not([type="radio"]),
+.champ input:not([type="radio"]):not([type="checkbox"]),
 .champ select,
 .champ textarea {
   width: 100%;
@@ -428,7 +480,7 @@ a {
   color: var(--encre);
 }
 
-.champ input:not([type="radio"]):focus,
+.champ input:not([type="radio"]):not([type="checkbox"]):focus,
 .champ select:focus,
 .champ textarea:focus,
 .champ-filtre:focus-within {
@@ -870,4 +922,62 @@ fieldset.champ legend {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ——— Écrans d'ajout : cases, nom proposé, suggestions ——— */
+
+.champ .case,
+.case {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 10px 16px;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.case + .case {
+  border-top: 1px solid var(--bord);
+}
+
+.boite {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.aide {
+  padding: 0 4px;
+  font-size: 14px;
+  color: var(--secondaire);
+}
+
+.bouton-nom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-texte);
+  cursor: pointer;
+}
+
+.bouton-nom[hidden] {
+  display: none;
+}
+
+.liste-choix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

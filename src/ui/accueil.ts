@@ -1,7 +1,7 @@
-// Écran d'accueil : liste des personnes (par lettre), filtre par nom, bouton +.
-// Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
+// Écran d'accueil : liste des personnes (par lettre), index alphabétique sur le bord droit,
+// filtre par nom, bouton +. Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
 
-import { filtrerParNom, grouperParLettre, nomListe, type Tri } from '../modele/liste';
+import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, nomListe, type Groupe, type Tri } from '../modele/liste';
 import type { Personne } from '../modele/types';
 import { importerJson } from '../modele/stockage';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
@@ -60,11 +60,51 @@ function liste(): HTMLElement[] {
   return grouperParLettre(trouvees, tri).map((g) =>
     h(
       'section',
-      { class: 'groupe' },
+      { class: 'groupe', 'data-lettre': g.lettre },
       h('h2', { class: 'titre-section' }, g.lettre),
       h('div', { class: 'carte' }, ...g.personnes.map((p) => ligne(p, tri))),
     ),
   );
+}
+
+/**
+ * Index latéral : toucher ou glisser sur une lettre fait défiler jusqu'à son groupe (sinon le suivant présent),
+ * avec la lettre en grand au centre. Les lettres sans personne sont estompées.
+ * Réservé au doigt : au clavier ou au lecteur d'écran, le filtre fait mieux.
+ */
+function indexLettres(groupes: Groupe[], zoneListe: HTMLElement, entete: HTMLElement): { index: HTMLElement; bulle: HTMLElement } {
+  const presentes = new Set(groupes.map((g) => g.lettre));
+  const lettres = lettresIndex(groupes);
+  const bulle = h('div', { class: 'bulle', 'aria-hidden': true, hidden: true });
+  const index = h(
+    'div',
+    { class: 'index', 'aria-hidden': true },
+    ...lettres.map((l) => h('span', { class: presentes.has(l) ? '' : 'absente' }, l)),
+  );
+
+  const aller = (e: PointerEvent) => {
+    const r = index.getBoundingClientRect();
+    const rang = Math.min(lettres.length - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * lettres.length)));
+    const cible = groupeVise(groupes, lettres[rang]);
+    const section = cible && zoneListe.querySelector<HTMLElement>(`[data-lettre="${cible}"]`);
+    if (!section) return;
+    bulle.textContent = cible;
+    bulle.hidden = false;
+    window.scrollTo(0, section.getBoundingClientRect().top + window.scrollY - entete.offsetHeight);
+  };
+  const lacher = () => (bulle.hidden = true);
+
+  index.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    index.setPointerCapture?.(e.pointerId);
+    aller(e);
+  });
+  index.addEventListener('pointermove', (e) => {
+    if (!bulle.hidden) aller(e);
+  });
+  index.addEventListener('pointerup', lacher);
+  index.addEventListener('pointercancel', lacher);
+  return { index, bulle };
 }
 
 export function accueil(): HTMLElement {
@@ -83,6 +123,8 @@ export function accueil(): HTMLElement {
   if (total === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, titre), accueilVide());
 
   const zoneListe = h('div', { class: 'liste' }, ...liste());
+  // Pendant un filtrage, la liste est courte : l'index disparaît.
+  const masquerIndex = () => (index.hidden = filtre.trim() !== '');
 
   const champ = h('input', {
     type: 'search',
@@ -92,20 +134,26 @@ export function accueil(): HTMLElement {
     enterkeyhint: 'search',
     oninput: () => {
       filtre = champ.value;
+      masquerIndex();
       zoneListe.replaceChildren(...liste());
     },
   });
+  const entete = h(
+    'header',
+    { class: 'entete-accueil' },
+    titre,
+    h('label', { class: 'champ-filtre' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Filtrer par nom'), champ),
+  );
+  const { index, bulle } = indexLettres(grouperParLettre(lireDonnees().personnes, lireReglages().tri), zoneListe, entete);
+  masquerIndex();
 
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'header',
-      { class: 'entete-accueil' },
-      titre,
-      h('label', { class: 'champ-filtre' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Filtrer par nom'), champ),
-    ),
+    entete,
     zoneListe,
+    index,
+    bulle,
     h('a', { class: 'ajout', href: '#/nouveau', 'aria-label': 'Ajouter une personne' }, icone('plus', 28)),
   );
 }

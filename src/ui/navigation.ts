@@ -5,6 +5,7 @@
 // ouvert). Une entrée dont la route ne correspond pas est nouvelle : un cran plus
 // loin que l'écran d'où l'on vient.
 
+import { confirmer } from './confirmer';
 import { h, type Enfant } from './dom';
 
 interface Entree {
@@ -16,6 +17,8 @@ let profondeur = -1;
 // Recul demandé mais pas encore arrivé : un second toucher sur Retour ne recule pas deux fois.
 let recul = false;
 let afficher: () => void = () => {};
+// Saisie en cours sur l'écran affiché : Retour demande confirmation avant de la perdre.
+let garde: (() => boolean) | undefined;
 
 function entreeCourante(): Entree | undefined {
   const etat = history.state as Partial<Entree> | null;
@@ -35,7 +38,11 @@ function noterEntree(): void {
 
 /** Lance la navigation : `rendu` dessine l'écran de la route courante, maintenant et à chaque changement. */
 export function demarrerNavigation(rendu: () => void): void {
-  afficher = rendu;
+  // Chaque nouvel écran repart sans garde ; il pose la sienne en se construisant.
+  afficher = () => {
+    garde = undefined;
+    rendu();
+  };
   // Le défilement est géré par l'appli (position de la liste gardée au retour).
   history.scrollRestoration = 'manual';
   // popstate arrive aussi quand l'écran précédent a la même adresse (sans hashchange).
@@ -72,10 +79,19 @@ export function revenir(defaut: string): void {
   } else remplacer(defaut);
 }
 
+/**
+ * L'écran en construction a une saisie à protéger : tant que `modifie()` est vrai, ses liens Retour
+ * demandent confirmation. Le geste ou le bouton Retour du téléphone n'est pas retenu.
+ */
+export function garderSaisie(modifie: () => boolean): void {
+  garde = modifie;
+}
+
 /** Lien Retour ou Annuler : aspect et adresse d'un lien, mais il revient en arrière au toucher. */
 export function lienRetour(defaut: string, attributs: Record<string, unknown>, ...enfants: Enfant[]): HTMLAnchorElement {
-  const retour = (e: Event) => {
+  const retour = async (e: Event) => {
     e.preventDefault();
+    if (garde?.() && !(await confirmer('Abandonner la saisie ? Ce que vous avez saisi sera perdu.', 'Abandonner', 'Continuer la saisie'))) return;
     revenir(defaut);
   };
   return h('a', { ...attributs, href: defaut, onclick: retour }, ...enfants);

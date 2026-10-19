@@ -14,6 +14,16 @@ export function nomComplet(p: Pick<Personne, 'prenom' | 'nom'>): string {
   return [p.prenom, p.nom].filter(Boolean).join(' ');
 }
 
+/** « Marc », « Marc et Claire », « Marc, Claire et Jean ». */
+export function enumerer(noms: string[]): string {
+  return noms.length < 2 ? (noms[0] ?? '') : `${noms.slice(0, -1).join(', ')} et ${noms.at(-1)}`;
+}
+
+/** « de Marc », « d’Anne », « d’Yves » : élision devant une voyelle (pas devant un h, souvent aspiré). */
+export function avecDe(nom: string): string {
+  return /^[aeiouy]/.test(simplifier(nom.trim())) ? `d’${nom}` : `de ${nom}`;
+}
+
 /** Première lettre du prénom et du nom, en majuscules. */
 export function initiales(p: Pick<Personne, 'prenom' | 'nom'>): string {
   const lettres = [p.prenom, p.nom].map((s) => [...s.trim()][0] ?? '').join('');
@@ -55,6 +65,32 @@ export function filtrerParNom(personnes: Personne[], saisie: string): Personne[]
     const cible = simplifier(`${p.prenom} ${p.nom}`);
     return mots.every((m) => cible.includes(m));
   });
+}
+
+/** Texte comparable pour les homonymes : simplifié, espaces superflus retirés. */
+function cleHomonyme(texte: string): string {
+  return simplifier(texte).trim().split(/\s+/).join(' ');
+}
+
+/** Fiches de même prénom et même nom (casse, accents et espaces ignorés), sauf `exclue`. */
+export function homonymes(personnes: Personne[], champs: Pick<Personne, 'prenom' | 'nom'>, exclue?: string): Personne[] {
+  const prenom = cleHomonyme(champs.prenom);
+  const nom = cleHomonyme(champs.nom);
+  return personnes.filter((p) => p.id !== exclue && cleHomonyme(p.prenom) === prenom && cleHomonyme(p.nom) === nom);
+}
+
+/** Lettres de l'index latéral : A à Z, puis « # » si un groupe le porte. */
+export function lettresIndex(groupes: Groupe[]): string[] {
+  const lettres = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+  return groupes.some((g) => g.lettre === '#') ? [...lettres, '#'] : lettres;
+}
+
+/** Groupe atteint en touchant `lettre` dans l'index : le sien, sinon le suivant, sinon le dernier. */
+export function groupeVise(groupes: Groupe[], lettre: string): string | undefined {
+  const index = lettresIndex(groupes);
+  const presentes = new Set(groupes.map((g) => g.lettre));
+  const suivante = index.slice(index.indexOf(lettre)).find((l) => presentes.has(l));
+  return suivante ?? groupes.at(-1)?.lettre;
 }
 
 /** Lettre de regroupement : initiale sans accent, « # » si ce n'est pas une lettre. */

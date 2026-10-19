@@ -1,11 +1,15 @@
-// Formulaire de création / modification d'une personne.
+// Formulaire de création / modification d'une personne. Création : curseur dans le prénom,
+// confirmation si une fiche porte déjà ce prénom et ce nom. Modification : annulable par le bandeau.
+// Retour avec une saisie en cours demande confirmation.
 
+import { avecDe, nomComplet } from '../modele/liste';
 import { creerPersonne, modifierPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
-import { champsIdentite } from './champsPersonne';
+import { changerAvecAnnulation } from './annulation';
+import { accepterHomonyme, champsIdentite } from './champsPersonne';
 import { h } from './dom';
-import { modifierDonnees } from './etat';
-import { lienRetour, remplacer, revenir } from './navigation';
+import { lireDonnees, modifierDonnees } from './etat';
+import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
 
 /** `existante` absente = création : la fiche créée prend la place du formulaire. */
 export function formulaire(existante: Personne | undefined): HTMLElement {
@@ -13,25 +17,33 @@ export function formulaire(existante: Personne | undefined): HTMLElement {
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
   const retour = existante ? `#/personne/${existante.id}` : '#/';
+  garderSaisie(identite.modifie);
 
-  const enregistrer = (e: Event) => {
+  const enregistrer = async (e: Event) => {
     e.preventDefault();
+    erreur.hidden = true;
     try {
       const champs = identite.lire();
-      let id = existante?.id ?? '';
+      if (existante) {
+        if (identite.modifie()) changerAvecAnnulation((d) => modifierPersonne(d, existante.id, champs), `Fiche ${nomComplet(champs) ? avecDe(nomComplet(champs)) : 'de cette personne'} modifiée.`, 'Modification annulée.');
+        revenir(retour);
+        return;
+      }
+      if (!(await accepterHomonyme(lireDonnees().personnes, champs))) return;
+      let id = '';
       modifierDonnees((d) => {
-        if (existante) return modifierPersonne(d, existante.id, champs);
         const r = creerPersonne(d, champs);
         id = r.personne.id;
         return r.donnees;
       });
-      if (existante) revenir(retour);
-      else remplacer(`#/personne/${id}`);
+      remplacer(`#/personne/${id}`);
     } catch (err) {
       erreur.textContent = err instanceof Error ? err.message : 'Enregistrement impossible';
       erreur.hidden = false;
     }
   };
+
+  if (!existante) queueMicrotask(identite.viserPrenom);
 
   return h(
     'div',
