@@ -74,6 +74,15 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Trop d'enfants pour la largeur : leur rang défile de côté, l'aîné à gauche au départ, du plus âgé au plus jeune toutes unions confondues, avec un fondu sur le bord.
 - Chaque personne dessinée ouvre sa fiche. Sur tablette, la fiche reste une colonne de 600 px et le foyer garde ses proportions de téléphone, centré.
 
+## Arbre global (#/arbre)
+- Ouvert par l'icône d'arbre de l'accueil (à côté de l'écrou, absente si la liste est vide). Plein écran, Retour vers la liste.
+- Sans « Moi » choisi : message et bouton vers les Réglages. Sinon, seules les personnes reliées à « Moi » (filiations, toutes unions, ex compris, amitiés, de proche en proche) ; les autres sont masquées.
+- Une ligne par génération, « Moi » au centre (pastille « Toi », anneau). Couples côte à côte (trait épais, tirets si séparés), conjoints à l'extérieur de la fratrie, frères et sœurs groupés, l'aîné à gauche ; côté paternel à gauche sans autre indice. Enfants reliés au milieu du couple ou à chaque parent ; lien adoptif en pointillé. Couple non voisin tracé en arc. Décédés grisés, années sous le nom.
+- Amis : les amis de « Moi » et leurs familles dans une bulle « Tes amis » sous la famille, reliée à « Moi » par un pointillé qui passe entre les personnes ; l'ami d'un autre proche est placé à côté de lui, l'ami d'un ami suit le groupe de son ami. Amitiés en pointillé couleur accent.
+- Glisser pour se déplacer, pincer ou molette pour zoomer (×0,2 à ×3), double toucher (double clic) pour zoomer à cet endroit, boutons + et −. « Toi » recentre sur « Moi », « Tout » montre l'arbre entier. Sous ×0,6, les noms s'effacent. L'arbre ne peut pas sortir de l'écran.
+- Toucher une personne ouvre sa fiche (pas après un glissement). Au retour, le zoom et la position sont retrouvés (pendant la session).
+- Loupe : recherche par prénom ou nom parmi les personnes de l'arbre ; le choix centre la personne et la fait pulser.
+
 ## Écrans d'ajout (conjoint, parent, enfant, frère ou sœur, ami)
 - Deux onglets : « Nouvelle personne » (ouvert d'abord, curseur dans le prénom) et « Personne existante ».
 - Nom prérempli, toujours modifiable. Enfant d'un couple homme-femme : nom du père, avec un bouton pour prendre celui de la mère ; sinon nom de la fiche ouverte, avec un bouton pour celui de l'autre parent coché. Parent, frère ou sœur : nom de la fiche ouverte.
@@ -83,7 +92,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 
 ## Écran d'accueil
 - Liste de toutes les personnes, regroupée par lettre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
-- Un écrou en haut à droite ouvre les Réglages.
+- Un écrou en haut à droite ouvre les Réglages ; à sa gauche, l'icône d'arbre ouvre l'arbre global.
 - Champ de filtre par nom (prénom ou nom).
 - En haut, « Prochains anniversaires » : les 3 prochains dans les 30 jours (aujourd'hui compris), avec « Aujourd'hui », « Demain » ou « Dans N jours » et l'âge atteint. Il faut une naissance complète ; pas pour les décédés ni pour un âge de 0 an. Un 29 février tombe le 28 les années non bissextiles. Bloc absent s'il n'y en a pas, masqué pendant un filtrage.
 - Index alphabétique sur le bord droit : les 26 lettres, les absentes estompées. Toucher ou glisser fait défiler jusqu'à la lettre (sinon la suivante présente), affichée en grand pendant le geste. Masqué pendant un filtrage.
@@ -129,7 +138,6 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Un export v1 ou v2 s'importe : `migrer()` le convertit avant la validation (unions v1 → actuelles ; si une personne en avait deux, la seconde devient séparée ; v2 → v3 ajoute une liste d'amitiés vide). Rien n'est perdu.
 
 ## Hors V1 (plus tard)
-- Arbre global de toute la famille (le mini-arbre de la fiche existe).
 - Photos.
 - Partage avec des proches.
 - Import et export GEDCOM.

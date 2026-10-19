@@ -139,6 +139,7 @@ export function accueil(): HTMLElement {
       'div',
       { class: 'entete-droite' },
       h('span', { class: 'secondaire' }, `${total} ${total > 1 ? 'personnes' : 'personne'}`),
+      total > 0 && h('a', { class: 'bouton-icone', href: '#/arbre', 'aria-label': 'Arbre' }, icone('arbre', 24)),
       h('a', { class: 'bouton-icone bouton-reglages', href: '#/reglages', 'aria-label': 'Réglages' }, icone('reglages', 24)),
     ),
   );

@@ -33,7 +33,7 @@ function annees(p: Personne): string {
 
 const parNaissance = (a: Personne, b: Personne) => (a.naissance ?? '9999').localeCompare(b.naissance ?? '9999');
 
-function noeud(p: Personne | undefined, moi: string | undefined, x: number, y: number, r: number, o: OptionsNoeud = {}): HTMLElement {
+export function noeud(p: Personne | undefined, moi: string | undefined, x: number, y: number, r: number, o: OptionsNoeud = {}): HTMLElement {
   const larg = o.larg ?? 64;
   const style = `left: ${x - larg / 2}px; top: ${y - r}px; width: ${larg}px`;
   if (!p) {

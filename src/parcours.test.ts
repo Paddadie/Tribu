@@ -773,3 +773,46 @@ describe('mémo : décès, âge et anniversaires', () => {
     expect(ecran().textContent).toContain('de décès');
   });
 });
+
+describe('arbre global', () => {
+  it('s’ouvre depuis l’accueil et montre les personnes reliées à Moi, sans les autres', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/', { moi: ids.Chloé });
+    await toucher(ecran().querySelector<HTMLElement>('a[href="#/arbre"]')!);
+    expect(titre()).toBe('Arbre');
+    const liens = [...ecran().querySelectorAll<HTMLAnchorElement>('.calque a.noeud')].map((a) => a.getAttribute('href'));
+    expect(liens.sort()).toEqual([ids.Anne, ids.Bruno, ids.Chloé].map((id) => `#/personne/${id}`).sort());
+    expect(ecran().querySelector('.calque .noeud.moi')?.textContent).toContain('Toi');
+    expect(ecran().querySelectorAll('.traits-arbre .couple')).toHaveLength(1);
+  });
+
+  it('ouvre la fiche d’une personne touchée, puis revient à l’arbre', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    await toucher(ecran().querySelector<HTMLElement>(`.calque a[href="#/personne/${ids.Anne}"]`)!);
+    expect(ecran().querySelector('.identite h1')?.textContent).toContain('Anne');
+    await retour();
+    await pause();
+    expect(titre()).toBe('Arbre');
+  });
+
+  it('cherche une personne de l’arbre', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    await toucher(ecran().querySelector<HTMLElement>('.barre button[aria-label="Chercher une personne"]')!);
+    const champ = ecran().querySelector<HTMLInputElement>('.recherche-arbre input')!;
+    champ.value = 'bru';
+    champ.dispatchEvent(new Event('input'));
+    expect([...ecran().querySelectorAll('.recherche-arbre li')].map((li) => li.textContent)).toEqual(['BMBruno Martin']);
+    champ.value = 'denis';
+    champ.dispatchEvent(new Event('input'));
+    expect(ecran().querySelectorAll('.recherche-arbre li')).toHaveLength(0);
+  });
+
+  it('sans fiche « Moi », renvoie vers les réglages', async () => {
+    await demarrer(famille().donnees, '#/arbre');
+    expect(ecran().textContent).toContain('Choisis d’abord ta fiche');
+    expect(ecran().querySelector('a[href="#/reglages"]')).not.toBeNull();
+    expect(ecran().querySelector('.calque')).toBeNull();
+  });
+});

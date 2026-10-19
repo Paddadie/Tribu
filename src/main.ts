@@ -6,6 +6,7 @@ import { ajoutAmi } from "./ui/ajoutAmi";
 import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
 import { EVENEMENT_RAFRAICHIR } from "./ui/annulation";
+import { ecranArbre } from "./ui/arbreGlobal";
 import { appliquerTheme, lireBrutIllisible, lireDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
@@ -24,6 +25,7 @@ import { ecranUnion } from "./ui/union";
 //   #/parent/<id>      ajout d'un parent à la personne    #/enfant/<id>   ajout d'un enfant
 //   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
+//   #/arbre            arbre de tous les liens autour de « Moi »
 const app = document.querySelector<HTMLElement>("#app");
 
 function vue(route: string): HTMLElement {
@@ -33,6 +35,7 @@ function vue(route: string): HTMLElement {
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
+  if (section === "arbre") return ecranArbre();
   if (section === "nouveau") return formulaire(undefined);
   if (section === "personne" && personne) return fiche(personne);
   if (section === "modifier" && personne) return formulaire(personne);
