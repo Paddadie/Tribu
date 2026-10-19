@@ -15,7 +15,6 @@ Session **S1 Robustesse** : lire seulement la section S1 de PLAN.md.
 - Départ : 97 tests Vitest verts, `tsc` et build propres.
 
 ## Points ouverts
-- FEAT-06 anciennes unions : en attente de la réponse de Paul, à trancher avant S3b.
 - S3a : où mémoriser « Moi » (réglages ou données), à décider en début de session.
 - Un parent déjà ancêtre de l'enfant n'est pas grisé : le refus « boucle » s'affiche à l'enregistrement.
 - `npm test` échoue parfois au premier lancement d'une session ; relancé, tout passe (enquête en S1, TEST-03).

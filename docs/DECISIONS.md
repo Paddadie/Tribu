@@ -63,4 +63,5 @@
 2026-10-19 | Direction visuelle A « sobre affiné », teinte d'avatar par nom de famille, Figtree seule, glissement latéral entre écrans | UI-01, UI-02, UI-08, ANIM-01
 2026-10-19 | « Moi » et lien de parenté ; famille élargie affichée : grands-parents, petits-enfants, oncles, tantes, neveux, nièces, cousins, belle-famille | FEAT-01, FEAT-02
 2026-10-19 | Date de décès, âge et prochains anniversaires ajoutés ; aucun autre champ (surnom, nom de naissance, lieu, recherche dans la note) | FEAT-04, FEAT-05, FEAT-07
-2026-10-19 | Anciennes unions : question en attente, à trancher avant S3b ; mini-arbre, photos et GEDCOM restent « Plus tard » | FEAT-06, FEAT-09, FEAT-10
+2026-10-19 | Anciennes unions conservées (S3b) : une séparation passe l'union au statut « séparés » au lieu de l'effacer, la fiche affiche les ex-conjoints ; toujours un seul conjoint actuel. Remplacera la décision 35, avec la migration v2 | FEAT-06, demande de Paul ; utile au partage
+2026-10-19 | Mini-arbre, photos et GEDCOM restent « Plus tard » | FEAT-09, FEAT-10
