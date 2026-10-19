@@ -3,12 +3,16 @@
 
 export type TypeFiliation = 'biologique' | 'adoptif';
 
+/** Sexe, sert uniquement aux accords (né/née). Absent = non précisé. */
+export type Sexe = 'F' | 'M';
+
 export interface Personne {
   id: string;
   prenom: string;
   nom: string;
-  /** Date ISO « AAAA-MM-JJ », facultative. */
+  /** Date ISO facultative, éventuellement partielle : « AAAA », « AAAA-MM » ou « AAAA-MM-JJ ». */
   naissance?: string;
+  sexe?: Sexe;
   note: string;
 }
 

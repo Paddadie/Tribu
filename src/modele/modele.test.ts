@@ -4,6 +4,7 @@ import {
   ajouterUnion,
   creerPersonne,
   donneesVides,
+  estDateValide,
   modifierPersonne,
   modifierUnion,
   supprimerFiliation,
@@ -143,5 +144,46 @@ describe('suppression d’une personne', () => {
 
   it('refuse un id inconnu', () => {
     expect(() => supprimerPersonne(donneesVides(), 'inconnu')).toThrow();
+  });
+});
+
+describe('dates de naissance partielles', () => {
+  const creer = (naissance: string) => creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', naissance }).personne;
+
+  it('accepte une année seule, un mois et une année, une date complète', () => {
+    expect(creer('1938').naissance).toBe('1938');
+    expect(creer('1961-05').naissance).toBe('1961-05');
+    expect(creer('1961-05-14').naissance).toBe('1961-05-14');
+  });
+  it('refuse un mois ou un jour impossible', () => {
+    expect(() => creer('1961-13')).toThrow();
+    expect(() => creer('1961-00')).toThrow();
+    expect(() => creer('1961-02-30')).toThrow();
+    expect(() => creer('1961-04-31')).toThrow();
+    expect(() => creer('1961-05-00')).toThrow();
+  });
+  it('gère les années bissextiles', () => {
+    expect(estDateValide('2000-02-29')).toBe(true);
+    expect(estDateValide('1900-02-29')).toBe(false);
+    expect(estDateValide('2024-02-29')).toBe(true);
+    expect(estDateValide('2023-02-29')).toBe(false);
+  });
+  it('refuse les formats incomplets ou non numériques', () => {
+    for (const d of ['19', '1961-5', '1961-05-1', '1961--14', 'abcd', '0000']) expect(estDateValide(d)).toBe(false);
+  });
+});
+
+describe('sexe', () => {
+  it('est facultatif et conservé', () => {
+    expect(creerPersonne(donneesVides(), { prenom: 'A', nom: 'B' }).personne.sexe).toBeUndefined();
+    expect(creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', sexe: 'F' }).personne.sexe).toBe('F');
+  });
+  it('peut être retiré à la modification', () => {
+    const { donnees, personne } = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', sexe: 'M' });
+    const d2 = modifierPersonne(donnees, personne.id, { prenom: 'A', nom: 'B' });
+    expect(d2.personnes[0].sexe).toBeUndefined();
+  });
+  it('refuse une valeur inconnue', () => {
+    expect(() => creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', sexe: 'X' as never })).toThrow();
   });
 });

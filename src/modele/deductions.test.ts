@@ -173,3 +173,16 @@ describe('frères et sœurs', () => {
     expect(prenoms(fratrie(m.d, m.id.Moi).freresSoeurs)).toEqual(['Plus âgé', 'Plus jeune']);
   });
 });
+
+describe('tri avec dates partielles', () => {
+  it('place une année seule avant les dates complètes de la même année, sans date en fin', () => {
+    const m = monde();
+    m.pers('Parent');
+    m.pers('Sans');
+    m.pers('Complet', '1990-06-01');
+    m.pers('Annee', '1990');
+    m.pers('Mois', '1990-03');
+    for (const e of ['Sans', 'Complet', 'Annee', 'Mois']) m.filiation('Parent', e);
+    expect(enfants(m.d, m.id.Parent).map((p) => p.prenom)).toEqual(['Annee', 'Mois', 'Complet', 'Sans']);
+  });
+});

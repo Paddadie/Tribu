@@ -2,7 +2,7 @@
 // elles renvoient de nouvelles données sans modifier les anciennes, et lèvent
 // une Error (message en français) quand une règle du modèle est violée.
 
-import type { Donnees, Filiation, Personne, TypeFiliation, Union } from './types';
+import type { Donnees, Filiation, Personne, Sexe, TypeFiliation, Union } from './types';
 
 export const MAX_PARENTS_PAR_TYPE = 2;
 
@@ -26,7 +26,27 @@ export interface ChampsPersonne {
   prenom: string;
   nom: string;
   naissance?: string;
+  sexe?: Sexe;
   note?: string;
+}
+
+/** Date « AAAA », « AAAA-MM » ou « AAAA-MM-JJ » existante au calendrier (année de 1 à 9999). */
+export function estDateValide(date: string): boolean {
+  const m = date.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  if (!m) return false;
+  const annee = Number(m[1]);
+  if (annee < 1) return false;
+  if (m[2] === undefined) return true;
+  const mois = Number(m[2]);
+  if (mois < 1 || mois > 12) return false;
+  if (m[3] === undefined) return true;
+  const jour = Number(m[3]);
+  return jour >= 1 && jour <= joursDuMois(annee, mois);
+}
+
+function joursDuMois(annee: number, mois: number): number {
+  if (mois === 2) return (annee % 4 === 0 && annee % 100 !== 0) || annee % 400 === 0 ? 29 : 28;
+  return [4, 6, 9, 11].includes(mois) ? 30 : 31;
 }
 
 function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
@@ -34,13 +54,17 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
   const nom = champs.nom.trim();
   if (!prenom && !nom) throw new Error('Un prénom ou un nom est requis');
   const naissance = champs.naissance?.trim();
-  if (naissance && !/^\d{4}-\d{2}-\d{2}$/.test(naissance)) {
-    throw new Error('Date de naissance invalide (attendu AAAA-MM-JJ)');
+  if (naissance && !estDateValide(naissance)) {
+    throw new Error('Date de naissance invalide (attendu : année, mois et année, ou date complète)');
+  }
+  if (champs.sexe !== undefined && champs.sexe !== 'F' && champs.sexe !== 'M') {
+    throw new Error('Sexe invalide');
   }
   return {
     prenom,
     nom,
     ...(naissance ? { naissance } : {}),
+    ...(champs.sexe ? { sexe: champs.sexe } : {}),
     note: champs.note ?? '',
   };
 }

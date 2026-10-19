@@ -33,8 +33,8 @@ export default defineConfig({
         name: "Tribu — liens familiaux",
         short_name: "Tribu",
         description: "Noter les liens familiaux de mes proches.",
-        theme_color: "#2f6f5e",
-        background_color: "#f6f3ec",
+        theme_color: "#1b6b58",
+        background_color: "#f3f6f4",
         display: "standalone",
         start_url: "/Tribu/",
         scope: "/Tribu/",
@@ -45,7 +45,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
         // Explicites : sans eux, le nouveau service worker reste « en attente »
         // et l'ancienne version continue de servir l'appli.
         skipWaiting: true,

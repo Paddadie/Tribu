@@ -1,7 +1,15 @@
 :root {
-  --papier: #f6f3ec;
-  --encre: #1f2a26;
-  --accent: #2f6f5e;
+  --fond: #f3f6f4;
+  --encre: #1f2a27;
+  --secondaire: #56635f;
+  --accent: #1b6b58;
+  --accent-clair: #dcebe5;
+  --accent-texte: #14503f;
+  --carte: #ffffff;
+  --bord: #e1e8e4;
+  --bord-champ: #c9d3cf;
+  --danger: #a32a2a;
+  --danger-bord: #e3bdbd;
 }
 
 * {
@@ -11,24 +19,459 @@
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--papier);
+  background: var(--fond);
   color: var(--encre);
-  font-family: system-ui, sans-serif;
+  font-family: "Figtree Variable", system-ui, sans-serif;
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 main {
-  padding: 24px 16px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-h1 {
-  margin: 0 0 8px;
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.secondaire {
+  font-size: 14px;
+  color: var(--secondaire);
+}
+
+/* ——— Écran d'accueil ——— */
+
+.entete-accueil {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 20px 14px;
+  background: var(--fond);
+}
+
+.entete-ligne {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.entete-ligne h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--accent);
 }
 
+.champ-filtre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px;
+  background: var(--carte);
+  border: 1px solid var(--bord-champ);
+  border-radius: 14px;
+  color: var(--secondaire);
+}
+
+.champ-filtre input {
+  flex-grow: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--encre);
+}
+
+.liste {
+  padding: 0 20px 100px;
+}
+
+.groupe {
+  margin-bottom: 6px;
+}
+
+.titre-section {
+  padding: 10px 4px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.carte {
+  display: flex;
+  flex-direction: column;
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ligne {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 16px;
+  color: var(--secondaire);
+}
+
+.ligne + .ligne {
+  border-top: 1px solid var(--bord);
+}
+
+.ligne-texte {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ligne-nom {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--encre);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.avatar-grand {
+  width: 84px;
+  height: 84px;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.vide {
+  padding: 32px 8px;
+  text-align: center;
+  color: var(--secondaire);
+}
+
 .version {
+  padding: 0 20px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--secondaire);
+}
+
+.ajout {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(20, 60, 50, 0.3);
+}
+
+/* ——— Fiche et formulaire ——— */
+
+.barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  padding: 16px 12px 0;
+}
+
+.bouton-icone {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.identite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px 20px;
+  text-align: center;
+}
+
+.identite h1 {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.identite .secondaire {
+  font-size: 16px;
+}
+
+.contenu {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 0 20px 32px;
+}
+
+.note {
+  padding: 14px 16px;
+  gap: 4px;
+}
+
+.titre-note {
+  padding: 0;
+  color: var(--secondaire);
+}
+
+.note p {
+  font-size: 16px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bouton {
+  min-height: 52px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--bord-champ);
+  border-radius: 14px;
+  background: var(--carte);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.bouton-pilule {
+  min-height: 44px;
+  border-radius: 22px;
+  font-size: 15px;
+}
+
+.bouton-plein {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.bouton-danger {
+  margin-top: 4px;
+  border-color: var(--danger-bord);
+  color: var(--danger);
+}
+
+.bouton-danger-plein {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.titre-formulaire {
+  flex-grow: 1;
+  padding-left: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.barre + .contenu {
+  padding-top: 20px;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.champ label {
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--secondaire);
+}
+
+.champ input:not([type="radio"]),
+.champ select,
+.champ textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid var(--bord-champ);
+  border-radius: 14px;
+  background: var(--carte);
+  font: inherit;
+  font-size: 16px; /* évite le zoom automatique d'iOS */
+  color: var(--encre);
+}
+
+.champ input:not([type="radio"]):focus,
+.champ select:focus,
+.champ textarea:focus,
+.champ-filtre:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.champ textarea {
+  resize: vertical;
+}
+
+.erreur {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fbeaea;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.erreur[hidden] {
+  display: none;
+}
+
+/* ——— Confirmation ——— */
+
+.confirmation {
+  width: min(340px, calc(100vw - 40px));
+  padding: 22px 20px 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--carte);
+  color: var(--encre);
+  font: inherit;
+}
+
+.confirmation::backdrop {
+  background: rgba(20, 30, 26, 0.5);
+}
+
+.confirmation p {
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.confirmation-actions .bouton {
+  flex: 1;
+}
+
+fieldset.champ {
   margin: 0;
-  font-size: 0.85rem;
-  opacity: 0.7;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+fieldset.champ legend {
+  padding: 0 4px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--secondaire);
+}
+
+.choix-groupe {
+  display: flex;
+  gap: 8px;
+}
+
+.choix-groupe .choix {
+  flex: 1;
+  position: relative;
+  padding: 0;
+}
+
+.choix input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.choix span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 8px;
+  border: 1px solid var(--bord-champ);
+  border-radius: 14px;
+  background: var(--carte);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--encre);
+  text-align: center;
+}
+
+.choix input:checked + span {
+  border-color: var(--accent);
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+.choix input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.date-groupe {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.4fr;
+  gap: 8px;
+}
+
+.champ select {
+  appearance: auto;
 }

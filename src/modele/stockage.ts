@@ -26,6 +26,7 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (!estObjet(p) || typeof p.id !== 'string' || ids.has(p.id)) return false;
     if (typeof p.prenom !== 'string' || typeof p.nom !== 'string' || typeof p.note !== 'string') return false;
     if (p.naissance !== undefined && typeof p.naissance !== 'string') return false;
+    if (p.sexe !== undefined && p.sexe !== 'F' && p.sexe !== 'M') return false;
     ids.add(p.id);
   }
 

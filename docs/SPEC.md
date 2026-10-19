@@ -14,7 +14,8 @@ V1 : moi seul. Partage avec des proches : plus tard.
 
 ## Fiche personne
 - Prénom, nom.
-- Date de naissance (facultative).
+- Sexe : homme (par défaut) ou femme, sert uniquement aux accords (« né » / « née »). Les fiches créées avant l'ajout du champ n'en ont pas et s'affichent « né(e) » jusqu'à leur modification.
+- Date de naissance (facultative), éventuellement partielle : année seule, mois et année, ou date complète.
 - Note libre.
 - Sections affichées, dans cet ordre : conjoints, enfants, frères et sœurs (puis demi-frères et demi-sœurs), parents.
 - Une section vide n'est pas affichée. Un bouton « Ajouter un proche » en bas de fiche permet de créer un lien dans une catégorie absente.

@@ -115,3 +115,19 @@ describe('validation des données', () => {
     ).toBe(false);
   });
 });
+
+describe('sexe et date partielle', () => {
+  it('relit un sexe et une date partielle enregistrés', () => {
+    const d = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B', sexe: 'F', naissance: '1938' }).donnees;
+    const relu = importerJson(exporterJson(d));
+    expect(relu.personnes[0]).toMatchObject({ sexe: 'F', naissance: '1938' });
+  });
+  it('accepte les anciennes données sans sexe', () => {
+    const d = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B' }).donnees;
+    expect(estDonneesValides(d)).toBe(true);
+  });
+  it('refuse un sexe inconnu', () => {
+    const d = creerPersonne(donneesVides(), { prenom: 'A', nom: 'B' }).donnees;
+    expect(estDonneesValides({ ...d, personnes: [{ ...d.personnes[0], sexe: 'X' }] })).toBe(false);
+  });
+});
