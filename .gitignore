@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dev-dist/
+
+# Fichiers Claude : local uniquement
+CLAUDE.md
+CLAUDE.local.md
+.claude/
