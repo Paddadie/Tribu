@@ -30,9 +30,12 @@ export interface ChampsPersonne {
   note?: string;
 }
 
+/** Forme d'une date partielle : « AAAA », « AAAA-MM » ou « AAAA-MM-JJ » (groupes : année, mois, jour). Sans drapeau g : partageable. */
+export const MOTIF_DATE = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;
+
 /** Date « AAAA », « AAAA-MM » ou « AAAA-MM-JJ » existante au calendrier (année de 1 à 9999). */
 export function estDateValide(date: string): boolean {
-  const m = date.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  const m = date.match(MOTIF_DATE);
   if (!m) return false;
   const annee = Number(m[1]);
   if (annee < 1) return false;
@@ -81,6 +84,16 @@ export function modifierPersonne(d: Donnees, id: string, champs: ChampsPersonne)
 }
 
 /** Retire la personne ainsi que toutes ses unions et filiations. */
+/** La personne a un conjoint (une seule union à la fois). */
+export function enCouple(d: Donnees, id: string): boolean {
+  return d.unions.some((u) => u.personneA === id || u.personneB === id);
+}
+
+/** La personne a au moins une union ou une filiation (parent ou enfant). */
+export function aDesLiens(d: Donnees, id: string): boolean {
+  return enCouple(d, id) || d.filiations.some((f) => f.parent === id || f.enfant === id);
+}
+
 export function supprimerPersonne(d: Donnees, id: string): Donnees {
   exigerPersonne(d, id);
   return {
@@ -106,8 +119,7 @@ export function ajouterUnion(
       (u.personneA === personneB && u.personneB === personneA),
   );
   if (doublon) throw new Error('Ces deux personnes sont déjà en couple');
-  const aDejaUnConjoint = (id: string) => d.unions.some((u) => u.personneA === id || u.personneB === id);
-  if (aDejaUnConjoint(personneA) || aDejaUnConjoint(personneB)) {
+  if (enCouple(d, personneA) || enCouple(d, personneB)) {
     throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
   }
   const union: Union = { id: nouvelId(), personneA, personneB, marie };

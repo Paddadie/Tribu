@@ -7,8 +7,9 @@ import type { Personne, TypeFiliation } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
+import { lienRetour, remplacer, revenir } from './navigation';
 
-export function ecranLien(idFiliation: string, depuis: Personne, naviguer: (route: string) => void): HTMLElement {
+export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
   const retour = `#/personne/${depuis.id}`;
   const d = lireDonnees();
   const filiation = d.filiations.find((f) => f.id === idFiliation);
@@ -16,7 +17,7 @@ export function ecranLien(idFiliation: string, depuis: Personne, naviguer: (rout
   const enfant = d.personnes.find((x) => x.id === filiation?.enfant);
   if (!filiation || !parent || !enfant) {
     // Lien déjà retiré (ou personne supprimée) : retour à la fiche.
-    naviguer(retour);
+    remplacer(retour);
     return h('div', { class: 'ecran' });
   }
 
@@ -38,7 +39,7 @@ export function ecranLien(idFiliation: string, depuis: Personne, naviguer: (rout
   const enregistrer = () => {
     try {
       modifierDonnees((x) => modifierFiliation(x, filiation.id, type));
-      naviguer(retour);
+      revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Enregistrement impossible');
     }
@@ -49,7 +50,7 @@ export function ecranLien(idFiliation: string, depuis: Personne, naviguer: (rout
     if (!(await confirmer(message, 'Retirer'))) return;
     try {
       modifierDonnees((x) => supprimerFiliation(x, filiation.id));
-      naviguer(retour);
+      revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Suppression impossible');
     }
@@ -61,7 +62,7 @@ export function ecranLien(idFiliation: string, depuis: Personne, naviguer: (rout
     h(
       'div',
       { class: 'barre' },
-      h('a', { class: 'bouton-icone', href: retour, 'aria-label': 'Annuler' }, icone('retour', 26)),
+      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
       h('h1', { class: 'titre-formulaire' }, 'Lien parent-enfant'),
     ),
     h(

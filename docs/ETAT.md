@@ -1,28 +1,25 @@
 # État en cours
 
-**V2, session S1 Robustesse : code terminé**, non commité. Les 15 lignes sont cochées dans PLAN.md. Le titre S1 reste ouvert jusqu'au test sur téléphone. 115 tests verts, `tsc` et build propres. Build vérifié sous CSP (service worker, police, aucune erreur console).
+**V2, session S2a Socle : terminée**, non commitée. Les 8 lignes et le titre S2a sont cochés dans PLAN.md. 134 tests verts, `tsc` et build propres. S1 est commitée ; son test sur téléphone reste à faire.
 
-## Avant S2a
-- Paul : commiter S1, déployer, puis tester sur iPhone et Android. Critère de fin : un export partagé depuis le téléphone se réimporte. Si c'est bon, cocher le titre S1 dans PLAN.md.
-- Ensuite `/clear`, puis session **S2a Socle** : lire seulement la section S2a de PLAN.md (pas de maquette, aucun changement visible). Commencer par TEST-01 (happy-dom, tests d'écran).
+## Avant S2b
+- Paul : commiter, déployer, puis tester sur iPhone et Android.
+  - S1 : un export partagé depuis le téléphone se réimporte ; si c'est bon, cocher le titre S1 dans PLAN.md.
+  - S2a : liste → fiche → autre fiche → Retour, puis Retour : on remonte d'un écran à la fois et la liste garde sa position.
+  - Thème sombre (téléphone en mode sombre) : pas d'éclair clair au lancement.
+- Ensuite `/clear`, puis session **S2b Parcours** : lire seulement la section S2b de PLAN.md. Maquette d'abord, à valider par Paul avant tout code.
 
-## Repères pour S2a
-- Nouveaux modules de S1 :
-  - src/ui/fichier.ts : export par partage, repli téléchargement ;
-  - src/ui/bandeau.ts : bandeau temporaire, à réutiliser pour UX-07 ;
-  - src/ui/annulation.ts : `changerAvecAnnulation` et `rafraichirEcran` ;
-  - src/ui/illisible.ts : écran « Données illisibles ».
-- src/ui/etat.ts :
-  - refuse toute écriture tant que les données sont illisibles ;
-  - `modifierDonneesAnnulable` renvoie la fonction d'annulation ;
-  - les tests rechargent le module avec `vi.resetModules()` (voir src/ui/etat.test.ts).
-- Vitest tourne en environnement « node » : happy-dom reste à ajouter (TEST-01).
+## Repères
+- src/parcours.test.ts : tests d'écran sous happy-dom (`demarrer(donnees, route)` recharge main.ts). En tête, émulation du vrai navigateur : `replaceState` sans `hashchange`, `history.back` différé (happy-dom fait autrement).
+- src/ui/navigation.ts : `remplacer`, `revenir`, `lienRetour` ; chaque entrée d'historique porte `{route, profondeur}` ; un double toucher sur Retour ne recule qu'une fois. Les écrans n'ont plus de paramètre `naviguer`.
+- src/ui/selecteurPersonne.ts : sélecteur commun (conjoint, parent, enfant).
+- src/ui/lignePersonne.ts : `contenuLigne` (avatar + nom + détail).
+- Modèle : `enCouple`, `aDesLiens`, `MOTIF_DATE` dans modele.ts.
+- Modules de S1 : fichier.ts (export), bandeau.ts (à réutiliser pour UX-07), annulation.ts, illisible.ts.
 
 ## Points ouverts
+- À valider par Paul : bandeau « Annuler », accords « Marié(e) » / « Adoptif(ve) ».
 - S3a : où mémoriser « Moi » (réglages ou données), à décider en début de session.
 - Un parent déjà ancêtre de l'enfant n'est pas grisé : le refus « boucle » s'affiche à l'enregistrement.
-- TEST-03 non reproduit en S1. Pistes :
-  - `npm test` lancé en même temps qu'un build ou que l'extension Vitest de VS Code ;
-  - cache `node_modules/.vite`.
-  À la prochaine occurrence, copier toute la sortie, y compris la première erreur avant le résumé.
+- TEST-03 non reproduit. Pistes : `npm test` en même temps qu'un build ou que l'extension Vitest de VS Code ; cache `node_modules/.vite`. À la prochaine occurrence, copier toute la sortie.
 - Icônes provisoires (S4).

@@ -8,13 +8,14 @@ import type { Personne } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
+import { lienRetour, remplacer, revenir } from './navigation';
 
-export function ecranUnion(p: Personne, naviguer: (route: string) => void): HTMLElement {
+export function ecranUnion(p: Personne): HTMLElement {
   const retour = `#/personne/${p.id}`;
   const lien = conjoint(lireDonnees(), p.id);
   if (!lien) {
     // Union déjà effacée (ou jamais créée) : retour à la fiche.
-    naviguer(retour);
+    remplacer(retour);
     return h('div', { class: 'ecran' });
   }
   const { union, personne: autre } = lien;
@@ -30,7 +31,7 @@ export function ecranUnion(p: Personne, naviguer: (route: string) => void): HTML
   const enregistrer = () => {
     try {
       modifierDonnees((d) => modifierUnion(d, union.id, marie.checked));
-      naviguer(retour);
+      revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Enregistrement impossible');
     }
@@ -41,7 +42,7 @@ export function ecranUnion(p: Personne, naviguer: (route: string) => void): HTML
     if (!(await confirmer(message, 'Mettre fin'))) return;
     try {
       modifierDonnees((d) => supprimerUnion(d, union.id));
-      naviguer(retour);
+      revenir(retour);
     } catch (e) {
       afficherErreur(e, 'Suppression impossible');
     }
@@ -53,7 +54,7 @@ export function ecranUnion(p: Personne, naviguer: (route: string) => void): HTML
     h(
       'div',
       { class: 'barre' },
-      h('a', { class: 'bouton-icone', href: retour, 'aria-label': 'Annuler' }, icone('retour', 26)),
+      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
       h('h1', { class: 'titre-formulaire' }, 'Union'),
     ),
     h(

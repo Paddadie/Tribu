@@ -1,6 +1,7 @@
 // Logique d'affichage de la liste : noms, initiales, tri, regroupement par
 // lettre et filtre. Fonctions pures, testables sans navigateur.
 
+import { MOTIF_DATE } from './modele';
 import type { Personne, Sexe } from './types';
 
 export interface Groupe {
@@ -40,9 +41,6 @@ export function comparateur(tri: Tri): (a: Personne, b: Personne) => number {
     a[premier].localeCompare(b[premier], 'fr') ||
     a[second].localeCompare(b[second], 'fr');
 }
-
-/** Tri par nom de famille puis prénom (ordre alphabétique français). */
-export const comparerParNom = comparateur('nom');
 
 /** Nom tel qu'écrit dans la liste : « Prénom Nom » en tri par prénom, « Nom Prénom » en tri par nom. */
 export function nomListe(p: Pick<Personne, 'prenom' | 'nom'>, tri: Tri): string {
@@ -103,7 +101,7 @@ export function libelleAdoptif(sexe?: Sexe): string {
 }
 
 export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
-  const m = naissance?.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  const m = naissance?.match(MOTIF_DATE);
   if (!m) return '';
   const ne = accorder(sexe, 'né', 'née', 'né(e)');
   if (m[2] === undefined) return `${ne} en ${m[1]}`;
@@ -123,7 +121,7 @@ export interface ChampsDate {
 
 /** Découpe « AAAA », « AAAA-MM » ou « AAAA-MM-JJ » en champs de saisie (jour et mois sans zéro initial). */
 export function decouperDate(naissance: string | undefined): ChampsDate {
-  const m = naissance?.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  const m = naissance?.match(MOTIF_DATE);
   if (!m) return { jour: '', mois: '', annee: '' };
   return { annee: m[1], mois: m[2] ? String(Number(m[2])) : '', jour: m[3] ? String(Number(m[3])) : '' };
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aDesLiens,
   ajouterFiliation,
   ajouterUnion,
   creerPersonne,
   donneesVides,
+  enCouple,
   estDateValide,
   modifierFiliation,
   modifierPersonne,
@@ -71,7 +73,7 @@ describe('unions', () => {
     expect(() => ajouterUnion(d, ids[0], ids[0])).toThrow();
     expect(() => ajouterUnion(d, ids[0], 'inconnu')).toThrow();
     const { donnees } = ajouterUnion(d, ids[0], ids[1]);
-    expect(() => ajouterUnion(donnees, ids[1], ids[0])).toThrow();
+    expect(() => ajouterUnion(donnees, ids[1], ids[0])).toThrow('déjà en couple');
   });
 
   it('refuse un second conjoint, de l’un ou l’autre côté', () => {
@@ -176,6 +178,23 @@ describe('suppression d’une personne', () => {
 
   it('refuse un id inconnu', () => {
     expect(() => supprimerPersonne(donneesVides(), 'inconnu')).toThrow();
+  });
+});
+
+describe('en couple, a des liens', () => {
+  it('suit les unions des deux côtés, puis leur fin', () => {
+    const { d, ids } = avec('A', 'B', 'C');
+    const { donnees, union } = ajouterUnion(d, ids[0], ids[1]);
+    expect([enCouple(donnees, ids[0]), enCouple(donnees, ids[1]), enCouple(donnees, ids[2])]).toEqual([true, true, false]);
+    expect(enCouple(supprimerUnion(donnees, union.id), ids[0])).toBe(false);
+  });
+
+  it('compte une union ou une filiation, comme parent ou comme enfant', () => {
+    const { d, ids } = avec('Parent', 'Enfant', 'Conjoint', 'Seul');
+    const [p, e, c, s] = ids;
+    const cur = ajouterUnion(ajouterFiliation(d, p, e, 'adoptif').donnees, c, s).donnees;
+    expect(ids.map((id) => aDesLiens(cur, id))).toEqual([true, true, true, true]);
+    expect(ids.map((id) => aDesLiens(d, id))).toEqual([false, false, false, false]);
   });
 });
 

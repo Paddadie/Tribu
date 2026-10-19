@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assemblerDate, comparateur, comparerParNom, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe } from './liste';
+import { assemblerDate, comparateur, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe } from './liste';
 import type { Personne } from './types';
 
 let n = 0;
@@ -22,18 +22,19 @@ describe('nomComplet et initiales', () => {
   });
 });
 
-describe('comparerParNom', () => {
+describe('tri par nom', () => {
+  const parNom = comparateur('nom');
   it('trie par nom de famille puis prénom', () => {
     const liste = [p('Pierre', 'Girard'), p('Louis', 'Bernard'), p('Marie', 'Girard')];
-    expect(liste.sort(comparerParNom).map((x) => x.prenom)).toEqual(['Louis', 'Marie', 'Pierre']);
+    expect(liste.sort(parNom).map((x) => x.prenom)).toEqual(['Louis', 'Marie', 'Pierre']);
   });
   it('ignore les accents dans l’ordre alphabétique', () => {
     const liste = [p('A', 'Zola'), p('B', 'Étienne'), p('C', 'Eric'), p('D', 'Édouard')];
-    expect(liste.sort(comparerParNom).map((x) => x.nom)).toEqual(['Édouard', 'Eric', 'Étienne', 'Zola']);
+    expect(liste.sort(parNom).map((x) => x.nom)).toEqual(['Édouard', 'Eric', 'Étienne', 'Zola']);
   });
   it('utilise le prénom pour une personne sans nom', () => {
     const liste = [p('Zoé', 'Martin'), p('Anna', '')];
-    expect(liste.sort(comparerParNom).map((x) => x.prenom)).toEqual(['Anna', 'Zoé']);
+    expect(liste.sort(parNom).map((x) => x.prenom)).toEqual(['Anna', 'Zoé']);
   });
 });
 

@@ -2,25 +2,20 @@
 
 import { conjoint, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien } from '../modele/deductions';
 import { initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
-import { supprimerPersonne } from '../modele/modele';
+import { aDesLiens, enCouple, supprimerPersonne } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
+import { contenuLigne } from './lignePersonne';
+import { lienRetour, remplacer } from './navigation';
 
 /** Ligne touchable vers la fiche d'une personne, avec une étiquette et un crayon vers l'écran de gestion du lien. */
 function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libelleModifier: string): HTMLElement {
-  const detail = libelleNaissance(c.naissance, c.sexe);
   return h(
     'div',
     { class: 'ligne ligne-union' },
-    h(
-      'a',
-      { class: 'ligne-lien', href: `#/personne/${c.id}` },
-      h('span', { class: 'avatar' }, initiales(c)),
-      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
-      etiquette,
-    ),
+    h('a', { class: 'ligne-lien', href: `#/personne/${c.id}` }, ...contenuLigne(c), etiquette),
     h('a', { class: 'bouton-icone', href: hrefModifier, 'aria-label': libelleModifier }, icone('crayon', 20)),
   );
 }
@@ -30,16 +25,7 @@ function ligneFratrie(c: Personne, via: Personne[] = []): HTMLElement {
   const detail = [libelleNaissance(c.naissance, c.sexe), via.length > 0 && `par ${via.map((x) => x.prenom || x.nom).join(' et ')}`]
     .filter(Boolean)
     .join(' · ');
-  return h(
-    'div',
-    { class: 'ligne' },
-    h(
-      'a',
-      { class: 'ligne-lien', href: `#/personne/${c.id}` },
-      h('span', { class: 'avatar' }, initiales(c)),
-      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(c)), detail && h('span', { class: 'secondaire' }, detail)),
-    ),
-  );
+  return h('div', { class: 'ligne' }, h('a', { class: 'ligne-lien', href: `#/personne/${c.id}` }, ...contenuLigne(c, undefined, detail)));
 }
 
 /** Frères et sœurs, puis demi-frères et demi-sœurs ; une section vide est masquée. */
@@ -82,7 +68,7 @@ function sectionConjoint(p: Personne): HTMLElement | null {
 
 /** Feuille « Ajouter un proche » : conjoint, parent ou enfant. Le conjoint est grisé s'il y en a déjà un. */
 function ouvrirChoixProche(p: Personne): void {
-  const aConjoint = conjoint(lireDonnees(), p.id) !== undefined;
+  const aConjoint = enCouple(lireDonnees(), p.id);
   const fermer = () => {
     dialogue.close();
     dialogue.remove();
@@ -114,16 +100,12 @@ function ouvrirChoixProche(p: Personne): void {
   dialogue.showModal();
 }
 
-export function fiche(p: Personne, naviguer: (route: string) => void): HTMLElement {
+export function fiche(p: Personne): HTMLElement {
   const naissance = libelleNaissance(p.naissance, p.sexe);
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
   const supprimer = async () => {
-    const d = lireDonnees();
-    const aDesLiens =
-      d.unions.some((u) => u.personneA === p.id || u.personneB === p.id) ||
-      d.filiations.some((f) => f.parent === p.id || f.enfant === p.id);
-    const message = `Supprimer ${nomComplet(p)} ?` + (aDesLiens ? ' Ses liens familiaux seront aussi supprimés.' : '');
+    const message = `Supprimer ${nomComplet(p)} ?` + (aDesLiens(lireDonnees(), p.id) ? ' Ses liens familiaux seront aussi supprimés.' : '');
     if (!(await confirmer(message, 'Supprimer'))) return;
     erreur.hidden = true;
     try {
@@ -133,7 +115,7 @@ export function fiche(p: Personne, naviguer: (route: string) => void): HTMLEleme
       erreur.hidden = false;
       return;
     }
-    naviguer('#/');
+    remplacer('#/');
   };
 
   return h(
@@ -142,7 +124,7 @@ export function fiche(p: Personne, naviguer: (route: string) => void): HTMLEleme
     h(
       'div',
       { class: 'barre' },
-      h('a', { class: 'bouton-icone', href: '#/', 'aria-label': 'Retour à la liste' }, icone('retour', 26)),
+      lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
       h('a', { class: 'bouton bouton-pilule', href: `#/modifier/${p.id}` }, icone('crayon', 18), 'Modifier'),
     ),
     h(

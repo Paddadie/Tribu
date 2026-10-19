@@ -1,7 +1,7 @@
 // Persistance dans localStorage (une seule clé, JSON) et export/import de
 // fichier JSON. Le `Storage` est injecté pour pouvoir tester sans navigateur.
 
-import { donneesVides } from './modele';
+import { donneesVides, MAX_PARENTS_PAR_TYPE } from './modele';
 import type { Donnees } from './types';
 
 export const CLE_STOCKAGE = 'tribu:donnees';
@@ -53,7 +53,7 @@ export function estDonneesValides(v: unknown): v is Donnees {
     paires.add(paire);
     const cle = `${f.enfant}/${f.type}`;
     const n = (parentsParType.get(cle) ?? 0) + 1;
-    if (n > 2) return false;
+    if (n > MAX_PARENTS_PAR_TYPE) return false;
     parentsParType.set(cle, n);
     idsLiens.add(f.id);
   }

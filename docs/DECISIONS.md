@@ -73,3 +73,8 @@
 2026-10-19 | « Effacer les données » réellement désactivé quand il n'y a personne, avec une aide ; remplace « grisé de fait » de la décision 51 | UX-10
 2026-10-19 | CSP en balise meta injectée au build seulement (plugin Vite dans `vite.config.ts`) ; le dev reste sans CSP | SEC-02 ; Vite dev injecte des styles en ligne et un websocket
 2026-10-19 | Échec d'écriture : stockage plein → « Stockage du téléphone plein : la modification n’a pas été enregistrée », données en mémoire inchangées ; erreurs affichées dans l'écran, plus d'`alert()` | CODE-03
+2026-10-19 | Tests d'écran sous happy-dom, activé fichier par fichier (`// @vitest-environment happy-dom`) ; les tests du modèle restent sous node | TEST-01 ; environnement de test plus léger pour la logique
+2026-10-19 | Thème résolu en JS : `data-theme` vaut toujours « clair » ou « sombre » sur `<html>`, « auto » suit le téléphone en direct ; palette sombre écrite une seule fois, plus une règle de fond sombre avant le script pour éviter un éclair clair au lancement | CODE-02
+2026-10-19 | Tri des proches sur la fiche par le comparateur de la liste : une personne sans prénom se classe désormais sur son nom | CODE-02, comparateur unique
+2026-10-19 | Navigation : chaque entrée d'historique porte sa route et sa profondeur ; Retour = `history.back()` si l'écran précédent est dans l'appli, sinon remplacement par l'écran par défaut ; les liens Retour restent des `<a href>` interceptés ; un second toucher pendant le recul est ignoré | UX-01 ; `history.length` n'est pas fiable
+2026-10-19 | Défilement géré par l'appli (`scrollRestoration` manuel) : seule la liste retrouve sa position, les autres écrans s'ouvrent en haut | UX-02

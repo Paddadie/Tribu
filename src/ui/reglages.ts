@@ -10,6 +10,7 @@ import { changerAvecAnnulation } from './annulation';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
+import { lienRetour } from './navigation';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
 export const pluriel = (n: number) => `${n} ${n > 1 ? 'personnes' : 'personne'}`;
@@ -115,7 +116,7 @@ export function ecranReglages(): HTMLElement {
     h(
       'div',
       { class: 'barre' },
-      h('a', { class: 'bouton-icone', href: retour, 'aria-label': 'Retour à la liste' }, icone('retour', 26)),
+      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
       h('h1', { class: 'titre-formulaire' }, 'Réglages'),
     ),
     h(

@@ -1,26 +1,20 @@
 // Écran d'accueil : liste des personnes (par lettre), filtre par nom, bouton +.
 // Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
 
-import { filtrerParNom, grouperParLettre, initiales, libelleNaissance, nomListe, type Tri } from '../modele/liste';
+import { filtrerParNom, grouperParLettre, nomListe, type Tri } from '../modele/liste';
 import type { Personne } from '../modele/types';
 import { importerJson } from '../modele/stockage';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
+import { contenuLigne } from './lignePersonne';
 import { messageImport } from './reglages';
 
 // Le filtre survit à l'aller-retour liste → fiche → liste.
 let filtre = '';
 
 function ligne(p: Personne, tri: Tri): HTMLElement {
-  const detail = libelleNaissance(p.naissance, p.sexe);
-  return h(
-    'a',
-    { class: 'ligne', href: `#/personne/${p.id}` },
-    h('span', { class: 'avatar' }, initiales(p)),
-    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomListe(p, tri)), detail && h('span', { class: 'secondaire' }, detail)),
-    icone('chevron', 18),
-  );
+  return h('a', { class: 'ligne', href: `#/personne/${p.id}` }, ...contenuLigne(p, nomListe(p, tri)), icone('chevron', 18));
 }
 
 /** Premier lancement ou données effacées : créer une fiche ou restaurer une sauvegarde. */

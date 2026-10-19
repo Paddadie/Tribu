@@ -63,10 +63,14 @@ export function lireReglages(): Reglages {
   return reglages;
 }
 
-/** Applique le thème : « auto » suit le téléphone (pas d'attribut), les deux autres le forcent. */
+// Thème du téléphone, suivi en direct pour le réglage « auto » (absent hors navigateur).
+const telephoneSombre = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : undefined;
+telephoneSombre?.addEventListener('change', () => appliquerTheme());
+
+/** Pose le thème effectif (« clair » ou « sombre ») sur <html> ; « auto » prend celui du téléphone. */
 export function appliquerTheme(theme: Reglages['theme'] = reglages.theme): void {
-  if (theme === 'auto') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = theme;
+  const sombre = theme === 'sombre' || (theme === 'auto' && telephoneSombre?.matches === true);
+  document.documentElement.dataset.theme = sombre ? 'sombre' : 'clair';
 }
 
 /** Change un ou plusieurs réglages, les mémorise et applique le thème. Garde le changement en mémoire même si l'écriture échoue. */

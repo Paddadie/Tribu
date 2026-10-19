@@ -51,6 +51,11 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Bouton « + » pour créer une personne.
 - Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
 
+## Navigation
+- Retour (et Annuler) revient à l'écran précédent de l'appli ; si l'appli a été ouverte directement sur cet écran, il ouvre la liste (ou la fiche) à sa place. Il n'ajoute jamais d'entrée à l'historique du téléphone.
+- Un enregistrement (modification, ajout de conjoint, de parent ou d'enfant, union, lien) revient sur la fiche comme Retour. Une création remplace le formulaire par la nouvelle fiche ; une suppression remplace la fiche par la liste.
+- La liste retrouve sa position de défilement au retour ; les autres écrans s'ouvrent en haut.
+
 ## Suppression
 - Confirmation obligatoire.
 - Supprimer une personne retire aussi ses unions et filiations.

@@ -10,6 +10,7 @@ import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
 import { ecranIllisible } from "./ui/illisible";
 import { ecranLien } from "./ui/lien";
+import { demarrerNavigation, remplacer } from "./ui/navigation";
 import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
 
@@ -23,9 +24,6 @@ import { ecranUnion } from "./ui/union";
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
 const app = document.querySelector<HTMLElement>("#app");
 
-/** Remplace la route courante : le bouton Retour ne revient pas sur l'écran quitté. */
-const remplacer = (route: string) => location.replace(route);
-
 function vue(route: string): HTMLElement {
   // Données illisibles : cet écran remplace tous les autres jusqu'au choix de Paul.
   const brut = lireBrutIllisible();
@@ -33,33 +31,40 @@ function vue(route: string): HTMLElement {
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
-  if (section === "nouveau") return formulaire(undefined, remplacer);
-  if (section === "personne" && personne) return fiche(personne, remplacer);
-  if (section === "modifier" && personne) return formulaire(personne, remplacer);
-  if (section === "conjoint" && personne) return ajoutConjoint(personne, remplacer);
-  if (section === "union" && personne) return ecranUnion(personne, remplacer);
-  if ((section === "parent" || section === "enfant") && personne) return ajoutLien(personne, section, remplacer);
+  if (section === "nouveau") return formulaire(undefined);
+  if (section === "personne" && personne) return fiche(personne);
+  if (section === "modifier" && personne) return formulaire(personne);
+  if (section === "conjoint" && personne) return ajoutConjoint(personne);
+  if (section === "union" && personne) return ecranUnion(personne);
+  if ((section === "parent" || section === "enfant") && personne) return ajoutLien(personne, section);
   if (section === "lien") {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
-    if (origine) return ecranLien(id, origine, remplacer);
+    if (origine) return ecranLien(id, origine);
   }
   // Route inconnue ou personne introuvable (supprimée) : retour à la liste.
-  if (route !== "#/" && route !== "" && route !== "#") remplacer("#/");
+  if (!estListe(route)) remplacer("#/", false);
   return accueil();
 }
 
+const estListe = (route: string | undefined) => route === "#/" || route === "" || route === "#";
+
+// Position de défilement de la liste, retrouvée en y revenant ; les autres écrans s'ouvrent en haut.
+let routeAffichee: string | undefined;
+let defilementListe = 0;
+
 function afficher() {
   if (!app) return;
+  if (estListe(routeAffichee)) defilementListe = window.scrollY;
   app.replaceChildren(vue(location.hash));
-  window.scrollTo(0, 0);
+  routeAffichee = location.hash;
+  window.scrollTo(0, estListe(routeAffichee) ? defilementListe : 0);
 }
 
 appliquerTheme();
-window.addEventListener("hashchange", afficher);
 // Après une annulation : même écran redessiné, sans remonter en haut.
 window.addEventListener(EVENEMENT_RAFRAICHIR, () => app?.replaceChildren(vue(location.hash)));
 // Demande au navigateur de ne pas purger le stockage sous contrainte d'espace (silencieux).
 void navigator.storage?.persist?.().catch(() => {});
-afficher();
+demarrerNavigation(afficher);
 
 initPwa();

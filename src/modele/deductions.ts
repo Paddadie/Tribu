@@ -1,7 +1,11 @@
 // Liens déduits à partir des unions et filiations. Rien n'est stocké : tout se
 // recalcule depuis les données.
 
+import { comparateur } from './liste';
 import type { Donnees, Filiation, Personne, Union } from './types';
+
+/** Ordre alphabétique « prénom nom », le même que la liste triée par prénom. */
+const parPrenom = comparateur('prenom');
 
 function parId(d: Donnees, ids: Iterable<string>): Personne[] {
   const voulus = new Set(ids);
@@ -17,7 +21,7 @@ export function comparerParNaissance(a: Personne, b: Personne): number {
   } else if (b.naissance) {
     return 1;
   }
-  return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr');
+  return parPrenom(a, b);
 }
 
 /** Conjoint actuel : une personne n'a qu'une union à la fois (une séparation efface l'union). */
@@ -27,10 +31,6 @@ export function conjoint(d: Donnees, id: string): { union: Union; personne: Pers
   const idConjoint = union.personneA === id ? union.personneB : union.personneA;
   const personne = d.personnes.find((p) => p.id === idConjoint);
   return personne && { union, personne };
-}
-
-export function parents(d: Donnees, id: string): Personne[] {
-  return parId(d, d.filiations.filter((f) => f.enfant === id).map((f) => f.parent));
 }
 
 export interface Lien {
@@ -48,7 +48,7 @@ export function liensParents(d: Donnees, id: string): Lien[] {
     })
     .sort((a, b) => {
       if (a.filiation.type !== b.filiation.type) return a.filiation.type === 'biologique' ? -1 : 1;
-      return `${a.personne.prenom} ${a.personne.nom}`.localeCompare(`${b.personne.prenom} ${b.personne.nom}`, 'fr');
+      return parPrenom(a.personne, b.personne);
     });
 }
 
@@ -63,11 +63,6 @@ export function liensEnfants(d: Donnees, id: string): Lien[] {
     .sort((a, b) => comparerParNaissance(a.personne, b.personne));
 }
 
-/** Enfants de la personne, du plus âgé au plus jeune. */
-export function enfants(d: Donnees, id: string): Personne[] {
-  return parId(d, d.filiations.filter((f) => f.parent === id).map((f) => f.enfant)).sort(comparerParNaissance);
-}
-
 /** Enfants ayant les deux personnes pour parents (tout type de filiation confondu). */
 export function enfantsDuCouple(d: Donnees, idA: string, idB: string): Personne[] {
   const deA = new Set(d.filiations.filter((f) => f.parent === idA).map((f) => f.enfant));
@@ -79,7 +74,7 @@ export function enfantsDuCouple(d: Donnees, idA: string, idB: string): Personne[
 export function parentsCommuns(d: Donnees, idA: string, idB: string): Personne[] {
   const deA = new Set(d.filiations.filter((f) => f.enfant === idA).map((f) => f.parent));
   const communs = d.filiations.filter((f) => f.enfant === idB && deA.has(f.parent)).map((f) => f.parent);
-  return parId(d, communs).sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr'));
+  return parId(d, communs).sort(parPrenom);
 }
 
 /**

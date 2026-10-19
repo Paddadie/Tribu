@@ -18,30 +18,8 @@
   --voile: rgba(20, 30, 26, 0.5);
 }
 
-/* Thème sombre : suit le téléphone en mode « auto », ou forcé par data-theme="sombre". */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="clair"]) {
-    color-scheme: dark;
-    --fond: #121a17;
-    --encre: #e6eeea;
-    --secondaire: #9aaba5;
-    --accent: #4cc0a0;
-    --accent-clair: #1f3b33;
-    --accent-texte: #8fdcc4;
-    --carte: #1b2622;
-    --bord: #2a3833;
-    --bord-champ: #3d4d47;
-    --danger: #ef8a8a;
-    --danger-bord: #6b3535;
-    --erreur-fond: #3a2020;
-    --succes-fond: #1d3a2d;
-    --sur-accent: #0c1f19;
-    --sur-danger: #2a0d0d;
-    --ombre-bouton: rgba(0, 0, 0, 0.5);
-    --voile: rgba(0, 0, 0, 0.65);
-  }
-}
-
+/* Thème sombre : data-theme="sombre" est posé par etat.ts, pour le réglage
+   « Sombre » ou pour « Auto » quand le téléphone est en sombre. */
 :root[data-theme="sombre"] {
   color-scheme: dark;
   --fond: #121a17;
@@ -61,6 +39,14 @@
   --sur-danger: #2a0d0d;
   --ombre-bouton: rgba(0, 0, 0, 0.5);
   --voile: rgba(0, 0, 0, 0.65);
+}
+
+/* Avant le script (thème pas encore posé) : fond sombre si le téléphone l'est, sans éclair clair au lancement. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --fond: #121a17;
+  }
 }
 
 * {

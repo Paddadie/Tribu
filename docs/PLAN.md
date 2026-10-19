@@ -52,15 +52,15 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] DOC-02 : SPEC et DECISIONS alignées sur le code (étiquette Biologique, effacement « grisé », enfants du couple affichés en S2b).
   Terminé quand : des données stockées invalides ne sont jamais écrasées sans action de Paul, et un export partagé depuis le téléphone se réimporte.
 
-- [ ] **S2a. Socle** — Aucun changement visible, pas de maquette.
-  - [ ] TEST-01 : happy-dom ; 5 à 8 tests d'écran sur les parcours qui touchent aux données (création, ajout de lien, import avec confirmation, suppression, route vers une personne supprimée). En premier : ils protègent le reste.
-  - [ ] ARCH-02 : sélecteur de personne commun à ajoutConjoint.ts et ajoutLien.ts (recherche, onglets existante / nouvelle, lignes, bouton, erreurs).
-  - [ ] ARCH-03 : une seule fonction pour la ligne avatar + nom + détail (5 copies : accueil, fiche ×2, ajouts ×2).
-  - [ ] ARCH-04 : « déjà en couple » et « a des liens » calculés par le modèle, testés, plus dans les écrans.
-  - [ ] CODE-01 : supprimer `comparerParNom`, `enfants`, `parents` et leurs tests ; garder `enfantsDuCouple` (FEAT-08).
-  - [ ] CODE-02 : regex de date unique, comparateur « prénom nom » unique, `MAX_PARENTS_PAR_TYPE` dans stockage.ts, palette sombre écrite une seule fois dans style.css, test redondant de `ajouterUnion`.
-  - [ ] UX-01 : Retour = écran précédent de l'appli (`history.back()`), la liste à défaut ; plus d'entrée d'historique ajoutée par Retour.
-  - [ ] UX-02 : position de défilement de la liste restaurée au retour (supprimer le `scrollTo(0,0)` systématique de main.ts).
+- [x] **S2a. Socle** — Aucun changement visible, pas de maquette.
+  - [x] TEST-01 : happy-dom ; 5 à 8 tests d'écran sur les parcours qui touchent aux données (création, ajout de lien, import avec confirmation, suppression, route vers une personne supprimée). En premier : ils protègent le reste.
+  - [x] ARCH-02 : sélecteur de personne commun à ajoutConjoint.ts et ajoutLien.ts (recherche, onglets existante / nouvelle, lignes, bouton, erreurs).
+  - [x] ARCH-03 : une seule fonction pour la ligne avatar + nom + détail (5 copies : accueil, fiche ×2, ajouts ×2).
+  - [x] ARCH-04 : « déjà en couple » et « a des liens » calculés par le modèle, testés, plus dans les écrans.
+  - [x] CODE-01 : supprimer `comparerParNom`, `enfants`, `parents` et leurs tests ; garder `enfantsDuCouple` (FEAT-08).
+  - [x] CODE-02 : regex de date unique, comparateur « prénom nom » unique, `MAX_PARENTS_PAR_TYPE` dans stockage.ts, palette sombre écrite une seule fois dans style.css, test redondant de `ajouterUnion`.
+  - [x] UX-01 : Retour = écran précédent de l'appli (`history.back()`), la liste à défaut ; plus d'entrée d'historique ajoutée par Retour.
+  - [x] UX-02 : position de défilement de la liste restaurée au retour (supprimer le `scrollTo(0,0)` systématique de main.ts).
   Terminé quand : tests verts ; liste → A → B → Retour revient sur A, puis sur la liste à la même position.
 
 - [ ] **S2b. Parcours** — Maquette d'abord : fiche, feuille « Ajouter un proche », écrans d'ajout, liste avec index.

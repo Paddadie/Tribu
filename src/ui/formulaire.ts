@@ -5,9 +5,10 @@ import type { Personne } from '../modele/types';
 import { champsIdentite } from './champsPersonne';
 import { h } from './dom';
 import { modifierDonnees } from './etat';
+import { lienRetour, remplacer, revenir } from './navigation';
 
-/** `existante` absente = création. `naviguer` remplace la route courante (pas d'empilement dans l'historique). */
-export function formulaire(existante: Personne | undefined, naviguer: (route: string) => void): HTMLElement {
+/** `existante` absente = création : la fiche créée prend la place du formulaire. */
+export function formulaire(existante: Personne | undefined): HTMLElement {
   const identite = champsIdentite(existante, true);
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
@@ -24,7 +25,8 @@ export function formulaire(existante: Personne | undefined, naviguer: (route: st
         id = r.personne.id;
         return r.donnees;
       });
-      naviguer(`#/personne/${id}`);
+      if (existante) revenir(retour);
+      else remplacer(`#/personne/${id}`);
     } catch (err) {
       erreur.textContent = err instanceof Error ? err.message : 'Enregistrement impossible';
       erreur.hidden = false;
@@ -41,7 +43,7 @@ export function formulaire(existante: Personne | undefined, naviguer: (route: st
       ...identite.noeuds,
       erreur,
       h('button', { type: 'submit', class: 'bouton bouton-plein' }, 'Enregistrer'),
-      h('a', { class: 'bouton', href: retour }, 'Annuler'),
+      lienRetour(retour, { class: 'bouton' }, 'Annuler'),
     ),
   );
 }
