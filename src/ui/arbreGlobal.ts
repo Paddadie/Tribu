@@ -74,7 +74,8 @@ const couleurGroupe = (i: number) => couleurTrait(i + 5);
 
 const borne = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-export function ecranArbre(): HTMLElement {
+/** `feuille` : liste ouverte d'emblée (raccourci « Familles » de l'accueil, route #/arbre/familles). */
+export function ecranArbre(feuille?: 'familles'): HTMLElement {
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d);
   const loupe = h('button', { type: 'button', class: 'bouton-icone', 'aria-label': 'Chercher une personne' }, icone('recherche', 24));
@@ -101,6 +102,7 @@ export function ecranArbre(): HTMLElement {
   const disp = disposerArbre(d, moi.id);
   const carte = new Carte(disp, moi);
   loupe.addEventListener('click', () => carte.basculerRecherche());
+  if (feuille) carte.ouvrirFeuille(feuille);
   return h('div', { class: 'ecran ecran-arbre' }, barre, carte.vue);
 }
 
@@ -311,6 +313,11 @@ class Carte {
     this.feuille.classList.remove('ouverte');
     this.feuilleOuverte = undefined;
     for (const b of this.puces.values()) b.setAttribute('aria-expanded', 'false');
+  }
+
+  /** Ouvre la liste si elle existe et n'est pas déjà ouverte. */
+  ouvrirFeuille(quoi: 'familles' | 'amis'): void {
+    if (this.puces.has(quoi) && this.feuilleOuverte !== quoi) this.basculerFeuille(quoi);
   }
 
   private basculerFeuille(quoi: 'familles' | 'amis'): void {

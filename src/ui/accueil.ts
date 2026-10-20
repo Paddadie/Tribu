@@ -1,26 +1,50 @@
-// Écran d'accueil : liste des personnes (par lettre), index alphabétique sur le bord droit,
-// filtre par nom, bouton +. Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
+// Accueil (#/) : salutation, recherche directe, dates du jour (« Aujourd'hui »), des 30 prochains jours (« Bientôt »),
+// souvenir des décès du jour et du lendemain, quatre raccourcis, bouton +.
+// Sans personne : « Ajouter la première personne » et « Restaurer une sauvegarde ».
 
-import { anniversairesDeces, libelleDelai, prochainsAnniversaires, type Anniversaire, type AnniversaireDeces } from '../modele/age';
-import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, libelleDeces, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
-import type { Personne } from '../modele/types';
-import { personnesVisibles } from '../modele/modele';
+import {
+  dateEvenement,
+  depuisUnion,
+  detailEvenement,
+  evenementsAVenir,
+  libelleAnnees,
+  nomEvenement,
+  quandCourt,
+  titreEvenement,
+  type Evenement,
+} from '../modele/evenements';
+import { comparateur, couleurFamille, filtrerParNom, libelleDeces, MOIS, nomComplet, simplifier } from '../modele/liste';
+import { estDecede, personnesListees, personnesVisibles } from '../modele/modele';
+import { etiquette, lienAvecMoi } from '../modele/parente';
+import { ficheMoi } from '../modele/reglages';
 import { importerJson } from '../modele/stockage';
+import type { Donnees, Personne } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
-import { avatarPersonne, contenuLigne } from './lignePersonne';
 import { messageImport } from './import';
+import { avatarPersonne, contenuLigne } from './lignePersonne';
 
-// Le filtre survit à l'aller-retour liste → fiche → liste.
-let filtre = '';
+// La recherche survit à l'aller-retour accueil → fiche → accueil.
+let recherche = '';
 
-function ligne(p: Personne, tri: Tri): HTMLElement {
-  return h('a', { class: 'ligne', href: `#/personne/${p.id}` }, ...contenuLigne(p, nomListe(p, tri)), icone('chevron', 18));
-}
+const SVG = 'http://www.w3.org/2000/svg';
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+/** Lignes de personnes du bloc « Aujourd'hui » avant « + N autres ». */
+const MAX_AUJOURDHUI = 4;
+const MAX_FETES_AUJOURDHUI = 2;
+const MAX_VIGNETTES = 10;
+const HORIZON = 30;
+/** Fêtes annoncées dans « Bientôt » : la semaine à venir seulement. */
+const HORIZON_FETES = 7;
+const MAX_RESULTATS = 30;
+
+const majuscule = (t: string) => t.charAt(0).toLocaleUpperCase('fr') + t.slice(1);
+const minuscule = (t: string) => t.charAt(0).toLocaleLowerCase('fr') + t.slice(1);
+const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? plusieurs : un}`;
 
 /** Premier lancement ou données effacées : créer une fiche ou restaurer une sauvegarde. */
-function accueilVide(): HTMLElement {
+export function accueilVide(): HTMLElement {
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const fichier = h('input', { type: 'file', accept: 'application/json,.json', class: 'sr-only', tabindex: -1, 'aria-hidden': true });
   fichier.addEventListener('change', async () => {
@@ -54,163 +78,336 @@ function accueilVide(): HTMLElement {
   );
 }
 
-function liste(): HTMLElement[] {
-  const toutes = personnesVisibles(lireDonnees());
-  const tri = lireReglages().tri;
-  const trouvees = filtrerParNom(toutes, filtre);
-  if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];
-  return grouperParLettre(trouvees, tri).map((g) =>
-    h(
-      'section',
-      { class: 'groupe', 'data-lettre': g.lettre },
-      h('h2', { class: 'titre-section' }, g.lettre),
-      h('div', { class: 'carte' }, ...g.personnes.map((p) => ligne(p, tri))),
-    ),
-  );
-}
-
-/**
- * Index latéral : toucher ou glisser sur une lettre fait défiler jusqu'à son groupe (sinon le suivant présent),
- * avec la lettre en grand au centre. Les lettres sans personne sont estompées.
- * Réservé au doigt : au clavier ou au lecteur d'écran, le filtre fait mieux.
- */
-function indexLettres(groupes: Groupe[], zoneListe: HTMLElement, entete: HTMLElement): { index: HTMLElement; bulle: HTMLElement } {
-  const presentes = new Set(groupes.map((g) => g.lettre));
-  const lettres = lettresIndex(groupes);
-  const bulle = h('div', { class: 'bulle', 'aria-hidden': true, hidden: true });
-  const index = h('div', { class: 'index', 'aria-hidden': true }, ...lettres.map((l) => h('span', { class: presentes.has(l) ? '' : 'absente' }, l)));
-
-  const aller = (e: PointerEvent) => {
-    const r = index.getBoundingClientRect();
-    const rang = Math.min(lettres.length - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * lettres.length)));
-    const cible = groupeVise(groupes, lettres[rang]);
-    const section = cible && zoneListe.querySelector<HTMLElement>(`[data-lettre="${cible}"]`);
-    if (!section) return;
-    bulle.textContent = cible;
-    bulle.hidden = false;
-    window.scrollTo(0, section.getBoundingClientRect().top + window.scrollY - entete.offsetHeight);
+/** « Bonjour Camille » (« Bonsoir » à partir de 18 h, sans prénom si « Moi » n'est pas choisi) et « Mardi 20 octobre ». */
+export function salutation(prenom: string | undefined, maintenant: Date): { titre: string; date: string } {
+  const mot = maintenant.getHours() >= 18 ? 'Bonsoir' : 'Bonjour';
+  const jour = maintenant.getDate();
+  return {
+    titre: prenom ? `${mot} ${prenom}` : mot,
+    date: majuscule(`${JOURS[maintenant.getDay()]} ${jour === 1 ? '1er' : jour} ${MOIS[maintenant.getMonth()]}`),
   };
-  const lacher = () => (bulle.hidden = true);
-
-  index.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    index.setPointerCapture?.(e.pointerId);
-    aller(e);
-  });
-  index.addEventListener('pointermove', (e) => {
-    if (!bulle.hidden) aller(e);
-  });
-  index.addEventListener('pointerup', lacher);
-  index.addEventListener('pointercancel', lacher);
-  return { index, bulle };
 }
 
-function ligneAnniversaire({ personne, dans, age, date }: Anniversaire): HTMLElement {
+/** Lien avec « Moi » : « ta cousine », « amie d’Inès » ; undefined sans « Moi » ou sans lien. */
+function lienDe(d: Donnees, moi: Personne | undefined, p: Personne): string | undefined {
+  if (!moi) return undefined;
+  const lien = lienAvecMoi(d, moi.id, p.id);
+  if (lien) return lien;
+  const e = etiquette(d, moi.id, p.id);
+  return e && minuscule(e);
+}
+
+/** Avatar d'une personne décédée : grisé. */
+function avatarGris(p: Personne): HTMLElement {
+  const a = avatarPersonne(p);
+  a.classList.add('decede');
+  return a;
+}
+
+/** Avatar seul, ou les deux d'un couple qui se chevauchent (le conjoint décédé en gris). */
+function avatars(e: Evenement): HTMLElement {
+  const un = (p: Personne) => (estDecede(p) ? avatarGris(p) : avatarPersonne(p));
+  return e.personnes.length === 1 ? un(e.personnes[0]) : h('span', { class: 'duo' }, ...e.personnes.map(un));
+}
+
+const lienFiche = (e: Evenement) => `#/personne/${e.personnes[0].id}`;
+
+// --- Recherche ----------------------------------------------------------------------------------------------------
+
+function resultats(d: Donnees, moi: Personne | undefined, texte: string): HTMLElement[] {
+  const trouvees = filtrerParNom(personnesListees(d), texte).sort(comparateur(lireReglages().tri));
+  const creer = h('a', { href: `#/nouveau/${encodeURIComponent(texte.trim())}` }, `Créer « ${texte.trim()} »`);
+  const pied = h('p', { class: 'pied-recherche secondaire' }, `${pluriel(trouvees.length, 'fiche', 'fiches')} · `, creer);
+  if (trouvees.length === 0) return [pied];
+  const lignes = trouvees
+    .slice(0, MAX_RESULTATS)
+    .map((p) => h('a', { class: 'ligne', href: `#/personne/${p.id}` }, ...contenuLigne(p, nomComplet(p), lienDe(d, moi, p)), icone('chevron', 18)));
+  return [h('div', { class: 'carte' }, ...lignes), pied];
+}
+
+// --- Aujourd'hui ----------------------------------------------------------------------------------------------------
+
+function ligneDuJour(d: Donnees, moi: Personne | undefined, e: Evenement): HTMLElement {
+  const [p] = e.personnes;
+  const union = e.genre === 'union';
+  const detail = union ? depuisUnion(e) : lienDe(d, moi, p);
+  const pastille = union ? detailEvenement(e) : libelleAnnees(e.annees) || 'anniversaire';
   return h(
     'a',
-    { class: dans === 0 ? 'ligne aujourdhui' : 'ligne', href: `#/personne/${personne.id}` },
-    avatarPersonne(personne),
-    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(personne)), h('span', { class: 'secondaire' }, date)),
-    h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), age !== undefined && h('span', { class: 'etiquette' }, `${age} ans`)),
+    { class: 'ligne', href: lienFiche(e) },
+    avatars(e),
+    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomEvenement(e)), detail && h('span', { class: 'secondaire' }, detail)),
+    h('span', { class: 'etiquette accent' }, pastille),
   );
 }
 
-function avatarDecede(p: Personne): HTMLElement {
-  const avatar = avatarPersonne(p);
-  avatar.classList.add('decede');
-  return avatar;
-}
-
-/** Anniversaire de décès : ligne grise, « décédé le 20 octobre 2015 » et « il y a 11 ans ». */
-function ligneDeces({ personne, dans, annees }: AnniversaireDeces): HTMLElement {
+function ligneFete(d: Donnees, moi: Personne | undefined, e: Evenement): HTMLElement {
+  const [p] = e.personnes;
+  const lien = lienDe(d, moi, p);
   return h(
     'a',
-    { class: 'ligne ligne-deces', href: `#/personne/${personne.id}` },
-    avatarDecede(personne),
+    { class: 'fete', href: lienFiche(e) },
+    h('span', { class: 'picto' }, icone('fete', 16)),
     h(
       'span',
       { class: 'ligne-texte' },
-      h('span', { class: 'ligne-nom' }, nomComplet(personne)),
-      h('span', { class: 'secondaire' }, libelleDeces(personne.deces, personne.sexe)),
+      h('span', { class: 'ligne-nom' }, `Bonne fête ${nomComplet(p)}`),
+      h('span', { class: 'detail' }, lien ? `${e.saint} · ${lien}` : e.saint),
     ),
-    h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), h('span', { class: 'etiquette' }, `il y a ${annees} ${annees > 1 ? 'ans' : 'an'}`)),
   );
 }
 
-/**
- * Les 3 prochains anniversaires des 30 jours à venir, au-dessus de la liste, plus les anniversaires de décès
- * d'aujourd'hui et de demain (hors limite) ; le bloc est caché s'il n'y a rien.
- */
-function blocAnniversaires(): HTMLElement {
-  const visibles = personnesVisibles(lireDonnees());
-  const proches = prochainsAnniversaires(visibles, new Date());
-  const deces = anniversairesDeces(visibles, new Date());
-  // Chaque décès vient après les naissances du même jour.
-  const lignes = [...proches.map((a) => ({ dans: a.dans, el: ligneAnniversaire(a) })), ...deces.map((a) => ({ dans: a.dans + 0.5, el: ligneDeces(a) }))].sort(
-    (a, b) => a.dans - b.dans,
-  );
+/** Carte verte : anniversaires et unions du jour en lignes blanches, fêtes en dessous ; au-delà, « + N autres » ouvre l'agenda. */
+function blocAujourdhui(d: Donnees, moi: Personne | undefined, evs: Evenement[]): HTMLElement | false {
+  const personnes = evs.filter((e) => e.genre === 'anniversaire' || e.genre === 'union');
+  const fetes = evs.filter((e) => e.genre === 'fete');
+  if (personnes.length + fetes.length === 0) return false;
+  const montrees = personnes.slice(0, MAX_AUJOURDHUI);
+  const fetesMontrees = fetes.slice(0, MAX_FETES_AUJOURDHUI);
+  const autres = personnes.length - montrees.length + fetes.length - fetesMontrees.length;
   return h(
     'section',
-    { class: 'anniversaires', hidden: lignes.length === 0 },
-    h('h2', { class: 'titre-section' }, 'Prochains anniversaires'),
-    h('div', { class: 'carte' }, ...lignes.map((l) => l.el)),
+    { class: 'aujourdhui', 'aria-label': 'Aujourd’hui' },
+    h('h2', { class: 'tete' }, 'Aujourd’hui'),
+    montrees.length > 0 && h('div', { class: 'carte' }, ...montrees.map((e) => ligneDuJour(d, moi, e))),
+    ...fetesMontrees.map((e) => ligneFete(d, moi, e)),
+    autres > 0 && h('a', { class: 'autres', href: '#/agenda' }, `+ ${autres} ${autres > 1 ? 'autres' : 'autre'}`),
+  );
+}
+
+// --- Bientôt --------------------------------------------------------------------------------------------------------
+
+const ICONES = { anniversaire: 'gateau', union: 'coeur', fete: 'fete', deces: 'agenda' } as const;
+
+function vignette(e: Evenement, aujourdhui: Date): HTMLElement {
+  const annees = e.genre === 'union' && e.annees === 0 ? 'le grand jour' : e.genre === 'fete' ? '' : libelleAnnees(e.annees);
+  return h(
+    'a',
+    { class: 'vignette', href: lienFiche(e) },
+    h('span', { class: 'type' }, icone(ICONES[e.genre], 14), titreEvenement(e)),
+    avatars(e),
+    h('span', { class: 'ligne-nom' }, nomEvenement(e, true)),
+    h('span', { class: 'secondaire' }, [quandCourt(e, aujourdhui), annees].filter(Boolean).join(' · ')),
+  );
+}
+
+/** Rien dans les 30 jours : la prochaine date de l'année, s'il y en a une. */
+function calme(d: Donnees, aujourdhui: Date): HTMLElement {
+  const prochaine = evenementsAVenir(d, aujourdhui, 365, { fetes: false }).find((e) => e.dans > HORIZON && e.genre !== 'deces');
+  const quoi = prochaine && (prochaine.genre === 'anniversaire' ? libelleAnnees(prochaine.annees) || 'anniversaire' : detailEvenement(prochaine));
+  return h(
+    'div',
+    { class: 'calme' },
+    h('span', { class: 'picto' }, icone('agenda', 16)),
+    h(
+      'span',
+      {},
+      `Rien dans les ${HORIZON} prochains jours.`,
+      prochaine && h('br'),
+      prochaine && 'Prochaine date : ',
+      prochaine && h('strong', {}, nomEvenement(prochaine)),
+      prochaine && `, ${quoi} le ${dateEvenement(prochaine)}.`,
+    ),
+  );
+}
+
+function blocBientot(d: Donnees, evs: Evenement[], aujourdhui: Date): HTMLElement {
+  const aVenir = evs.filter((e) => e.dans > 0 && e.genre !== 'deces' && (e.genre !== 'fete' || e.dans <= HORIZON_FETES));
+  const montrees = aVenir.slice(0, MAX_VIGNETTES);
+  return h(
+    'section',
+    { class: 'bientot' },
+    h('h2', { class: 'titre-section titre-lien' }, 'Bientôt', h('a', { href: '#/agenda' }, 'Tout voir')),
+    montrees.length === 0
+      ? calme(d, aujourdhui)
+      : h(
+          'div',
+          { class: 'defile' },
+          ...montrees.map((e) => vignette(e, aujourdhui)),
+          h('a', { class: 'vignette fin', href: '#/agenda' }, icone('agenda', 20), 'Tout voir'),
+        ),
+  );
+}
+
+// --- Souvenir -------------------------------------------------------------------------------------------------------
+
+/** Décès d'aujourd'hui ou de demain : sobre, encadré en pointillés, sans phrase. */
+function souvenir(e: Evenement): HTMLElement {
+  const [p] = e.personnes;
+  return h(
+    'a',
+    { class: 'souvenir', href: lienFiche(e) },
+    avatarGris(p),
+    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(p)), h('span', {}, libelleDeces(p.deces, p.sexe))),
+    h('span', { class: 'quand' }, h('span', {}, e.dans === 0 ? 'aujourd’hui' : 'demain'), h('span', { class: 'etiquette' }, libelleAnnees(e.annees))),
+  );
+}
+
+// --- Raccourcis -----------------------------------------------------------------------------------------------------
+
+/** Dessin de 72 × 40 : des ronds de couleur (cx, cy, r, couleur CSS). */
+function dessin(ronds: [number, number, number, string][], traits?: string, contour?: boolean): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('class', 'dessin');
+  svg.setAttribute('viewBox', '0 0 72 40');
+  svg.setAttribute('aria-hidden', 'true');
+  if (traits) {
+    const chemin = document.createElementNS(SVG, 'path');
+    chemin.setAttribute('d', traits);
+    chemin.setAttribute('class', 'traits');
+    svg.append(chemin);
+  }
+  for (const [cx, cy, r, couleur] of ronds) {
+    const rond = document.createElementNS(SVG, 'circle');
+    rond.setAttribute('cx', String(cx));
+    rond.setAttribute('cy', String(cy));
+    rond.setAttribute('r', String(r));
+    if (contour) rond.setAttribute('class', 'cerne');
+    // Par le CSSOM : la CSP du build bloque un attribut style posé en texte.
+    rond.style.fill = couleur;
+    svg.append(rond);
+  }
+  return svg;
+}
+
+/** Noms de famille distincts, du plus nombreux au moins nombreux, avec leur couleur. */
+function familles(personnes: Personne[]): number[] {
+  const parNom = new Map<string, { n: number; couleur: number }>();
+  for (const p of personnes) {
+    const cle = simplifier(p.nom.trim());
+    const couleur = couleurFamille(p);
+    if (!cle || couleur === undefined) continue;
+    const f = parNom.get(cle) ?? { n: 0, couleur };
+    f.n++;
+    parNom.set(cle, f);
+  }
+  return [...parNom.values()].sort((a, b) => b.n - a.n).map((f) => f.couleur);
+}
+
+function raccourci(href: string, image: Element, titre: string, detail: string): HTMLElement {
+  return h('a', { class: 'raccourci', href }, image, h('strong', {}, titre), h('span', { class: 'secondaire' }, detail));
+}
+
+function raccourcis(d: Donnees, listees: Personne[]): HTMLElement {
+  const n = listees.length;
+  const couleurs = familles(listees);
+  const quatre = [0, 1, 2, 3].map((i) => (couleurs[i] === undefined ? 'var(--pastille)' : `var(--c${couleurs[i]})`));
+  const nbGroupes = d.groupes.length;
+  return h(
+    'nav',
+    { class: 'raccourcis', 'aria-label': 'Raccourcis' },
+    raccourci(
+      '#/groupes',
+      dessin([
+        [15, 22, 10, 'var(--c7)'],
+        [32, 12, 8, 'var(--c0)'],
+        [35, 30, 7, 'var(--c4)'],
+        [51, 20, 9, 'var(--c3)'],
+      ]),
+      'Groupes d’amis',
+      nbGroupes === 0 ? 'Aucun groupe' : pluriel(nbGroupes, 'groupe', 'groupes'),
+    ),
+    raccourci(
+      '#/arbre/familles',
+      dessin(
+        quatre.map((c, i) => [11 + 14 * i, 20, 10, c]),
+        undefined,
+        true,
+      ),
+      'Familles',
+      couleurs.length === 0 ? 'Aucun nom de famille' : pluriel(couleurs.length, 'nom de famille', 'noms de famille'),
+    ),
+    raccourci(
+      '#/arbre',
+      dessin(
+        [
+          [22, 7, 6, 'var(--c2)'],
+          [50, 7, 6, 'var(--c1)'],
+          [14, 32, 6, 'var(--c2)'],
+          [36, 32, 7, 'var(--accent)'],
+          [58, 32, 6, 'var(--c1)'],
+        ],
+        'M22 7h28M36 7v12M14 19h44M14 19v12M36 19v12M58 19v12',
+      ),
+      'Arbre global',
+      pluriel(n, 'personne', 'personnes'),
+    ),
+    raccourci(
+      '#/personnes',
+      h('span', { class: 'dessin duo' }, ...listees.slice(0, 3).map((p) => avatarPersonne(p))),
+      'Toutes les fiches',
+      pluriel(n, 'fiche', 'fiches'),
+    ),
+  );
+}
+
+// --- Écran ----------------------------------------------------------------------------------------------------------
+
+function sommaire(d: Donnees, moi: Personne | undefined, listees: Personne[]): HTMLElement[] {
+  const aujourdhui = new Date();
+  const evs = evenementsAVenir(d, aujourdhui, HORIZON, { fetes: lireReglages().fetes });
+  const duJour = evs.filter((e) => e.dans === 0);
+  const deces = evs.filter((e) => e.genre === 'deces' && e.dans <= 1);
+  return [blocAujourdhui(d, moi, duJour), blocBientot(d, evs, aujourdhui), ...deces.map(souvenir), raccourcis(d, listees)].filter(
+    (e): e is HTMLElement => e !== false,
   );
 }
 
 export function accueil(): HTMLElement {
-  const total = personnesVisibles(lireDonnees()).length;
-  const titre = h(
+  const d = lireDonnees();
+  const listees = personnesListees(d);
+  const moi = ficheMoi(lireReglages(), d);
+  const { titre, date } = salutation(moi && !estDecede(moi) ? moi.prenom : undefined, new Date());
+  const tete = h(
     'div',
     { class: 'entete-ligne' },
-    h('h1', {}, 'Tribu'),
-    h(
-      'div',
-      { class: 'entete-droite' },
-      h('span', { class: 'secondaire' }, `${total} ${total > 1 ? 'personnes' : 'personne'}`),
-      total > 0 && h('a', { class: 'bouton-icone', href: '#/arbre', 'aria-label': 'Arbre' }, icone('arbre', 24)),
-      h('a', { class: 'bouton-icone bouton-reglages', href: '#/reglages', 'aria-label': 'Réglages' }, icone('reglages', 24)),
-    ),
+    h('h1', { class: 'salut' }, titre, h('span', { class: 'secondaire' }, date)),
+    h('a', { class: 'bouton-icone bouton-reglages', href: '#/reglages', 'aria-label': 'Réglages' }, icone('reglages', 24)),
   );
-  if (total === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, titre), accueilVide());
+  if (listees.length === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, tete), accueilVide());
 
-  const zoneListe = h('div', { class: 'liste' }, ...liste());
-  const anniversaires = blocAnniversaires();
-  const avecAnniversaires = !anniversaires.hidden;
-  // Pendant un filtrage, la liste est courte : l'index et les anniversaires disparaissent.
-  const masquerIndex = () => {
-    index.hidden = filtre.trim() !== '';
-    anniversaires.hidden = !avecAnniversaires || filtre.trim() !== '';
-  };
-
+  const zone = h('div', { class: 'accueil' });
+  const montrer = () => zone.replaceChildren(...(recherche.trim() ? resultats(d, moi, recherche) : sommaire(d, moi, listees)));
+  const effacer = h(
+    'button',
+    {
+      type: 'button',
+      class: 'effacer',
+      'aria-label': 'Effacer la recherche',
+      hidden: !recherche,
+      onclick: () => {
+        recherche = champ.value = '';
+        effacer.hidden = true;
+        montrer();
+        champ.focus();
+      },
+    },
+    icone('croix', 18),
+  );
   const champ = h('input', {
     type: 'search',
-    placeholder: 'Filtrer par prénom ou nom',
-    value: filtre,
+    placeholder: 'Chercher quelqu’un',
+    value: recherche,
     autocomplete: 'off',
     enterkeyhint: 'search',
     oninput: () => {
-      filtre = champ.value;
-      masquerIndex();
-      zoneListe.replaceChildren(...liste());
+      recherche = champ.value;
+      effacer.hidden = !recherche;
+      montrer();
     },
   });
-  const entete = h(
-    'header',
-    { class: 'entete-accueil' },
-    titre,
-    h('label', { class: 'champ-filtre' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Filtrer par nom'), champ),
-  );
-  const { index, bulle } = indexLettres(grouperParLettre(personnesVisibles(lireDonnees()), lireReglages().tri), zoneListe, entete);
-  masquerIndex();
+  montrer();
 
   return h(
     'div',
     { class: 'ecran' },
-    entete,
-    anniversaires,
-    zoneListe,
-    index,
-    bulle,
+    h(
+      'header',
+      { class: 'entete-accueil' },
+      tete,
+      h('label', { class: 'champ-filtre champ-recherche' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Chercher quelqu’un'), champ, effacer),
+    ),
+    zone,
     h('a', { class: 'ajout', href: '#/nouveau', 'aria-label': 'Ajouter une personne' }, icone('plus', 28)),
   );
 }

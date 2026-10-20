@@ -1,11 +1,12 @@
 // Export des dates vers un agenda (.ics, RFC 5545) : naissances, décès et unions datées deviennent des événements
 // annuels sur la journée. Les UID sont stables (id + type), donc réimporter met à jour sans créer de doublon.
 
+import { feteDuPrenom } from './fetes';
 import { nomComplet } from './liste';
-import { MOTIF_DATE, MOTIF_SANS_ANNEE, estDateSansAnneeValide, estDateValide, personnesVisibles } from './modele';
+import { MOTIF_DATE, MOTIF_SANS_ANNEE, estDateSansAnneeValide, estDateValide, estDecede, personnesVisibles } from './modele';
 import type { Donnees } from './types';
 
-export type TypeEvenement = 'naissance' | 'deces' | 'union';
+export type TypeEvenement = 'naissance' | 'deces' | 'union' | 'fete';
 
 export interface EvenementAgenda {
   uid: string;
@@ -22,6 +23,7 @@ export interface BilanAgenda {
   naissances: number;
   deces: number;
   unions: number;
+  fetes: number;
 }
 
 const DOMAINE_UID = 'tribu';
@@ -41,8 +43,11 @@ function jourDeLAnnee(date: string | undefined): { annee?: number; mois: number;
   return { annee: Number(m[1]), mois: Number(m[2]), jour: Number(m[3]) };
 }
 
-/** Les événements annuels du carnet, triés par mois puis jour. Les fiches sans jour et mois sont ignorées, comme les ex. */
-export function evenementsAgenda(d: Donnees): EvenementAgenda[] {
+/**
+ * Les événements annuels du carnet, triés par mois puis jour. Les fiches sans jour et mois sont ignorées, comme les ex.
+ * Avec `fetes`, la fête du prénom de chaque personne vivante et nommée s'y ajoute.
+ */
+export function evenementsAgenda(d: Donnees, options: { fetes?: boolean } = {}): EvenementAgenda[] {
   const visibles = personnesVisibles(d);
   const parId = new Map(visibles.map((p) => [p.id, p]));
   const evenements: EvenementAgenda[] = [];
@@ -69,6 +74,10 @@ export function evenementsAgenda(d: Donnees): EvenementAgenda[] {
         ...deces,
       });
     }
+    const fete = options.fetes && !estDecede(p) && !p.sansNom ? feteDuPrenom(p.prenom) : undefined;
+    if (fete) {
+      evenements.push({ uid: `${p.id}-fete@${DOMAINE_UID}`, type: 'fete', titre: `Fête de ${nom}`, description: `${fete.saint}.`, mois: fete.mois, jour: fete.jour });
+    }
   }
 
   for (const u of d.unions) {
@@ -92,7 +101,7 @@ export function evenementsAgenda(d: Donnees): EvenementAgenda[] {
 
 export function bilanAgenda(evenements: EvenementAgenda[]): BilanAgenda {
   const compte = (type: TypeEvenement) => evenements.filter((e) => e.type === type).length;
-  return { naissances: compte('naissance'), deces: compte('deces'), unions: compte('union') };
+  return { naissances: compte('naissance'), deces: compte('deces'), unions: compte('union'), fetes: compte('fete') };
 }
 
 function echapper(texte: string): string {

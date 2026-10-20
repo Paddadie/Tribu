@@ -3,7 +3,7 @@
 
 import { nomGroupe, raisonGroupe } from '../modele/deductions';
 import { comparateur, filtrerParNom, nomListe } from '../modele/liste';
-import { ajouterAuGroupe, creerGroupe, groupesDe, personnesVisibles, renommerGroupe, retirerDuGroupe, supprimerGroupe } from '../modele/modele';
+import { ajouterAuGroupe, creerGroupe, groupesDe, personnesListees, renommerGroupe, retirerDuGroupe, supprimerGroupe } from '../modele/modele';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { confirmer } from './confirmer';
@@ -65,7 +65,7 @@ export function ecranNouveauGroupe(): HTMLElement {
   };
   const dessiner = () => {
     const d = lireDonnees();
-    const libres = personnesVisibles(d).filter((p) => groupesDe(d, p.id).length === 0).sort(comparateur(lireReglages().tri));
+    const libres = personnesListees(d).filter((p) => groupesDe(d, p.id).length === 0).sort(comparateur(lireReglages().tri));
     const trouvees = filtrerParNom(libres, filtre);
     liste.replaceChildren(
       libres.length === 0

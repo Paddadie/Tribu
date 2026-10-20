@@ -100,6 +100,17 @@ describe('datesIncoherentes', () => {
     const sansAnnee = ajouterUnion(d, ids[0], ids[1], true, 'actuelle', '--06-09').donnees;
     expect(datesIncoherentes(sansAnnee)).toEqual([]);
   });
+
+  it('signale une naissance ou un décès dans le futur, pas une union à venir', () => {
+    const aujourdhui = new Date(2026, 9, 21);
+    const { d, ids } = avec([
+      { prenom: 'A', nom: 'Un', naissance: '2027' },
+      { prenom: 'B', nom: 'Deux', naissance: '1950', deces: '2026-11-02' },
+      { prenom: 'C', nom: 'Trois', naissance: '2026' },
+    ]);
+    const avecUnion = ajouterUnion(d, ids[1], ids[2], true, 'actuelle', '2027-06-12').donnees;
+    expect(datesIncoherentes(avecUnion, aujourdhui).map((r) => r.raison)).toEqual(['Naissance dans le futur (2027)', 'Décès dans le futur (2026)']);
+  });
 });
 
 describe('fichesTest', () => {

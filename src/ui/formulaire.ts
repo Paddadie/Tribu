@@ -12,9 +12,14 @@ import { h } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
 import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
 
-/** `existante` absente = création : la fiche créée prend la place du formulaire. */
-export function formulaire(existante: Personne | undefined): HTMLElement {
-  const identite = champsIdentite(existante, true);
+/**
+ * `existante` absente = création : la fiche créée prend la place du formulaire. `saisie` (recherche de l'accueil)
+ * préremplit le prénom avec son premier mot et le nom avec le reste.
+ */
+export function formulaire(existante: Personne | undefined, saisie = ''): HTMLElement {
+  const [prenomSaisi = '', ...nomSaisi] = saisie.trim().split(/\s+/);
+  const majuscule = (t: string) => t.charAt(0).toLocaleUpperCase('fr') + t.slice(1);
+  const identite = champsIdentite(existante, true, 'M', majuscule(nomSaisi.join(' ')), majuscule(prenomSaisi));
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 
   // Parent sans nom (ou son autre parent) : case « Marié avec … », sans union actuelle à gérer ailleurs.

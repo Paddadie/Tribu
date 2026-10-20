@@ -1,6 +1,7 @@
 // Champs d'identité d'une personne (prénom, nom, sexe, naissance, décès, note), partagés
 // par le formulaire de fiche et l'ajout d'un conjoint à créer.
 
+import { estDansLeFutur } from '../modele/age';
 import { accorder, assemblerDate, decouperDate, homonymes, MOIS, nomComplet, nomsConnus } from '../modele/liste';
 import { estDecede, personnesVisibles, type ChampsPersonne } from '../modele/modele';
 import type { Personne, Sexe } from '../modele/types';
@@ -32,7 +33,8 @@ const champ = (libelle: string, id: string, controle: HTMLElement) =>
  * `suffixe` distingue les ids de deux dates sur le même écran ; `de` complète les libellés (« de naissance ») ;
  * `sansAnnee` admet aussi jour et mois sans année.
  */
-export function champDate(suffixe: string, de: string, valeur: string | undefined, sansAnnee = false) {
+/** `passee` refuse une date entièrement à venir (naissance, décès) ; une union peut être annoncée. */
+export function champDate(suffixe: string, de: string, valeur: string | undefined, sansAnnee = false, passee = false) {
   const date = decouperDate(valeur);
   const jour = h('input', { id: `jour${suffixe}`, type: 'text', inputmode: 'numeric', maxlength: 2, placeholder: 'JJ', value: date.jour, autocomplete: 'off', 'aria-label': `Jour ${de}` });
   const mois = h(
@@ -46,18 +48,22 @@ export function champDate(suffixe: string, de: string, valeur: string | undefine
     groupe: h('div', { class: 'date-groupe' }, jour, mois, annee),
     valeurs: () => [jour.value, mois.value, annee.value],
     viserAnnee: () => annee.focus(),
-    lire: () => assemblerDate({ jour: jour.value, mois: mois.value, annee: annee.value }, de, sansAnnee),
+    lire: () => {
+      const lue = assemblerDate({ jour: jour.value, mois: mois.value, annee: annee.value }, de, sansAnnee);
+      if (passee && estDansLeFutur(lue, new Date())) throw new Error(`Date ${de} dans le futur`);
+      return lue;
+    },
   };
 }
 
-/** `existante` préremplit les champs ; `avecNote` ajoute la note libre ; `nomInitial` préremplit le nom d'une création. */
-export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M', nomInitial = ''): ChampsIdentite {
-  const prenom = h('input', { id: 'prenom', type: 'text', value: existante?.prenom ?? '', autocomplete: 'off', autocapitalize: 'words' });
+/** `existante` préremplit les champs ; `avecNote` ajoute la note libre ; `nomInitial` et `prenomInitial` préremplissent une création. */
+export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M', nomInitial = '', prenomInitial = ''): ChampsIdentite {
+  const prenom = h('input', { id: 'prenom', type: 'text', value: existante?.prenom ?? prenomInitial, autocomplete: 'off', autocapitalize: 'words' });
   // Propositions : les noms de famille déjà saisis (liste native, filtrée par le navigateur pendant la frappe).
   const propositions = h('datalist', { id: 'noms-connus' }, ...nomsConnus(personnesVisibles(lireDonnees())).map((n) => h('option', { value: n })));
   const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? nomInitial, autocomplete: 'off', autocapitalize: 'words', list: 'noms-connus' });
-  const naissance = champDate('', 'de naissance', existante?.naissance, true);
-  const deces = champDate('-deces', 'de décès', existante?.deces, true);
+  const naissance = champDate('', 'de naissance', existante?.naissance, true, true);
+  const deces = champDate('-deces', 'de décès', existante?.deces, true, true);
 
   // Création : `sexeParDefaut` (Homme sauf indication). Fiche existante : son sexe,
   // ou rien de coché si elle date d'avant l'ajout du champ (il reste alors non précisé).

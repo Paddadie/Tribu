@@ -13,13 +13,17 @@ export interface Reglages {
   dernierExport: string | null;
   /** Id de ma fiche, null si non choisie. Gardé même si la fiche disparaît : voir `ficheMoi`. */
   moi: string | null;
+  /** Fêtes du prénom à l'accueil et dans l'agenda. */
+  fetes: boolean;
+  /** Fêtes du prénom dans l'export .ics (non par défaut : une par personne, ça fait beaucoup). */
+  fetesDansIcs: boolean;
 }
 
 export const CLE_REGLAGES = 'tribu:reglages';
 
 type Magasin = Pick<Storage, 'getItem' | 'setItem'>;
 
-export const REGLAGES_PAR_DEFAUT: Reglages = { tri: 'prenom', theme: 'auto', dernierExport: null, moi: null };
+export const REGLAGES_PAR_DEFAUT: Reglages = { tri: 'prenom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false };
 
 /** Charge les réglages ; chaque valeur absente ou inconnue retombe sur sa valeur par défaut. */
 export function chargerReglages(magasin: Magasin): Reglages {
@@ -32,6 +36,8 @@ export function chargerReglages(magasin: Magasin): Reglages {
       theme: o.theme === 'auto' || o.theme === 'clair' || o.theme === 'sombre' ? o.theme : REGLAGES_PAR_DEFAUT.theme,
       dernierExport: typeof o.dernierExport === 'string' && !Number.isNaN(Date.parse(o.dernierExport)) ? o.dernierExport : null,
       moi: typeof o.moi === 'string' && o.moi !== '' ? o.moi : null,
+      fetes: typeof o.fetes === 'boolean' ? o.fetes : REGLAGES_PAR_DEFAUT.fetes,
+      fetesDansIcs: typeof o.fetesDansIcs === 'boolean' ? o.fetesDansIcs : REGLAGES_PAR_DEFAUT.fetesDansIcs,
     };
   } catch {
     return { ...REGLAGES_PAR_DEFAUT };

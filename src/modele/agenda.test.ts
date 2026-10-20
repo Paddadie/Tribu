@@ -29,7 +29,7 @@ describe('evenementsAgenda', () => {
       '7/1 Anniversaire de Léa Test',
       '11/2 Souvenir de Joseph Test',
     ]);
-    expect(bilanAgenda(ev)).toEqual({ naissances: 3, deces: 1, unions: 1 });
+    expect(bilanAgenda(ev)).toEqual({ naissances: 3, deces: 1, unions: 1, fetes: 0 });
   });
 
   it('ignore une date sans jour et une union séparée', () => {
@@ -45,6 +45,15 @@ describe('evenementsAgenda', () => {
     const { d, a } = carnet();
     expect(evenementsAgenda(d).find((x) => x.titre.includes('Camille'))!.uid).toBe(`${a.id}-naissance@tribu`);
     expect(evenementsAgenda(d).map((x) => x.uid)).toEqual(evenementsAgenda(d).map((x) => x.uid));
+  });
+
+  it('ajoute sur demande la fête des vivants, sans année', () => {
+    const { d, a } = carnet();
+    const fetes = evenementsAgenda(d, { fetes: true }).filter((x) => x.type === 'fete');
+    expect(fetes.map((x) => `${x.mois}/${x.jour} ${x.titre}`)).toEqual(['3/22 Fête de Léa Test', '4/25 Fête de Marc Test', '7/14 Fête de Camille Test']);
+    expect(fetes[2]).toMatchObject({ uid: `${a.id}-fete@tribu`, description: 'Sainte Camille.' });
+    expect(fetes[2].annee).toBeUndefined();
+    expect(bilanAgenda(evenementsAgenda(d, { fetes: true })).fetes).toBe(3);
   });
 });
 

@@ -1,6 +1,7 @@
 // Vérification des données (Réglages → Vérifier mes données) : repère ce qui mérite un coup d'œil sans rien modifier.
 // Doublons probables, personnes isolées, dates incohérentes, fiches « Test ». Fonctions pures.
 
+import { estDansLeFutur } from './age';
 import { nomComplet, simplifier } from './liste';
 import { MOTIF_DATE, personnesVisibles } from './modele';
 import type { Donnees, Personne } from './types';
@@ -82,7 +83,7 @@ export function personnesIsolees(d: Donnees): Personne[] {
   return personnesVisibles(d).filter((p) => !reliees.has(p.id));
 }
 
-export function datesIncoherentes(d: Donnees): DateIncoherente[] {
+export function datesIncoherentes(d: Donnees, aujourdhui = new Date()): DateIncoherente[] {
   const visibles = personnesVisibles(d);
   const parId = new Map(visibles.map((p) => [p.id, p]));
   const resultat: DateIncoherente[] = [];
@@ -92,6 +93,9 @@ export function datesIncoherentes(d: Donnees): DateIncoherente[] {
     if (naissance && deces && deces.max < naissance.min) {
       resultat.push({ personne: p, raison: `Décès (${deces.annee}) avant la naissance (${naissance.annee})` });
     }
+    // Refusée à la saisie, mais des données plus anciennes ou importées peuvent en contenir.
+    if (estDansLeFutur(p.naissance, aujourdhui)) resultat.push({ personne: p, raison: `Naissance dans le futur (${naissance?.annee})` });
+    if (estDansLeFutur(p.deces, aujourdhui)) resultat.push({ personne: p, raison: `Décès dans le futur (${deces?.annee})` });
   }
 
   for (const f of d.filiations) {
@@ -127,6 +131,6 @@ export function fichesTest(d: Donnees): Personne[] {
   return personnesVisibles(d).filter((p) => /(^|[^\p{L}])test($|[^\p{L}])/u.test(simplifier(nomComplet(p))));
 }
 
-export function verifier(d: Donnees): Verification {
-  return { doublons: doublonsProbables(d), isolees: personnesIsolees(d), dates: datesIncoherentes(d), tests: fichesTest(d) };
+export function verifier(d: Donnees, aujourdhui = new Date()): Verification {
+  return { doublons: doublonsProbables(d), isolees: personnesIsolees(d), dates: datesIncoherentes(d, aujourdhui), tests: fichesTest(d) };
 }

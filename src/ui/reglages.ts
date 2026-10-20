@@ -86,12 +86,12 @@ export function ecranReglages(): HTMLElement {
     const n = personnesVisibles(lireDonnees()).length;
     resumeExport.textContent = `Enregistre ${pluriel(n)} et leurs liens dans ${nomFichierExport(new Date())}.`;
     dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
-    const bilan = bilanAgenda(evenementsAgenda(lireDonnees()));
-    const total = bilan.naissances + bilan.deces + bilan.unions;
+    const bilan = bilanAgenda(evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs }));
+    const total = bilan.naissances + bilan.deces + bilan.unions + bilan.fetes;
     resumeAgenda.textContent =
       total === 0
         ? 'Aucune date complète pour l’instant : ajoute le jour et le mois d’une naissance, d’un décès ou d’une union.'
-        : `${bilan.naissances} ${bilan.naissances > 1 ? 'naissances' : 'naissance'} · ${bilan.deces} ${bilan.deces > 1 ? 'décès' : 'décès'} · ${bilan.unions} ${bilan.unions > 1 ? 'unions' : 'union'}. Les fiches sans jour ni mois sont ignorées.`;
+        : `${bilan.naissances} ${bilan.naissances > 1 ? 'naissances' : 'naissance'} · ${bilan.deces} ${bilan.deces > 1 ? 'décès' : 'décès'} · ${bilan.unions} ${bilan.unions > 1 ? 'unions' : 'union'}${bilan.fetes > 0 ? ` · ${bilan.fetes} ${bilan.fetes > 1 ? 'fêtes' : 'fête'}` : ''}. Les fiches sans jour ni mois sont ignorées.`;
     boutonAgenda.disabled = total === 0;
     const moi = ficheMoi(lireReglages(), lireDonnees());
     if (moi) {
@@ -119,7 +119,7 @@ export function ecranReglages(): HTMLElement {
   };
 
   const exporterAgenda = async () => {
-    const evenements = evenementsAgenda(lireDonnees());
+    const evenements = evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs });
     if (evenements.length === 0) return;
     try {
       const issue = await exporterFichier(NOM_FICHIER_AGENDA, construireIcs(evenements, new Date()), 'text/calendar');
@@ -178,6 +178,16 @@ export function ecranReglages(): HTMLElement {
       erreurEffacement.textContent = e instanceof Error ? e.message : 'Effacement impossible';
       erreurEffacement.hidden = false;
     }
+  };
+
+  const bascule = (id: string, titre: string, aide: string, coche: boolean, changer: (coche: boolean) => void) => {
+    const boite = h('input', { id, type: 'checkbox', class: 'bascule', checked: coche, onchange: () => changer(boite.checked) });
+    return h(
+      'label',
+      { class: 'interrupteur', for: id },
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, titre), h('span', { class: 'secondaire' }, aide)),
+      boite,
+    );
   };
 
   const date = new Date(__BUILD_DATE__).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -239,6 +249,7 @@ export function ecranReglages(): HTMLElement {
             reglages.theme,
             (theme) => modifierReglages({ theme }),
           ),
+          bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', reglages.fetes, (fetes) => modifierReglages({ fetes })),
         ),
       ),
       h(
@@ -257,6 +268,10 @@ export function ecranReglages(): HTMLElement {
               { class: 'secondaire' },
               'Crée un fichier avec les anniversaires de naissance, les souvenirs de décès et les anniversaires d’union de tes proches. Chaque date revient chaque année.',
             ),
+            bascule('fetes-ics', 'Inclure les fêtes', 'Une date par prénom au calendrier', reglages.fetesDansIcs, (fetesDansIcs) => {
+              modifierReglages({ fetesDansIcs });
+              maj();
+            }),
             resumeAgenda,
             boutonAgenda,
             messageAgenda,

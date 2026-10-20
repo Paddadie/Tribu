@@ -106,14 +106,28 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Homonymes : créer une personne de même prénom et même nom qu'une fiche existante (casse, accents et espaces ignorés) demande confirmation. Vaut pour toute création, pas pour une modification.
 - Retour ou Annuler avec une saisie en cours (ici et dans le formulaire de fiche) demande « Abandonner la saisie ? ». Le geste ou le bouton Retour du téléphone ramène sur l'écran de saisie, intact, et pose la même question.
 
-## Écran d'accueil
-- Liste de toutes les personnes, regroupée par lettre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
-- Un écrou en haut à droite ouvre les Réglages ; à sa gauche, l'icône d'arbre ouvre l'arbre global.
+## Écran d'accueil (#/)
+- « Bonjour <prénom de Moi> » (« Bonsoir » à partir de 18 h ; sans prénom si Moi n'est pas choisi ou est décédé), la date du jour dessous ; l'écrou à droite ouvre les Réglages. L'en-tête n'est pas collant.
+- Champ « Chercher quelqu'un » : les résultats remplacent le reste de l'accueil, avec le lien de chacun avec Moi ; une croix vide le champ ; en pied, « N fiches · Créer « … » » ouvre le formulaire prérempli (premier mot = prénom, la suite = nom).
+- « Aujourd'hui » (carte verte, absente s'il n'y a rien) : anniversaires et unions du jour sur des lignes blanches avec pastille (âge, « 10 ans »…), un couple avec deux avatars, un conjoint décédé en gris ; puis les fêtes du jour, « Bonne fête X » et « Sainte X · lien ». Au-delà de 4 lignes, « + N autres » ouvre l'agenda.
+- « Bientôt » : vignettes des 30 prochains jours, triées, avec le genre en tête (icône) ; les fêtes seulement à 7 jours ; « Tout voir » ouvre l'agenda. Rien dans les 30 jours : « Rien dans les 30 prochains jours. Prochaine date : … ».
+- Souvenir (cadre en pointillés), seulement la veille et le jour d'un anniversaire de décès (date complète, au moins un an) : avatar gris, nom, « décédée le … », « demain » ou « aujourd'hui » et « N ans ». Aucune phrase toute faite.
+- Quatre raccourcis dessinés en 2 × 2, chacun avec son compteur : Groupes d'amis (`#/groupes`), Familles (`#/arbre/familles`, aux couleurs des 4 plus grandes familles), Arbre global (`#/arbre`), Toutes les fiches (`#/personnes`). Bouton « + » pour créer une personne.
+- Aucune personne : ni recherche ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
+
+## Toutes les fiches (#/personnes)
+- Liste de toutes les personnes, regroupée par lettre, avec leur nombre. Tri par prénom (défaut) ou par nom, au choix dans les Réglages ; il s'applique aussi aux listes de choix d'une personne (ajout de conjoint, de parent, d'enfant). En tri par nom, les noms s'écrivent « Nom Prénom ».
 - Champ de filtre par nom (prénom ou nom).
-- En haut, « Prochains anniversaires » : les 3 prochains dans les 30 jours (aujourd'hui compris), avec « Aujourd'hui », « Demain » ou « Dans N jours » et l'âge atteint. Il faut une naissance complète, ou jour et mois sans année (alors sans âge) ; pas pour les décédés ni pour un âge de 0 an. Un 29 février tombe le 28 les années non bissextiles. S'y ajoutent, hors limite de 3, les anniversaires de décès d'aujourd'hui et de demain (date de décès complète, au moins un an) : ligne grise, avatar gris marqué « † », « décédé le 20 octobre 2015 » et « il y a 11 ans », après les naissances du même jour. Bloc absent s'il n'y a rien, masqué pendant un filtrage.
 - Index alphabétique sur le bord droit : les 26 lettres, les absentes estompées. Toucher ou glisser fait défiler jusqu'à la lettre (sinon la suivante présente), affichée en grand pendant le geste. Masqué pendant un filtrage.
-- Bouton « + » pour créer une personne.
-- Liste vide : ni filtre ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
+
+## Agenda (#/agenda)
+- Les 12 prochains mois, groupés par mois (l'année n'est écrite que hors de l'année en cours) ; puces Tout / Anniversaires / Noces / Fêtes / Décès (Fêtes absente si le réglage les cache). Date en bloc à gauche, décès en gris. En bas, « Ajouter à l'agenda du téléphone » ouvre les Réglages.
+
+## Dates fêtées
+- Anniversaire : naissance complète, ou jour et mois sans année (alors sans âge) ; pas pour les décédés ni pour un âge de 0 an. Un 29 février tombe le 28 les années non bissextiles.
+- Union actuelle datée : mariés, le nom des noces (« 10 ans · noces d'étain ») ; sinon « 10 ans ensemble ». Rien après une séparation ; gardée si un seul des deux est décédé. Une union à venir s'annonce « Mariage » ou « Union », « le grand jour ». L'écran Union affiche la durée sous le résumé.
+- Fête du prénom (calendrier dans `fetes.ts`, variantes comprises) : personnes vivantes seulement ; le réglage « Fêtes du prénom » les cache de l'accueil et de l'agenda.
+- Naissance et décès ne peuvent pas être dans le futur (« Date de naissance dans le futur ») ; une union, si.
 
 ## Identité visuelle
 - Vert calmé (#2F6F5E, aussi `theme_color`), Figtree seule, thèmes clair et sombre. Le vert ne marque que ce qui se touche (retour, boutons, +, choix, focus) ; les titres de section sont en gris chaud, capitales posées en CSS ; pastilles (« Cousine », « Marié(e) », « Adoptif(ve) ») neutres.
@@ -124,9 +138,9 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Icône : trois anneaux entrelacés, blanc cassé sur vert.
 
 ## Navigation
-- Retour (et Annuler) revient à l'écran précédent de l'appli ; si l'appli a été ouverte directement sur cet écran, il ouvre la liste (ou la fiche) à sa place. Il n'ajoute jamais d'entrée à l'historique du téléphone.
-- Un enregistrement (modification, ajout de conjoint, de parent ou d'enfant, union, lien) revient sur la fiche comme Retour. Une création remplace le formulaire par la nouvelle fiche ; une suppression remplace la fiche par la liste.
-- La liste retrouve sa position de défilement au retour ; les autres écrans s'ouvrent en haut.
+- Retour (et Annuler) revient à l'écran précédent de l'appli ; si l'appli a été ouverte directement sur cet écran, il ouvre l'accueil (ou la fiche) à sa place. Il n'ajoute jamais d'entrée à l'historique du téléphone.
+- Un enregistrement (modification, ajout de conjoint, de parent ou d'enfant, union, lien) revient sur la fiche comme Retour. Une création remplace le formulaire par la nouvelle fiche ; une suppression remplace la fiche par l'accueil.
+- L'accueil et Toutes les fiches retrouvent leur position de défilement au retour ; les autres écrans s'ouvrent en haut.
 
 ## Suppression
 - Confirmation obligatoire.
@@ -135,10 +149,10 @@ V1 : moi seul. Partage avec des proches : plus tard.
 
 ## Réglages (écran ouvert par l'écrou)
 - Moi : ma fiche, qui sert au lien affiché sur chaque fiche. Mémorisée sur l'appareil, hors des données exportées.
-- Affichage : tri de la liste (prénom ou nom), thème (auto, clair, sombre). Mémorisés sur l'appareil, hors des données exportées.
-- Agenda : « Exporter vers l’agenda » crée `tribu.ics` (partage ou téléchargement, comme l’export JSON). Un événement annuel sur la journée (RRULE) par naissance, décès (« Souvenir de… ») et union actuelle datée (« Anniversaire de mariage de… » si mariés) ; UID stables (id + type), donc un réimport met à jour sans doublon. Seules les dates avec jour et mois comptent (les naissances « --MM-JJ » sans année aussi) ; l’année connue va dans la description, pas l’âge. Le 29 février revient le dernier jour de février. Bouton grisé sans date exploitable. Aide repliable : agenda dédié « Tribu », notifications la veille et le jour même, réexporter après des ajouts.
+- Affichage : tri de la liste (prénom ou nom), thème (auto, clair, sombre), « Fêtes du prénom » (allumé par défaut). Mémorisés sur l'appareil, hors des données exportées.
+- Agenda : « Exporter vers l’agenda » crée `tribu.ics` (partage ou téléchargement, comme l’export JSON). Un événement annuel sur la journée (RRULE) par naissance, décès (« Souvenir de… ») et union actuelle datée (« Anniversaire de mariage de… » si mariés) ; UID stables (id + type), donc un réimport met à jour sans doublon. Seules les dates avec jour et mois comptent (les naissances « --MM-JJ » sans année aussi) ; l’année connue va dans la description, pas l’âge. Le 29 février revient le dernier jour de février. Les fêtes n’y vont que si « Inclure les fêtes » est allumé (éteint par défaut). Bouton grisé sans date exploitable. Aide repliable : agenda dédié « Tribu », notifications la veille et le jour même, réexporter après des ajouts.
 - Exports (section « Exports », avec l’agenda) : « Exporter l’arbre en PNG » dessine tout l’arbre global autour de Moi sur un canvas (`src/ui/arbreImage.ts`, géométrie partagée avec l’écran via `geometrieArbre.ts`) : fond blanc quel que soit le thème, titre « Arbre de [Moi] » et date, lignées en couleur, couples, adoptions en pointillé, bulle « Tes amis » et groupes, noms sous chaque rond, sans âge ni date. ×2 de netteté, plus grand côté plafonné à 4 096 px. Fichier `tribu-arbre-AAAA-MM-JJ.png` par partage ou téléchargement. Bouton grisé sans « Moi ».
-- Données → « Vérifier mes données » (`#/verification`), lecture seule, quatre rubriques avec compteur (« 0 » = message vide) : doublons probables (même prénom et noms à 1 lettre près, ou même nom et prénoms à 1 lettre près ou préfixe d’au moins 3 lettres ; écartés si les années de naissance diffèrent ou si l’un est parent de l’autre ; chaque paire montre ses deux fiches), personnes isolées (ni filiation, ni union, ni groupe), dates incohérentes (décès avant naissance, qui ne vient que d’un import ; parent né après son enfant ou moins de 12 ans avant ; union datée avant la naissance de l’un des deux ; dates partielles comparées par bornes), fiches dont le prénom ou le nom est le mot « test ».
+- Données → « Vérifier mes données » (`#/verification`), lecture seule, quatre rubriques avec compteur (« 0 » = message vide) : doublons probables (même prénom et noms à 1 lettre près, ou même nom et prénoms à 1 lettre près ou préfixe d’au moins 3 lettres ; écartés si les années de naissance diffèrent ou si l’un est parent de l’autre ; chaque paire montre ses deux fiches), personnes isolées (ni filiation, ni union, ni groupe), dates incohérentes (décès avant naissance, qui ne vient que d’un import ; parent né après son enfant ou moins de 12 ans avant ; union datée avant la naissance de l’un des deux ; naissance ou décès dans le futur ; dates partielles comparées par bornes), fiches dont le prénom ou le nom est le mot « test ».
 - Sauvegarde : export de toutes les données dans un fichier JSON `tribu-AAAA-MM-JJ.json`, par la feuille de partage du téléphone, sinon par téléchargement. Message selon l'issue : « Fichier partagé. », « Partage annulé : rien n’a été exporté. », « Téléchargement lancé : regarde dans le dossier Téléchargements. » ou « Export impossible sur cet appareil. » Au-dessus du bouton : « L’export contient tes notes en clair : garde le fichier pour toi. »
 - Date du dernier export affichée sous le bouton (« Jamais », ou « jj/mm/aaaa · il y a N jours ») ; mémorisée avec les réglages, mise à jour sauf si le partage est annulé.
 - Import d'un fichier JSON, validé avant toute écriture, avec confirmation avant d'écraser des données existantes.
@@ -163,6 +177,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 
 ## Parent sans nom
 - Un enfant qui n'a qu'un parent voit un « ? » gris à côté de lui dans l'arbre global, relié en pointillés gris ; le toucher l'enregistre comme « Parent inconnu » et ouvre sa fiche (note, décès, union, nom). Sa fiche montre l'autre parent en pointillés avec la fratrie, la case « Marié(e) avec X » à la modification et le « Lien avec toi ».
+- Tant qu'il n'a pas de nom, il n'apparaît ni à l'accueil (recherche, dates, compteurs), ni dans Toutes les fiches, ni dans le choix de « Moi », ni parmi les personnes à ajouter à un groupe : on l'ouvre depuis la fiche d'un proche ou l'arbre global. Une fois nommé, il redevient une personne ordinaire. Il reste dans « Vérifier mes données » et dans les choix de lien.
 
 ## Hors V1 (plus tard)
 - Photos.

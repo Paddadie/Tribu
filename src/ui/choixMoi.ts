@@ -1,7 +1,7 @@
 // Feuille « Quelle est ta fiche ? » : choix de la fiche « Moi » (réglage), avec recherche.
 
 import { filtrerParNom, comparateur, nomListe } from '../modele/liste';
-import { personnesVisibles } from '../modele/modele';
+import { personnesListees } from '../modele/modele';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
 import { contenuLigne } from './lignePersonne';
@@ -23,7 +23,7 @@ export function ouvrirChoixMoi(apres: () => void): void {
   const dessiner = () => {
     const tri = lireReglages().tri;
     const actuelle = lireReglages().moi;
-    const personnes = filtrerParNom(personnesVisibles(lireDonnees()).sort(comparateur(tri)), filtre);
+    const personnes = filtrerParNom(personnesListees(lireDonnees()).sort(comparateur(tri)), filtre);
     liste.replaceChildren(
       ...(personnes.length === 0
         ? [h('p', { class: 'vide' }, filtre ? 'Aucun résultat.' : 'Aucune personne. Crées-en une depuis la liste.')]

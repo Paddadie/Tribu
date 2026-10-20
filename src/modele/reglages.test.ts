@@ -12,21 +12,24 @@ function magasin(contenu?: string) {
 
 describe('réglages', () => {
   it('donne les valeurs par défaut quand rien n\'est stocké', () => {
-    expect(chargerReglages(magasin())).toEqual({ tri: 'prenom', theme: 'auto', dernierExport: null, moi: null });
+    expect(chargerReglages(magasin())).toEqual({ tri: 'prenom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
   });
   it('relit ce qui a été sauvegardé', () => {
     const m = magasin();
-    const r = { tri: 'nom', theme: 'sombre', dernierExport: '2026-10-12T09:30:00.000Z', moi: 'id-moi' } as const;
+    const r = { tri: 'nom', theme: 'sombre', dernierExport: '2026-10-12T09:30:00.000Z', moi: 'id-moi', fetes: false, fetesDansIcs: true } as const;
     sauvegarderReglages(m, r);
     expect(chargerReglages(m)).toEqual(r);
   });
   it('remplace chaque valeur inconnue par son défaut, sans toucher à l\'autre', () => {
-    expect(chargerReglages(magasin('{"tri":"age","theme":"clair"}'))).toEqual({ tri: 'prenom', theme: 'clair', dernierExport: null, moi: null });
-    expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({ tri: 'nom', theme: 'auto', dernierExport: null, moi: null });
+    expect(chargerReglages(magasin('{"tri":"age","theme":"clair"}'))).toEqual({ tri: 'prenom', theme: 'clair', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
+    expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({ tri: 'nom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
   });
   it('ignore une date de dernier export invalide', () => {
     expect(chargerReglages(magasin('{"dernierExport":"hier"}')).dernierExport).toBeNull();
     expect(chargerReglages(magasin('{"dernierExport":42}')).dernierExport).toBeNull();
+  });
+  it('garde les fêtes affichées et hors du .ics si la valeur n’est pas un booléen', () => {
+    expect(chargerReglages(magasin('{"fetes":"non","fetesDansIcs":1}'))).toMatchObject({ fetes: true, fetesDansIcs: false });
   });
   it('ignore une fiche « Moi » qui n’est pas un id', () => {
     expect(chargerReglages(magasin('{"moi":42}')).moi).toBeNull();

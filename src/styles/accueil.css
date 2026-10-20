@@ -65,48 +65,409 @@
   margin-bottom: 16px;
 }
 
-/* Prochains anniversaires : au-dessus de la liste, même marges (place de l'index à droite). */
-.anniversaires {
-  padding: 0 28px 4px 20px;
+/* Accueil : en-tête non collant (la salutation n'a pas à rester), zone sous la recherche. */
+.entete-accueil:has(.salut) {
+  position: static;
 }
 
-.anniversaires .quand {
+.salut {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.salut .secondaire {
+  font-size: var(--t2);
+  font-weight: normal;
+  letter-spacing: 0;
+}
+
+/* Champ de recherche : la croix remplace celle du navigateur. */
+.champ-recherche input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.champ-recherche .effacer {
+  flex-shrink: 0;
+  display: flex;
+  margin-right: -8px;
+  padding: 8px;
+  color: var(--secondaire);
+}
+
+.champ-recherche .effacer[hidden] {
+  display: none;
+}
+
+.accueil {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 20px 100px;
+}
+
+.pied-recherche {
+  text-align: center;
+  font-size: var(--t2);
+}
+
+.pied-recherche a,
+.titre-lien a,
+.aujourdhui .autres {
+  color: var(--accent-texte);
+  font-weight: var(--gras);
+  text-decoration: none;
+}
+
+.titre-lien {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.titre-lien a {
+  font-size: var(--t2);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Petit pictogramme rond (fête, agenda). */
+.picto {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+/* Un couple : deux avatars qui se chevauchent. */
+.duo {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.duo .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: var(--t1);
+}
+
+.duo .avatar + .avatar {
+  margin-left: -10px;
+  box-shadow: 0 0 0 2px var(--carte);
+}
+
+/* Personne décédée : avatar gris, sans la couleur de sa famille. */
+.avatar.decede {
+  background: var(--pastille);
+  color: var(--secondaire);
+}
+
+.etiquette.accent {
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+/* Aujourd'hui : carte verte, lignes blanches pour les personnes, fêtes en dessous. */
+.aujourdhui {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--rayon-l);
+  background: var(--accent);
+  color: var(--sur-accent);
+}
+
+.aujourdhui .tete {
+  padding: 8px 10px 6px;
+  font-size: var(--t1);
+  font-weight: var(--gras);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aujourdhui .carte {
+  border: 0;
+}
+
+.aujourdhui .ligne {
+  min-height: 56px;
+  padding: 10px 12px;
+  color: var(--secondaire);
+  text-decoration: none;
+}
+
+.aujourdhui .fete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.aujourdhui .fete .ligne-nom {
+  font-size: var(--t2);
+  color: inherit;
+}
+
+.aujourdhui .fete .detail {
+  font-size: var(--t1);
+  opacity: 0.85;
+}
+
+.aujourdhui .picto {
+  background: color-mix(in srgb, var(--sur-accent) 18%, transparent);
+  color: var(--sur-accent);
+}
+
+.aujourdhui .autres {
+  padding: 6px 10px 8px;
+  color: var(--sur-accent);
+  font-size: var(--t2);
+}
+
+/* Bientôt : vignettes qui défilent de côté jusqu'au bord de l'écran. */
+.defile {
+  display: flex;
+  gap: 10px;
+  margin: 0 -20px;
+  padding: 0 20px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding: 0 20px;
+  scrollbar-width: none;
+}
+
+.defile::-webkit-scrollbar {
+  display: none;
+}
+
+.vignette {
+  flex: none;
+  width: 136px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  color: var(--secondaire);
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.vignette .type {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--t1);
+  font-weight: var(--gras);
+  color: var(--accent-texte);
+}
+
+.vignette .ligne-nom {
+  max-width: 100%;
+  font-size: var(--t2);
+  line-height: 1.25;
+}
+
+.vignette .secondaire {
+  font-size: var(--t1);
+}
+
+.vignette.fin {
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px dashed var(--trait);
+  color: var(--accent-texte);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+}
+
+.calme {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  font-size: var(--t2);
+  color: var(--secondaire);
+}
+
+.calme strong {
+  color: var(--encre);
+  font-weight: var(--gras);
+}
+
+/* Souvenir : décès du jour ou du lendemain, sobre, encadré en pointillés. */
+.souvenir {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--trait);
+  border-radius: var(--rayon-m);
+  font-size: var(--t2);
+  color: var(--secondaire);
+  text-decoration: none;
+}
+
+.souvenir .quand {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+}
+
+/* Quatre raccourcis en 2 × 2, chacun avec un petit dessin aux vraies couleurs. */
+.raccourcis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.raccourci {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  color: var(--encre);
+  text-decoration: none;
+}
+
+.raccourci strong {
+  font-size: var(--t2);
+  font-weight: var(--gras);
+}
+
+.raccourci .secondaire {
+  font-size: var(--t1);
+}
+
+.raccourci .dessin {
+  width: 72px;
+  height: 40px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.dessin .traits {
+  fill: none;
+  stroke: var(--trait);
+  stroke-width: 2;
+}
+
+.dessin .cerne {
+  stroke: var(--carte);
+  stroke-width: 2;
+}
+
+/* En-tête avec retour à gauche du titre (Toutes les fiches, Agenda). */
+.entete-gauche {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -12px;
+}
+
+/* Agenda : filtres en puces, date en bloc à gauche, décès en gris. */
+.puces {
+  display: flex;
+  gap: 6px;
+  margin: 0 -20px;
+  padding: 0 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.puces::-webkit-scrollbar {
+  display: none;
+}
+
+.puce {
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--bord);
+  background: var(--carte);
+  color: var(--secondaire);
+  font: inherit;
   font-size: var(--t2);
 }
 
-.anniversaires .quand strong {
+.puce[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--sur-accent);
+  font-weight: var(--gras);
+}
+
+.agenda .groupe:last-child {
+  margin-bottom: 0;
+}
+
+.agenda .ligne {
+  text-decoration: none;
+}
+
+.datebloc {
+  flex-shrink: 0;
+  width: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.datebloc strong {
+  font-size: var(--t4);
+  font-weight: var(--gras);
   color: var(--encre);
 }
 
-.anniversaires .aujourdhui {
-  background: var(--pastille);
+.datebloc span {
+  font-size: var(--t1);
 }
 
-/* Anniversaire de décès : ligne grise, avatar en gris marqué d'une croix. */
-.anniversaires .ligne-deces .ligne-nom,
-.anniversaires .ligne-deces .quand strong {
+.datebloc.auj strong,
+.datebloc.auj span {
+  color: var(--accent-texte);
+}
+
+.ligne.gris .ligne-nom {
   color: var(--secondaire);
 }
 
-.anniversaires .ligne-deces .avatar {
-  position: relative;
-  overflow: visible;
-  filter: grayscale(1);
-  opacity: 0.72;
-}
-
-.anniversaires .ligne-deces .avatar::after {
-  content: '†';
-  position: absolute;
-  top: -6px;
-  right: -4px;
-  font-size: 13px;
-  color: var(--secondaire);
+.lien-ics {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-s);
+  color: var(--accent-texte);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  text-decoration: none;
 }
 
 /* Dates de la fiche : l'âge, sur sa propre ligne, ressort. */
@@ -304,4 +665,3 @@
   justify-content: center;
   box-shadow: 0 6px 16px var(--ombre-bouton);
 }
-

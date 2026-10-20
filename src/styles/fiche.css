@@ -525,6 +525,13 @@ fieldset.champ legend {
   cursor: pointer;
 }
 
+/* Dans un bloc de réglages : sans carte propre, ni marge en plus. */
+.bloc-reglages .interrupteur {
+  display: flex;
+  min-height: 0;
+  padding: 0;
+}
+
 .bascule {
   appearance: none;
   flex-shrink: 0;

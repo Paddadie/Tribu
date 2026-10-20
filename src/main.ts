@@ -2,6 +2,7 @@ import "@fontsource-variable/figtree";
 import "./style.css";
 import { initPwa } from "./pwa";
 import { accueil } from "./ui/accueil";
+import { ecranAgenda } from "./ui/agenda";
 import { ajoutAmi } from "./ui/ajoutAmi";
 import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
@@ -14,21 +15,24 @@ import { ecranAjoutMembre, ecranGroupe, ecranGroupes, ecranNouveauGroupe } from 
 import { ecranIllisible } from "./ui/illisible";
 import { ecranLien } from "./ui/lien";
 import { demarrerNavigation, profondeurCourante, remplacer } from "./ui/navigation";
+import { ecranPersonnes } from "./ui/personnes";
 import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
 import { ecranVerification } from "./ui/verification";
 
 // Routage par hash (compatible GitHub Pages) :
-//   #/                 liste          #/personne/<id>   fiche
+//   #/                 accueil        #/personnes       toutes les fiches     #/personne/<id>   fiche
+//   #/agenda           dates des 12 prochains mois
 //   #/reglages         réglages (tri, thème, sauvegarde)
-//   #/nouveau          création       #/modifier/<id>   modification
+//   #/nouveau          création       #/nouveau/<texte>  création, prénom et nom tirés de la recherche
+//   #/modifier/<id>    modification
 //   #/conjoint/<id>    ajout d'un conjoint à la personne      #/ami/<id>   ajout d'un ami
 //   #/union/<union>/<id>      union (marié, séparation, rétablissement), ouverte depuis la fiche de <id>
 //   #/parent/<id>      ajout d'un parent à la personne    #/enfant/<id>   ajout d'un enfant
 //   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
 //   #/verification    vérification des données (doublons, isolés, dates)
-//   #/arbre            arbre de tous les liens autour de « Moi »
+//   #/arbre            arbre de tous les liens autour de « Moi »      #/arbre/familles   le même, feuille Familles ouverte
 //   #/groupes          groupes d'amis      #/groupe/nouveau   création      #/groupe/<id>   détail      #/groupe/<id>/ajouter   ajout d'un membre
 const app = document.querySelector<HTMLElement>("#app");
 
@@ -39,7 +43,9 @@ function vue(route: string): HTMLElement {
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
-  if (section === "arbre") return ecranArbre();
+  if (section === "arbre") return ecranArbre(id === "familles" ? "familles" : undefined);
+  if (section === "personnes") return ecranPersonnes();
+  if (section === "agenda") return ecranAgenda();
   if (section === "verification") return ecranVerification();
   if (section === "groupes") return ecranGroupes();
   if (section === "groupe" && id === "nouveau") return ecranNouveauGroupe();
@@ -47,7 +53,7 @@ function vue(route: string): HTMLElement {
     const groupe = lireDonnees().groupes.find((g) => g.id === id);
     if (groupe) return route.split("/")[3] === "ajouter" ? ecranAjoutMembre(groupe) : ecranGroupe(groupe);
   }
-  if (section === "nouveau") return formulaire(undefined);
+  if (section === "nouveau") return formulaire(undefined, id ? decodeURIComponent(id) : "");
   if (section === "personne" && personne) return fiche(personne);
   if (section === "modifier" && personne) return formulaire(personne);
   if (section === "conjoint" && personne) return ajoutConjoint(personne);
@@ -62,16 +68,17 @@ function vue(route: string): HTMLElement {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
     if (origine) return ecranLien(id, origine);
   }
-  // Route inconnue ou personne introuvable (supprimée) : retour à la liste.
-  if (!estListe(route)) remplacer("#/", false);
+  // Route inconnue ou personne introuvable (supprimée) : retour à l'accueil.
+  if (!estAccueil(route)) remplacer("#/", false);
   return accueil();
 }
 
-const estListe = (route: string | undefined) => route === "#/" || route === "" || route === "#";
+const estAccueil = (route: string | undefined) => route === "#/" || route === "" || route === "#";
+// Écrans dont la position de défilement est retrouvée en y revenant ; les autres s'ouvrent en haut.
+const cleDefilement = (route: string | undefined) => (estAccueil(route) ? "#/" : route === "#/personnes" ? route : undefined);
 
-// Position de défilement de la liste, retrouvée en y revenant ; les autres écrans s'ouvrent en haut.
 let routeAffichee: string | undefined;
-let defilementListe = 0;
+const defilements = new Map<string, number>();
 
 // Glissement latéral (ANIM-01) : sens déduit de la profondeur d'historique, sans animation si le téléphone demande moins de mouvement.
 let profondeurAffichee = -1;
@@ -80,11 +87,13 @@ const peutAnimer = () =>
 
 function afficher() {
   if (!app) return;
-  if (estListe(routeAffichee)) defilementListe = window.scrollY;
+  const quittee = cleDefilement(routeAffichee);
+  if (quittee) defilements.set(quittee, window.scrollY);
   const dessiner = () => {
     app.replaceChildren(vue(location.hash));
     routeAffichee = location.hash;
-    window.scrollTo(0, estListe(routeAffichee) ? defilementListe : 0);
+    const cle = cleDefilement(routeAffichee);
+    window.scrollTo(0, (cle && defilements.get(cle)) || 0);
   };
   const profondeur = profondeurCourante();
   const sens = profondeur > profondeurAffichee ? "avant" : profondeur < profondeurAffichee ? "arriere" : null;

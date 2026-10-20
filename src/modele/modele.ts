@@ -97,6 +97,11 @@ export function personnesVisibles(d: Donnees): Personne[] {
   return d.personnes.filter((p) => !p.inconnu);
 }
 
+/** Les personnes de la liste d'accueil et des choix : sans les parents « ? », qu'on ouvre depuis un proche ou l'arbre. */
+export function personnesListees(d: Donnees): Personne[] {
+  return personnesVisibles(d).filter((p) => !p.sansNom);
+}
+
 function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
   const prenom = champs.prenom.trim();
   const nom = champs.nom.trim();

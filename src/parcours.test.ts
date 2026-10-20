@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele/modele';
 import { charger, exporterJson, sauvegarder } from './modele/stockage';
+import { entreesCalendrier } from './modele/fetes';
 import type { Donnees, Sexe } from './modele/types';
 
 vi.mock('./pwa', () => ({ initPwa: () => {} }));
@@ -48,7 +49,7 @@ afterEach(() => {
 const pause = () => new Promise((r) => setTimeout(r, 5));
 
 /** Lance l'appli sur `route` avec `donnees` déjà enregistrées. */
-async function demarrer(donnees: Donnees = donneesVides(), route = '#/', reglages?: { moi: string }) {
+async function demarrer(donnees: Donnees = donneesVides(), route = '#/', reglages?: { moi?: string; fetes?: boolean }) {
   localStorage.clear();
   sauvegarder(localStorage, donnees);
   if (reglages) localStorage.setItem('tribu:reglages', JSON.stringify(reglages));
@@ -64,6 +65,10 @@ async function demarrer(donnees: Donnees = donneesVides(), route = '#/', reglage
 
 const ecran = () => document.querySelector<HTMLElement>('#app')!;
 const titre = () => ecran().querySelector('h1')?.textContent;
+/** Titre de l'accueil : « Bonjour » (ou « Bonsoir ») suivi de la date. */
+const ACCUEIL = /^Bon(jour|soir)/;
+/** Texte du raccourci « Toutes les fiches » de l'accueil (avec le nombre de fiches). */
+const fiches = () => trouver('a.raccourci', 'Toutes les fiches').textContent;
 const retour = () => toucher(ecran().querySelector<HTMLElement>('.barre a[aria-label="Retour"], .barre a[aria-label="Annuler"]')!);
 
 /** Données réellement enregistrées dans le stockage. */
@@ -136,9 +141,9 @@ describe('création d’une personne', () => {
     expect(location.hash).toBe(`#/personne/${anne.id}`);
     expect(titre()).toBe('Anne Martin');
 
-    // La fiche a pris la place du formulaire : Retour revient à la liste.
+    // La fiche a pris la place du formulaire : Retour revient à l'accueil.
     await retour();
-    expect(titre()).toBe('Tribu');
+    expect(titre()).toMatch(ACCUEIL);
   });
 
   it('sans prénom ni nom, affiche une erreur et n’enregistre rien', async () => {
@@ -399,7 +404,7 @@ describe('ajout d’un lien', () => {
     expect(d.personnes.filter((p) => p.inconnu)).toHaveLength(1);
 
     // Le parent inconnu reste invisible : la liste ne compte que les vraies personnes.
-    await demarrer(d, '#/');
+    await demarrer(d, '#/personnes');
     expect(ecran().textContent).toContain('5 personnes');
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(5);
 
@@ -573,7 +578,7 @@ describe('retrait sans confirmation, annulable', () => {
 describe('index alphabétique', () => {
   it('montre les 26 lettres, estompe les absentes, disparaît pendant un filtrage', async () => {
     const { donnees } = famille();
-    await demarrer(donnees);
+    await demarrer(donnees, '#/personnes');
     const index = ecran().querySelector<HTMLElement>('.index')!;
     expect(index.children).toHaveLength(26);
     const absentes = [...index.querySelectorAll('.absente')].map((e) => e.textContent);
@@ -671,7 +676,7 @@ describe('import', () => {
 
     expect(dialogue()).toBeNull();
     expect(enregistrees().personnes).toHaveLength(2);
-    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(2);
+    expect(fiches()).toContain('2 fiches');
   });
 });
 
@@ -694,7 +699,7 @@ describe('suppression d’une personne', () => {
     expect(apres.unions).toHaveLength(0);
     expect(apres.filiations).toEqual([expect.objectContaining({ parent: ids.Bruno, enfant: ids.Chloé })]);
     expect(location.hash).toBe('#/');
-    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(3);
+    expect(fiches()).toContain('3 fiches');
   });
 });
 
@@ -731,7 +736,7 @@ describe('thème', () => {
 describe('navigation', () => {
   it('liste → Anne → Chloé : Retour revient sur Anne, puis sur la liste à la même position', async () => {
     const { donnees } = famille();
-    await demarrer(donnees);
+    await demarrer(donnees, '#/personnes');
     window.scrollTo(0, 300);
     await toucher(trouver('a.ligne', 'Anne'));
     expect(window.scrollY).toBe(0);
@@ -742,7 +747,7 @@ describe('navigation', () => {
     await retour();
     expect(titre()).toBe('Anne Martin');
     await retour();
-    expect(titre()).toBe('Tribu');
+    expect(titre()).toBe('Toutes les fiches');
     expect(window.scrollY).toBe(300);
     // Retour recule dans l'historique au lieu d'y empiler la liste.
     expect(history.length).toBe(entrees);
@@ -750,7 +755,7 @@ describe('navigation', () => {
 
   it('deux touchers rapides sur Retour ne reculent que d’un écran', async () => {
     const { donnees } = famille();
-    await demarrer(donnees);
+    await demarrer(donnees, '#/personnes');
     await toucher(trouver('a.ligne', 'Anne'));
     await toucher(trouver('a.ligne-lien', 'Chloé'));
 
@@ -761,20 +766,20 @@ describe('navigation', () => {
     expect(titre()).toBe('Anne Martin');
   });
 
-  it('appli ouverte sur une fiche : Retour ouvre la liste à sa place', async () => {
+  it('appli ouverte sur une fiche : Retour ouvre l’accueil à sa place', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/personne/${ids.Anne}`);
     const entrees = history.length;
 
     await retour();
     expect(location.hash).toBe('#/');
-    expect(titre()).toBe('Tribu');
+    expect(titre()).toMatch(ACCUEIL);
     expect(history.length).toBe(entrees);
   });
 
   it('une modification enregistrée revient sur la fiche ; Retour mène ensuite à la liste', async () => {
     const { donnees, ids } = famille();
-    await demarrer(donnees);
+    await demarrer(donnees, '#/personnes');
     await toucher(trouver('a.ligne', 'Anne'));
     await toucher(trouver('a', 'Modifier'));
     saisir('nom', 'Leroy');
@@ -783,7 +788,7 @@ describe('navigation', () => {
     expect(location.hash).toBe(`#/personne/${ids.Anne}`);
     expect(titre()).toBe('Anne Leroy');
     await retour();
-    expect(titre()).toBe('Tribu');
+    expect(titre()).toBe('Toutes les fiches');
   });
 });
 
@@ -793,8 +798,8 @@ describe('route vers une personne supprimée', () => {
     await demarrer(donnees, `#/${section}/inconnu`);
 
     expect(location.hash).toBe('#/');
-    expect(titre()).toBe('Tribu');
-    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
+    expect(titre()).toMatch(ACCUEIL);
+    expect(fiches()).toContain('4 fiches');
   });
 });
 
@@ -906,7 +911,7 @@ describe('mémo : décès, âge et anniversaires', () => {
     return { donnees: d, ids };
   };
 
-  it('l’accueil montre les prochains anniversaires, sans les décédés, et les masque pendant un filtrage', async () => {
+  it('l’accueil montre les dates du jour et les prochaines, sans les décédés, et les cache pendant une recherche', async () => {
     const { donnees } = avec(
       { prenom: 'Léa', naissance: dans(0, 8) },
       { prenom: 'Paulette', naissance: dans(5, 67) },
@@ -914,56 +919,49 @@ describe('mémo : décès, âge et anniversaires', () => {
       { prenom: 'Loin', naissance: dans(60, 40) },
     );
     await demarrer(donnees);
-    const bloc = ecran().querySelector<HTMLElement>('.anniversaires')!;
-    expect(bloc.hidden).toBe(false);
-    const lignes = [...bloc.querySelectorAll('.ligne')].map((l) => l.textContent);
-    expect(lignes).toHaveLength(2);
-    expect(lignes[0]).toContain('Léa Test');
-    expect(lignes[0]).toContain('Aujourd’hui');
-    expect(lignes[0]).toContain('8 ans');
-    expect(lignes[1]).toContain('Paulette Test');
-    expect(lignes[1]).toContain('Dans 5 jours');
-    expect(lignes[1]).toContain('67 ans');
-    expect(bloc.textContent).not.toContain('Mort');
+    const jour = ecran().querySelector<HTMLElement>('.aujourdhui')!;
+    expect(jour.textContent).toContain('Léa Test');
+    expect(jour.textContent).toContain('8 ans');
+    expect(trouver('.vignette', 'Paulette').textContent).toContain('67 ans');
+    const bientot = ecran().querySelector<HTMLElement>('.bientot')!.textContent;
+    expect(bientot).not.toContain('Mort');
+    expect(bientot).not.toContain('Loin');
 
     const champ = ecran().querySelector<HTMLInputElement>('input[type=search]')!;
     champ.value = 'Léa';
     champ.dispatchEvent(new Event('input'));
-    expect(bloc.hidden).toBe(true);
+    expect(ecran().querySelector('.aujourdhui')).toBeNull();
+    expect(trouver('a.ligne', 'Léa Test')).toBeTruthy();
+    expect(ecran().querySelector('.pied-recherche')!.textContent).toBe('1 fiche · Créer « Léa »');
     champ.value = '';
     champ.dispatchEvent(new Event('input'));
-    expect(bloc.hidden).toBe(false);
+    expect(ecran().querySelector('.aujourdhui')).not.toBeNull();
   });
 
-  it('l’accueil ajoute les anniversaires de décès d’aujourd’hui et de demain, hors limite de 3', async () => {
-    const { donnees } = avec(
-      { prenom: 'A', naissance: dans(1, 30) },
-      { prenom: 'B', naissance: dans(2, 30) },
-      { prenom: 'C', naissance: dans(3, 30) },
-      { prenom: 'Partie', deces: dans(1, 11) },
-      { prenom: 'Lointaine', deces: dans(5, 11) },
-    );
+  it('l’accueil rappelle sobrement un décès de demain, pas un plus lointain', async () => {
+    const { donnees } = avec({ prenom: 'Partie', deces: dans(1, 11) }, { prenom: 'Lointaine', deces: dans(5, 11) });
     await demarrer(donnees);
-    const lignes = [...ecran().querySelectorAll('.anniversaires .ligne')];
-    expect(lignes).toHaveLength(4);
-    expect(lignes[1].classList.contains('ligne-deces')).toBe(true);
-    expect(lignes[1].textContent).toContain('Partie Test');
-    expect(lignes[1].textContent).toContain('décédée le');
-    expect(lignes[1].textContent).toContain('Demain');
-    expect(lignes[1].textContent).toContain('il y a 11 ans');
-    expect(ecran().querySelector('.anniversaires')!.textContent).not.toContain('Lointaine');
+    const souvenirs = [...ecran().querySelectorAll('a.souvenir')].map((s) => s.textContent);
+    expect(souvenirs).toHaveLength(1);
+    expect(souvenirs[0]).toContain('Partie Test');
+    expect(souvenirs[0]).toContain('décédée le');
+    expect(souvenirs[0]).toContain('demain');
+    expect(souvenirs[0]).toContain('11 ans');
+    expect(ecran().querySelector('.accueil')!.textContent).not.toContain('Lointaine');
   });
 
-  it('l’accueil montre la section pour un seul anniversaire de décès', async () => {
+  it('l’accueil rappelle un décès d’aujourd’hui', async () => {
     const { donnees } = avec({ prenom: 'Partie', deces: dans(0, 3) });
     await demarrer(donnees);
-    expect(ecran().querySelector<HTMLElement>('.anniversaires')!.hidden).toBe(false);
+    expect(trouver('a.souvenir', 'Partie').textContent).toContain('aujourd’hui');
   });
 
-  it('l’accueil n’a pas de bloc quand personne n’a d’anniversaire proche', async () => {
+  it('l’accueil n’a ni « Aujourd’hui » ni vignette quand rien n’approche, mais annonce la prochaine date', async () => {
     const { donnees } = avec({ prenom: 'Loin', naissance: dans(60, 40) }, { prenom: 'Sans' });
     await demarrer(donnees);
-    expect(ecran().querySelector<HTMLElement>('.anniversaires')!.hidden).toBe(true);
+    expect(ecran().querySelector('.aujourdhui')).toBeNull();
+    expect(ecran().querySelector('.vignette')).toBeNull();
+    expect(ecran().querySelector('.calme')!.textContent).toContain('Prochaine date');
   });
 
   it('la fiche affiche l’âge d’une personne vivante, et décès puis « Morte à … » pour une décédée', async () => {
@@ -978,7 +976,7 @@ describe('mémo : décès, âge et anniversaires', () => {
 
   it('une ligne de liste d’une personne décédée affiche ses années de vie', async () => {
     const { donnees } = avec({ prenom: 'Disparue', naissance: '1941-05-03', deces: '2024-01-14' });
-    await demarrer(donnees);
+    await demarrer(donnees, '#/personnes');
     expect(trouver('a.ligne', 'Disparue').textContent).toContain('1941 – 2024');
   });
 
@@ -1085,9 +1083,8 @@ describe('mémo : décès, âge et anniversaires', () => {
     const date = dans(3, 0).slice(4);
     const { donnees } = avec({ prenom: 'Anniv', naissance: `-${date}` });
     await demarrer(donnees);
-    const ligne = ecran().querySelector<HTMLElement>('.anniversaires .ligne')!;
-    expect(ligne.textContent).toContain('Dans 3 jours');
-    expect(ligne.querySelector('.etiquette')).toBeNull();
+    const vignette = trouver('.vignette', 'Anniv');
+    expect(vignette.querySelector('.secondaire')!.textContent).not.toContain(' · ');
   });
 });
 
@@ -1184,5 +1181,103 @@ describe('arbre global', () => {
     expect(ecran().textContent).toContain('Choisis d’abord ta fiche');
     expect(ecran().querySelector('a[href="#/reglages"]')).not.toBeNull();
     expect(ecran().querySelector('.calque')).toBeNull();
+  });
+});
+
+describe('accueil, agenda et dates', () => {
+  const deux = (n: number) => String(n).padStart(2, '0');
+  /** Date dans `jours` jours, `ans` ans plus tôt, au format « AAAA-MM-JJ ». */
+  const dans = (jours: number, ans: number) => {
+    const j = new Date();
+    j.setDate(j.getDate() + jours);
+    return `${j.getFullYear() - ans}-${deux(j.getMonth() + 1)}-${deux(j.getDate())}`;
+  };
+  // Un prénom du calendrier des fêtes, sans autre date : il n'apparaît dans l'agenda que par sa fête.
+  const prenomFete = entreesCalendrier()[0].prenom;
+  const agenda = () => {
+    let d = donneesVides();
+    for (const c of [{ prenom: 'Paulette', naissance: dans(5, 67) }, { prenom: 'Partie', deces: dans(10, 5) }, { prenom: prenomFete }])
+      d = creerPersonne(d, { nom: 'Test', sexe: 'F', ...c }).donnees;
+    return d;
+  };
+  const puces = () => [...ecran().querySelectorAll('.puce')].map((p) => p.textContent);
+
+  it('les raccourcis de l’accueil mènent aux groupes, aux familles, à l’arbre et à toutes les fiches', async () => {
+    const { donnees } = famille();
+    await demarrer(donnees);
+    const liens = [...ecran().querySelectorAll<HTMLAnchorElement>('a.raccourci')].map((a) => a.getAttribute('href'));
+    expect(liens).toEqual(['#/groupes', '#/arbre/familles', '#/arbre', '#/personnes']);
+    await toucher(trouver('a.raccourci', 'Toutes les fiches'));
+    expect(titre()).toBe('Toutes les fiches');
+    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
+  });
+
+  it('« Créer » depuis la recherche ouvre le formulaire prérempli', async () => {
+    const { donnees } = famille();
+    await demarrer(donnees);
+    const champ = ecran().querySelector<HTMLInputElement>('input[type=search]')!;
+    champ.value = 'Zoé Petit';
+    champ.dispatchEvent(new Event('input'));
+    expect(ecran().querySelector('.pied-recherche')!.textContent).toBe('0 fiche · Créer « Zoé Petit »');
+    await toucher(trouver('.pied-recherche a', 'Créer'));
+    expect(ecran().querySelector<HTMLInputElement>('#prenom')!.value).toBe('Zoé');
+    expect(ecran().querySelector<HTMLInputElement>('#nom')!.value).toBe('Petit');
+  });
+
+  it('l’agenda groupe les dates par mois et les filtre par genre', async () => {
+    await demarrer(agenda(), '#/agenda');
+    expect(titre()).toBe('Agenda');
+    expect(puces()).toEqual(['Tout', 'Anniversaires', 'Noces', 'Fêtes', 'Décès']);
+    expect(trouver('.puce', 'Tout').getAttribute('aria-pressed')).toBe('true');
+    expect(ecran().querySelectorAll('section.groupe h2').length).toBeGreaterThan(0);
+
+    await toucher(trouver('.puce', 'Anniversaires'));
+    const anniversaires = [...ecran().querySelectorAll('.agenda .ligne')].map((l) => l.textContent);
+    expect(anniversaires).toHaveLength(1);
+    expect(anniversaires[0]).toContain('Paulette');
+    expect(anniversaires[0]).toContain('67 ans');
+
+    await toucher(trouver('.puce', 'Décès'));
+    const deces = [...ecran().querySelectorAll('.agenda .ligne')];
+    expect(deces).toHaveLength(1);
+    expect(deces[0].classList.contains('gris')).toBe(true);
+    expect(deces[0].textContent).toContain('Partie');
+
+    await toucher(trouver('.puce', 'Fêtes'));
+    expect(trouver('.agenda .ligne', prenomFete)).toBeTruthy();
+
+    await toucher(trouver('.puce', 'Noces'));
+    expect(ecran().querySelector('.agenda')!.textContent).toBe('Rien dans les 12 prochains mois.');
+    expect(ecran().querySelector('a.lien-ics')!.getAttribute('href')).toBe('#/reglages');
+  });
+
+  it('sans les fêtes (réglage), l’agenda n’a ni puce ni ligne de fête', async () => {
+    await demarrer(agenda(), '#/agenda', { fetes: false });
+    expect(puces()).not.toContain('Fêtes');
+    expect(ecran().querySelector('.agenda')!.textContent).not.toContain(prenomFete);
+  });
+
+  it('le réglage « Fêtes du prénom » s’enregistre', async () => {
+    await demarrer(agenda(), '#/reglages');
+    const bascule = ecran().querySelector<HTMLInputElement>('#fetes')!;
+    expect(bascule.checked).toBe(true);
+    await toucher(bascule);
+    expect(JSON.parse(localStorage.getItem('tribu:reglages')!).fetes).toBe(false);
+  });
+
+  it('le formulaire refuse une naissance dans le futur', async () => {
+    await demarrer(donneesVides(), '#/nouveau');
+    saisir('prenom', 'Future');
+    saisir('annee', String(new Date().getFullYear() + 1));
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(ecran().textContent).toContain('Date de naissance dans le futur');
+    expect(enregistrees().personnes).toHaveLength(0);
+  });
+
+  it('l’écran d’une union affiche sa durée et le nom des noces', async () => {
+    const { donnees, ids } = famille();
+    const union = { ...donnees.unions[0], marie: true, date: `${new Date().getFullYear() - 10}-01-01` };
+    await demarrer({ ...donnees, unions: [union] }, `#/union/${union.id}/${ids.Anne}`);
+    expect(ecran().querySelector('.duree-union')!.textContent).toBe('10 ans · noces d’étain');
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { disposerArbre } from './arbreGlobal';
 import { etiquette } from './parente';
 import { autreParent, chemin, foyer } from './deductions';
-import { ajouterFiliation, creerPersonne, definirMariageParents, donneesVides, modifierPersonne } from './modele';
+import { ajouterFiliation, creerPersonne, definirMariageParents, donneesVides, modifierPersonne, personnesListees, personnesVisibles } from './modele';
 import { avecParentsSansNom, enregistrerParentSansNom, estParentSansNom, estVirtuel, PARENT_INCONNU } from './parentSansNom';
 import type { Donnees } from './types';
 
@@ -60,6 +60,15 @@ describe('Parent sans nom (enfant à parent seul)', () => {
     const nomme = modifierPersonne(note, r.personne.id, { prenom: 'Jean', nom: 'D', note: '' });
     expect(estParentSansNom(nomme.personnes.find((p) => p.id === r.personne.id)!)).toBe(false);
     expect(disposerArbre(nomme, sabine).places.some((p) => estVirtuel(p.personne.id))).toBe(false);
+  });
+
+  it('n’apparaît pas dans la liste tant qu’il n’a pas de nom', () => {
+    const { d, florence } = seul();
+    const r = enregistrerParentSansNom(d, `virtuel:${florence}`)!;
+    expect(personnesListees(r.donnees).map((p) => p.prenom).sort()).toEqual(['Florence', 'Sabine']);
+    expect(personnesVisibles(r.donnees)).toHaveLength(3);
+    const nomme = modifierPersonne(r.donnees, r.personne.id, { prenom: 'Jean', nom: 'D', note: '' });
+    expect(personnesListees(nomme)).toHaveLength(3);
   });
 
   it('ignore les parents inconnus cachés (fratrie sans parent connu)', () => {

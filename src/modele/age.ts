@@ -24,6 +24,16 @@ function bornes(date: string): [number, number] {
   return [bas, haut];
 }
 
+/**
+ * La date tombe entièrement après `aujourdhui` : « 2027 » l'est en 2026, « 2026 » ne l'est pas (elle peut désigner un
+ * jour passé). Une date sans année (« --MM-JJ ») ou invalide ne l'est jamais.
+ */
+export function estDansLeFutur(date: string | undefined, aujourdhui: Date): boolean {
+  if (!date || !MOTIF_DATE.test(date)) return false;
+  const jour = aujourdhui.getFullYear() * 10000 + (aujourdhui.getMonth() + 1) * 100 + aujourdhui.getDate();
+  return bornes(date)[0] > jour;
+}
+
 export interface Age {
   annees: number;
   /** Les dates sont trop partielles pour trancher : l'âge est à un an près. */

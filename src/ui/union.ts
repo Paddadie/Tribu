@@ -3,6 +3,7 @@
 // Séparation et suppression sont annulables depuis le bandeau.
 
 import { nomComplet } from '../modele/liste';
+import { dureeUnion } from '../modele/noces';
 import { modifierDateUnion, modifierUnion, retablirUnion, separerUnion, supprimerUnion } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
@@ -25,6 +26,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
   }
   const separee = union.statut === 'separee';
   const prenomAutre = autre.prenom || autre.nom;
+  const duree = dureeUnion(union.date, union.marie, new Date());
 
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const afficherErreur = (e: unknown, defaut: string) => {
@@ -103,6 +105,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
       'div',
       { class: 'contenu' },
       h('p', { class: 'resume-union' }, `${nomComplet(p)} et ${nomComplet(autre)}${separee ? ' sont séparés.' : ''}`),
+      !separee && duree && h('p', { class: 'secondaire duree-union' }, duree),
       h(
         'label',
         { class: 'carte interrupteur', for: 'marie' },

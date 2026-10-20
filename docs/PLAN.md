@@ -182,6 +182,12 @@ Règles valables partout : maquette validée par Paul avant tout changement visi
 - [x] FEATURE-13 (codé le 20/10 sur maquette validée) : Réglages → « Vérifier mes données » : doublons probables, personnes isolées, dates incohérentes, fiches « Test ».
 - [x] FEATURE-14 : Réglages → export PNG de l'arbre global (dessin sur canvas, noms compris).
 
+### Étape 3b — Page d'accueil (maquette validée le 21/10 : https://claude.ai/artifact/MEG7NvRthLJE8N5A8Dc5sq)
+- [x] Accueil « portrait de famille » : salutation, recherche directe avec « Créer », Aujourd'hui, Bientôt, souvenir, 4 raccourcis dessinés.
+- [x] Liste déplacée en `#/personnes` ; agenda `#/agenda` (12 mois, puces) ; route `#/arbre/familles`.
+- [x] Noces et « N ans ensemble », fêtes du prénom (réglage, option `.ics`), naissance et décès futurs refusés, signalés dans « Vérifier mes données ».
+- [ ] Paul : relire le calendrier des fêtes (`src/modele/fetes.ts`) et valider le rendu (captures).
+
 ### Après la V3
 - FEATURE-16 : fusion à l'import d'abord (utile aussi pour changer de téléphone), puis plusieurs groupes par personne, puis lecture seule. FEATURE-17 : photos.
 - Abandonnés : FEATURE-12 (lien entre deux personnes), ANIM-08 (vibration).
