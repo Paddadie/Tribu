@@ -1,19 +1,14 @@
 # État en cours
 
-**Étape 3b — Page d'accueil (codée le 21/10, non commitée, 482 tests, tsc et build verts)** : maquette « portrait de famille » validée. `#/` = salutation, recherche avec « Créer », Aujourd'hui, Bientôt, souvenir, 4 raccourcis ; liste en `#/personnes` ; agenda `#/agenda` ; noces (`noces.ts`), fêtes (`fetes.ts`, réglage + option `.ics`), `evenements.ts` ; naissance/décès futurs refusés et vérifiés. PLAN, SPEC, DECISIONS, context.md à jour. Rendu non vu à l'œil.
-**À relire par Paul** : le calendrier des fêtes (`src/modele/fetes.ts`, prénoms et saints).
+**Tout est commité au 21/10** (étapes 3, 3b, import par fusion, filtres de la liste, Réglages en onglets, raccourcis de l'accueil en fenêtres-listes, « copine / compagne »). Docs à jour (PLAN, SPEC, DECISIONS, context.md). Dernier relevé des tests : 482 (avant fusion et filtres), à relancer.
+**Rendu non vu à l'œil** : accueil, Toutes les fiches (puces), agenda, Union, Réglages en onglets, fenêtres Groupes/Familles, fusion à l'import, UI-10 (PLAN 2-2 non coché), 2-3 (Données v5), PNG de l'arbre (canvas non testable sous happy-dom), groupes d'amis superposés (SPEC/DECISIONS pas à jour).
+**À relire par Paul** : calendrier des fêtes (`src/modele/fetes.ts`) ; tester le `.ics` dans un agenda dédié « Tribu ».
+**À trancher par Paul** : retirer aussi le parent « ? » du sélecteur de lien ? Si UI-10 validé : cocher PLAN 2-2 et noter la décision (sinon lignes à 8 px ou 3ᵉ graisse 700).
 **Nettoyage possible** : `prochainsAnniversaires`, `anniversairesDeces`, `libelleDelai` (age.ts) ne servent peut-être plus qu'aux tests.
 
-**Étape 3 codée, non commitée** : FEATURE-11 (`.ics`), FEATURE-13 (« Vérifier mes données »), FEATURE-14 (PNG, `src/ui/arbreImage.ts`, géométrie partagée dans `geometrieArbre.ts`). Le dessin canvas n'est pas testable sous happy-dom.
-**Parent « ? » hors des listes (20/10, non vu à l'œil)** : à trancher par Paul, le retirer aussi du sélecteur de lien ?
-**Groupes d'amis superposés (codé)** : SPEC/DECISIONS pas mis à jour ; rendu non vu.
-**UI-10 codé, en attente de validation** (PLAN.md 2-2 non coché). Jetons dans src/styles/base.css. Si trop visible : lignes à 8 px, ou garder une 3e graisse 700.
-**Étape 2-3 (Données v5) faite le 20/10** : écrans codés sans maquette, rendu non vérifié.
+**Prochaine étape** : Paul lance `npm run captures` et valide le rendu ; puis étape 4 du PLAN.md.
 
-**Prochaine étape** : Paul lance `npm run captures` (accueil, Toutes les fiches, agenda, écran Union, réglages ; 2-3, UI-10, vérification, PNG, arbre) et teste le `.ics` dans un agenda dédié « Tribu ». Si UI-10 validé : cocher dans PLAN.md, décision dans DECISIONS.md. Puis étape 4 du PLAN.md.
-
-**À faire par Paul** : confirmer que la forme de la famille peut être publique (sinon ne pas commiter fixtures/ ni __snapshots__/) ; commiter les étapes en attente ; effacer le profil Edge temporaire (`%TEMP%\tribu-captures-*`). Prettier signale encore des fichiers non reformatés.
-
+**À faire par Paul** : confirmer que la forme de la famille peut être publique (sinon retirer fixtures/ et __snapshots__/) ; effacer le profil Edge temporaire (`%TEMP%\tribu-captures-*`) ; Prettier signale des fichiers non reformatés.
 **À valider par Paul** : échelle minimale abaissée pour le pincement ; noms de famille masqués de loin s'ils se chevauchent ; « ? » enregistré au toucher.
 
 ## Points ouverts

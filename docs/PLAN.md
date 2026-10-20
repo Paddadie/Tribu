@@ -186,14 +186,15 @@ Règles valables partout : maquette validée par Paul avant tout changement visi
 - [x] Accueil « portrait de famille » : salutation, recherche directe avec « Créer », Aujourd'hui, Bientôt, souvenir, 4 raccourcis dessinés.
 - [x] Liste déplacée en `#/personnes` ; agenda `#/agenda` (12 mois, puces) ; route `#/arbre/familles`.
 - [x] Noces et « N ans ensemble », fêtes du prénom (réglage, option `.ics`), naissance et décès futurs refusés, signalés dans « Vérifier mes données ».
+- [x] Import par fusion (DATA-06), filtres de la liste, Réglages en onglets, raccourcis de l'accueil en fenêtres-listes, « copine / compagne » : codés et commités le 21/10.
 - [ ] Paul : relire le calendrier des fêtes (`src/modele/fetes.ts`) et valider le rendu (captures).
 
 ### Après la V3
-- FEATURE-16 : fusion à l'import d'abord (utile aussi pour changer de téléphone), puis plusieurs groupes par personne, puis lecture seule. FEATURE-17 : photos.
+- FEATURE-16 : fusion à l'import faite le 21/10 (`fusion.ts`) ; reste : plusieurs groupes par personne, puis lecture seule. FEATURE-17 : photos.
 - Abandonnés : FEATURE-12 (lien entre deux personnes), ANIM-08 (vibration).
 
 ## Plus tard
-- Import en fusion (DATA-06), avec le partage
+- Partage avec des proches (la fusion à l'import existe déjà)
 - Partage avec des proches ; revoir alors le chiffrement de l'export (SEC-01)
 - [x] Mini-arbre sur la fiche (FEAT-09), avec le lien « ami » : maquette validée le 19/10 (claude.ai/artifact/CUp7N1VAn5HCNvLvHvJxiy, version 5), codé le 19/10
 - [x] Arbre global (après FEAT-09) : maquette A validée le 19/10 (claude.ai/artifact/QeJzzjcSac5fzuuZ3R9Cow), personnes sans lien masquées, codé le 19/10 ; bouton sur l'accueil, « Moi » au centre, toutes les personnes et leurs liens (amis compris) ; zoom au pincement, défilement libre, toucher une personne ouvre sa fiche
