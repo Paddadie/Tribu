@@ -7,7 +7,7 @@ import { ajoutAmi } from "./ui/ajoutAmi";
 import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
 import { EVENEMENT_RAFRAICHIR } from "./ui/annulation";
-import { ecranArbre } from "./ui/arbreGlobal";
+import { ecranArbre, type FocusArbre } from "./ui/arbreGlobal";
 import { appliquerTheme, lireBrutIllisible, lireDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
@@ -33,6 +33,7 @@ import { ecranVerification } from "./ui/verification";
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
 //   #/verification    vérification des données (doublons, isolés, dates)
 //   #/arbre            arbre de tous les liens autour de « Moi »      #/arbre/familles   le même, feuille Familles ouverte
+//   #/arbre/famille/<lignée>   le même, zoomé sur une famille      #/arbre/groupe/<id>   le même, zoomé sur un groupe d'amis
 //   #/groupes          groupes d'amis      #/groupe/nouveau   création      #/groupe/<id>   détail      #/groupe/<id>/ajouter   ajout d'un membre
 const app = document.querySelector<HTMLElement>("#app");
 
@@ -43,7 +44,11 @@ function vue(route: string): HTMLElement {
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
-  if (section === "arbre") return ecranArbre(id === "familles" ? "familles" : undefined);
+  if (section === "arbre") {
+    const cle = route.split("/")[3];
+    const focus = (id === "famille" || id === "groupe") && cle ? { quoi: id as FocusArbre["quoi"], cle: decodeURIComponent(cle) } : undefined;
+    return ecranArbre(id === "familles" ? "familles" : undefined, focus);
+  }
   if (section === "personnes") return ecranPersonnes();
   if (section === "agenda") return ecranAgenda();
   if (section === "verification") return ecranVerification();

@@ -58,6 +58,43 @@ interface Vue {
 /** Vue choisie par sa puce (pleine tant qu'on ne s'en écarte pas) ; aucune après un déplacement ou un autre saut. */
 type VueActive = 'toi' | 'tout' | undefined;
 
+/** Une famille de l'arbre principal (une lignée) : son nom et son effectif, par ordre alphabétique. */
+export interface ResumeFamille {
+  nom: string;
+  lignee: number;
+  n: number;
+}
+
+/** Une entrée par lignée, nommée d'après son étiquette « Famille X » ; sans étiquette, le nom le plus répandu de la lignée la nomme. */
+export function resumesFamilles(disp: Disposition): ResumeFamille[] {
+  const effectifs = new Map<number, number>();
+  const noms = new Map<number, Map<string, number>>();
+  for (const p of disp.places) {
+    if (p.lignee === undefined || estVirtuel(p.personne.id)) continue;
+    effectifs.set(p.lignee, (effectifs.get(p.lignee) ?? 0) + 1);
+    const nom = p.personne.nom.trim();
+    if (nom) {
+      const compte = noms.get(p.lignee) ?? new Map<string, number>();
+      compte.set(nom, (compte.get(nom) ?? 0) + 1);
+      noms.set(p.lignee, compte);
+    }
+  }
+  const plusRepandu = (lignee: number) => [...(noms.get(lignee) ?? [])].sort((a, b) => b[1] - a[1])[0]?.[0];
+  return [...effectifs]
+    .map(([lignee, n]) => ({
+      lignee,
+      n,
+      nom: disp.etiquettes.find((e) => e.lignee === lignee)?.texte ?? (plusRepandu(lignee) ? `Famille ${plusRepandu(lignee)}` : `Famille ${lignee + 1}`),
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+}
+
+/** Zone sur laquelle l'arbre s'ouvre (pop-ups de l'accueil) : une famille par sa lignée, un groupe par son identifiant. */
+export interface FocusArbre {
+  quoi: 'famille' | 'groupe';
+  cle: string;
+}
+
 /** Zoom et position gardés pendant la session : au retour d'une fiche, l'arbre est tel qu'on l'a laissé. */
 let vueGardee: Vue | undefined;
 let activeGardee: VueActive;
@@ -67,7 +104,7 @@ const PILE_MAX = 30;
 let astuceMontree = false;
 
 /** Douze couleurs pastel de CSS (--c0 à --c11) : une par nom de famille ; les groupes d'amis reprennent la série en décalé. */
-const couleur = (k: number) => `var(--c${k % 12})`;
+export const couleur = (k: number) => `var(--c${k % 12})`;
 /** Teinte des traits et des textes : la couleur pastel assombrie, pour rester lisible sur le fond. */
 const couleurTrait = (k: number) => `color-mix(in srgb, ${couleur(k)} 62%, var(--encre))`;
 const couleurGroupe = (i: number) => couleurTrait(i + 5);
@@ -75,7 +112,7 @@ const couleurGroupe = (i: number) => couleurTrait(i + 5);
 const borne = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /** `feuille` : liste ouverte d'emblée (raccourci « Familles » de l'accueil, route #/arbre/familles). */
-export function ecranArbre(feuille?: 'familles'): HTMLElement {
+export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElement {
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d);
   const loupe = h('button', { type: 'button', class: 'bouton-icone', 'aria-label': 'Chercher une personne' }, icone('recherche', 24));
@@ -100,7 +137,7 @@ export function ecranArbre(feuille?: 'familles'): HTMLElement {
     );
   }
   const disp = disposerArbre(d, moi.id);
-  const carte = new Carte(disp, moi);
+  const carte = new Carte(disp, moi, focus);
   loupe.addEventListener('click', () => carte.basculerRecherche());
   if (feuille) carte.ouvrirFeuille(feuille);
   return h('div', { class: 'ecran ecran-arbre' }, barre, carte.vue);
@@ -137,7 +174,7 @@ class Carte {
   /** Barre des puces, en bas : le dessin passe dessous, « Tout » cadre l'arbre au-dessus. */
   private readonly barreBas: HTMLElement;
 
-  constructor(disp: Disposition, moi: Personne) {
+  constructor(disp: Disposition, moi: Personne, focus?: FocusArbre) {
     this.disp = disp;
     this.moi = moi;
     const pos = positions(disp);
@@ -227,6 +264,10 @@ class Carte {
       if (!this.pret) {
         this.pret = true;
         this.v = vueGardee ? { ...vueGardee } : this.surPersonne(moi.id, 1);
+        this.appliquer();
+        // Arrivée depuis une pop-up de l'accueil : saut sur la zone (la vue de départ va sur la pile de « Revenir »).
+        const cap = this.zoneDe(focus);
+        if (cap) this.sauter(this.surZone(cap.zone), undefined, cap.cibles);
       }
       this.appliquer();
     });
@@ -273,26 +314,17 @@ class Carte {
   /** Une entrée par lignée de l'arbre principal (par ordre alphabétique), nommée d'après son étiquette « Famille X ». */
   private calculerFamilles(): FamilleListee[] {
     const parLignee = new Map<number, (Point & { id: string })[]>();
-    const noms = new Map<number, Map<string, number>>();
     for (const p of this.disp.places) {
       if (p.lignee === undefined || estVirtuel(p.personne.id)) continue;
       parLignee.set(p.lignee, [...(parLignee.get(p.lignee) ?? []), { ...this.centres.get(p.personne.id)!, id: p.personne.id }]);
-      // Sans étiquette (lignée dont la racine a des parents), le nom le plus répandu de la lignée la nomme.
-      const nom = p.personne.nom.trim();
-      if (nom) {
-        const compte = noms.get(p.lignee) ?? new Map<string, number>();
-        compte.set(nom, (compte.get(nom) ?? 0) + 1);
-        noms.set(p.lignee, compte);
-      }
     }
-    const plusRepandu = (lignee: number) => [...(noms.get(lignee) ?? [])].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const resumes = resumesFamilles(this.disp);
     return [...parLignee]
       .map(([lignee, pts]) => {
         const x = Math.min(...pts.map((p) => p.x)) - LARG / 2;
         const y = Math.min(...pts.map((p) => p.y)) - R - 24;
         const l = Math.max(...pts.map((p) => p.x)) + LARG / 2 - x;
-        const nom =
-          this.disp.etiquettes.find((e) => e.lignee === lignee)?.texte ?? (plusRepandu(lignee) ? `Famille ${plusRepandu(lignee)}` : `Famille ${lignee + 1}`);
+        const nom = resumes.find((r) => r.lignee === lignee)!.nom;
         // Cible : sur la ligne la plus haute, la personne la plus proche du milieu de la famille.
         const haut = pts.filter((p) => p.y === Math.min(...pts.map((q) => q.y)));
         const cible = haut.reduce((a, b) => (Math.abs(b.x - (x + l / 2)) < Math.abs(a.x - (x + l / 2)) ? b : a)).id;
@@ -358,6 +390,15 @@ class Carte {
           });
     this.feuille.replaceChildren(h('h2', {}, quoi === 'familles' ? 'Familles' : 'Groupes d’amis'), ...lignes);
     this.feuille.classList.add('ouverte');
+  }
+
+  private zoneDe(focus?: FocusArbre): { zone: Zone; cibles: string[] } | undefined {
+    if (focus?.quoi === 'famille') {
+      const f = this.familles.find((x) => String(x.lignee) === focus.cle);
+      return f && { zone: f.zone, cibles: [f.cible] };
+    }
+    const c = focus && this.cadres.find((x) => x.groupe.id === focus.cle);
+    return c && { zone: c, cibles: c.groupe.membres };
   }
 
   /** Vue qui montre toute la zone (jusqu'à l'échelle 1,2), un peu au-dessus du centre pour laisser la place aux commandes. */

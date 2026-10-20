@@ -1217,10 +1217,30 @@ describe('accueil, agenda et dates', () => {
     const { donnees } = famille();
     await demarrer(donnees);
     const liens = [...ecran().querySelectorAll<HTMLAnchorElement>('a.raccourci')].map((a) => a.getAttribute('href'));
-    expect(liens).toEqual(['#/groupes', '#/arbre/familles', '#/arbre', '#/personnes']);
+    expect(liens).toEqual(['#/arbre', '#/personnes']);
     await toucher(trouver('a.raccourci', 'Toutes les fiches'));
     expect(titre()).toBe('Toutes les fiches');
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
+  });
+
+  it('les raccourcis Groupes d’amis et Familles ouvrent une pop-up dont chaque ligne mène à l’arbre zoomé', async () => {
+    const { donnees, ids } = famille();
+    const avecGroupe = creerGroupe(donnees, [ids.Anne, ids.Bruno], 'Les voisins');
+    await demarrer(avecGroupe.donnees, '#/', { moi: ids.Chloé });
+    await toucher(trouver('button.raccourci', 'Groupes d’amis'));
+    const lignes = () => [...document.querySelectorAll<HTMLAnchorElement>('dialog.fenetre-liste a.ligne-feuille')];
+    expect(lignes().map((a) => a.getAttribute('href'))).toEqual([`#/arbre/groupe/${avecGroupe.groupe.id}`]);
+    expect(document.querySelector('.ligne-pied')?.getAttribute('href')).toBe('#/groupes');
+    document.querySelector('dialog.fenetre-liste')!.remove();
+
+    await toucher(trouver('button.raccourci', 'Familles'));
+    expect(lignes().length).toBeGreaterThan(0);
+    for (const a of lignes()) expect(a.getAttribute('href')).toMatch(/^#\/arbre\/famille\/\d+$/);
+    const href = lignes()[0].getAttribute('href')!;
+    await toucher(lignes()[0]);
+    expect(document.querySelector('dialog.fenetre-liste')).toBeNull();
+    expect(location.hash).toBe(href);
+    expect(ecran().querySelector('.vue-arbre')).not.toBeNull();
   });
 
   it('« Créer » depuis la recherche ouvre le formulaire prérempli', async () => {

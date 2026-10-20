@@ -698,3 +698,55 @@
   justify-content: center;
   box-shadow: 0 6px 16px var(--ombre-bouton);
 }
+
+button.raccourci {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ——— Pop-up du bas d'écran (Familles, Groupes d'amis) ——— */
+
+.fenetre-liste {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: 70dvh;
+  margin: auto auto 0;
+  padding: 14px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  border: 0;
+  border-radius: var(--rayon-l, 20px) var(--rayon-l, 20px) 0 0;
+  background: var(--carte);
+  color: var(--encre);
+  font: inherit;
+  overflow-y: auto;
+}
+
+.fenetre-liste::backdrop {
+  background: var(--voile);
+}
+
+.fenetre-liste h2 {
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font-size: var(--t3);
+}
+
+.fenetre-liste a.ligne-feuille {
+  box-sizing: border-box;
+  text-decoration: none;
+  border-top: 1px solid var(--bord);
+  border-radius: 0;
+}
+
+.fenetre-liste .ligne-pied {
+  display: block;
+  padding: 12px;
+  color: var(--accent-texte, var(--accent));
+  text-decoration: none;
+}
+
+.fenetre-liste .vide {
+  padding: 8px 12px;
+  color: var(--secondaire);
+}

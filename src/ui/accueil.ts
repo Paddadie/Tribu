@@ -23,6 +23,10 @@ import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
 import { messageImport } from './import';
+import { disposerArbre } from '../modele/arbreGlobal';
+import { nomGroupe } from '../modele/deductions';
+import { couleur, resumesFamilles } from './arbreGlobal';
+import { ouvrirListe } from './fenetreListe';
 import { avatarPersonne, contenuLigne } from './lignePersonne';
 
 // La recherche survit à l'aller-retour accueil → fiche → accueil.
@@ -284,11 +288,43 @@ function familles(personnes: Personne[]): number[] {
   return [...parNom.values()].sort((a, b) => b.n - a.n).map((f) => f.couleur);
 }
 
-function raccourci(href: string, image: Element, titre: string, detail: string): HTMLElement {
-  return h('a', { class: 'raccourci', href }, image, h('strong', {}, titre), h('span', { class: 'secondaire' }, detail));
+function raccourci(href: string | (() => void), image: Element, titre: string, detail: string): HTMLElement {
+  const contenu = [image, h('strong', {}, titre), h('span', { class: 'secondaire' }, detail)];
+  return typeof href === 'string'
+    ? h('a', { class: 'raccourci', href }, ...contenu)
+    : h('button', { type: 'button', class: 'raccourci', onclick: href }, ...contenu);
 }
 
-function raccourcis(d: Donnees, listees: Personne[]): HTMLElement {
+/** Pop-up « Groupes d'amis » : chaque groupe ouvre l'arbre zoomé dessus. */
+function listeGroupes(d: Donnees): void {
+  const groupes = [...d.groupes].sort((a, b) => nomGroupe(d, a).localeCompare(nomGroupe(d, b), 'fr'));
+  ouvrirListe(
+    'Groupes d’amis',
+    groupes.map((g) => {
+      const pastille = h('span', { class: 'pastille-feuille anneau' });
+      pastille.style.borderColor = 'var(--accent)';
+      return { href: `#/arbre/groupe/${g.id}`, pastille, nom: nomGroupe(d, g), detail: pluriel(g.membres.length, 'personne', 'personnes') };
+    }),
+    'Aucun groupe d’amis pour l’instant.',
+    { href: '#/groupes', texte: 'Gérer les groupes' },
+  );
+}
+
+/** Pop-up « Familles » : chaque famille de l'arbre ouvre l'arbre zoomé dessus. */
+function listeFamilles(d: Donnees, moi: Personne | undefined): void {
+  const familles = moi ? resumesFamilles(disposerArbre(d, moi.id)) : [];
+  ouvrirListe(
+    'Familles',
+    familles.map((f) => {
+      const pastille = h('span', { class: 'pastille-feuille' });
+      pastille.style.background = couleur(f.lignee);
+      return { href: `#/arbre/famille/${f.lignee}`, pastille, nom: f.nom, detail: `${f.n} pers.` };
+    }),
+    moi ? 'Aucune famille dans l’arbre.' : 'Choisis d’abord ta fiche dans les réglages : les familles se lisent autour de toi.',
+  );
+}
+
+function raccourcis(d: Donnees, listees: Personne[], moi: Personne | undefined): HTMLElement {
   const n = listees.length;
   const couleurs = familles(listees);
   const quatre = [0, 1, 2, 3].map((i) => (couleurs[i] === undefined ? 'var(--pastille)' : `var(--c${couleurs[i]})`));
@@ -297,7 +333,7 @@ function raccourcis(d: Donnees, listees: Personne[]): HTMLElement {
     'nav',
     { class: 'raccourcis', 'aria-label': 'Raccourcis' },
     raccourci(
-      '#/groupes',
+      () => listeGroupes(d),
       dessin([
         [15, 22, 10, 'var(--c7)'],
         [32, 12, 8, 'var(--c0)'],
@@ -308,7 +344,7 @@ function raccourcis(d: Donnees, listees: Personne[]): HTMLElement {
       nbGroupes === 0 ? 'Aucun groupe' : pluriel(nbGroupes, 'groupe', 'groupes'),
     ),
     raccourci(
-      '#/arbre/familles',
+      () => listeFamilles(d, moi),
       dessin(
         quatre.map((c, i) => [11 + 14 * i, 20, 10, c]),
         undefined,
@@ -348,7 +384,7 @@ function sommaire(d: Donnees, moi: Personne | undefined, listees: Personne[]): H
   const evs = evenementsAVenir(d, aujourdhui, HORIZON, { fetes: lireReglages().fetes });
   const duJour = evs.filter((e) => e.dans === 0);
   const deces = evs.filter((e) => e.genre === 'deces' && e.dans <= 1);
-  return [blocAujourdhui(d, moi, duJour), blocBientot(d, evs, aujourdhui), ...deces.map(souvenir), raccourcis(d, listees)].filter(
+  return [blocAujourdhui(d, moi, duJour), blocBientot(d, evs, aujourdhui), ...deces.map(souvenir), raccourcis(d, listees, moi)].filter(
     (e): e is HTMLElement => e !== false,
   );
 }
