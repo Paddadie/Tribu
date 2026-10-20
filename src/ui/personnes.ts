@@ -2,8 +2,11 @@
 // filtre par nom, bouton +. Sans personne : le même écran vide que l'accueil.
 
 import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, nomListe, type Groupe, type Tri } from '../modele/liste';
+import { MANQUES, filtrerListe, manquesDe, type Filtre, type Manque } from '../modele/filtres';
 import type { Personne } from '../modele/types';
+import { nomGroupe } from '../modele/deductions';
 import { personnesListees } from '../modele/modele';
+import { ficheMoi } from '../modele/reglages';
 import { accueilVide } from './accueil';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
@@ -12,15 +15,39 @@ import { lienRetour } from './navigation';
 
 // Le filtre survit à l'aller-retour liste → fiche → liste.
 let filtre = '';
+// Les puces aussi : filtre principal, groupe visé (« Un groupe »), manques cherchés (« À compléter »).
+let puce: Filtre = 'tous';
+let groupeChoisi = '';
+const manquesChoisis = new Set<Manque>();
+
+const PUCES: { filtre: Filtre; libelle: string }[] = [
+  { filtre: 'tous', libelle: 'Toutes' },
+  { filtre: 'famille', libelle: 'Famille' },
+  { filtre: 'amis', libelle: 'Amis proches' },
+  { filtre: 'groupe', libelle: 'Un groupe' },
+
+  { filtre: 'acompleter', libelle: 'À compléter' },
+];
 
 function ligne(p: Personne, tri: Tri): HTMLElement {
-  return h('a', { class: 'ligne', href: `#/personne/${p.id}` }, ...contenuLigne(p, nomListe(p, tri)), icone('chevron', 18));
+  const contenu = contenuLigne(p, nomListe(p, tri));
+  if (puce === 'acompleter') {
+    const pastilles = manquesDe(p).map((m) => h('span', { class: 'pastille-manque' }, MANQUES.find((x) => x.manque === m)?.detail));
+    contenu[1].append(h('span', { class: 'pastilles-manque' }, ...pastilles));
+  }
+  return h('a', { class: 'ligne', href: `#/personne/${p.id}` }, ...contenu, icone('chevron', 18));
+}
+
+function fichesFiltrees(): Personne[] {
+  const d = lireDonnees();
+  const moi = ficheMoi(lireReglages(), d)?.id;
+  const criteres = { filtre: puce, groupe: groupeChoisi, manques: manquesChoisis };
+  return filtrerListe(d, filtrerParNom(personnesListees(d), filtre), criteres, moi);
 }
 
 function liste(): HTMLElement[] {
-  const toutes = personnesListees(lireDonnees());
   const tri = lireReglages().tri;
-  const trouvees = filtrerParNom(toutes, filtre);
+  const trouvees = fichesFiltrees();
   if (trouvees.length === 0) return [h('p', { class: 'vide' }, 'Aucun résultat.')];
   return grouperParLettre(trouvees, tri).map((g) =>
     h(
@@ -70,6 +97,7 @@ function indexLettres(groupes: Groupe[], zoneListe: HTMLElement, entete: HTMLEle
 
 export function ecranPersonnes(): HTMLElement {
   const total = personnesListees(lireDonnees()).length;
+  const compteur = h('span', { class: 'secondaire' });
   const titre = h(
     'div',
     { class: 'entete-ligne' },
@@ -79,13 +107,67 @@ export function ecranPersonnes(): HTMLElement {
       lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
       h('h1', {}, 'Toutes les fiches'),
     ),
-    h('span', { class: 'secondaire' }, `${total} ${total > 1 ? 'personnes' : 'personne'}`),
+    compteur,
   );
   if (total === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, titre), accueilVide());
 
   const zoneListe = h('div', { class: 'liste' }, ...liste());
   // Pendant un filtrage, la liste est courte : l'index disparaît.
-  const masquerIndex = () => (index.hidden = filtre.trim() !== '');
+  const masquerIndex = () => (index.hidden = filtre.trim() !== '' || puce !== 'tous');
+  const afficherCompteur = () => {
+    const n = fichesFiltrees().length;
+    compteur.textContent = n === total ? `${total} ${total > 1 ? 'personnes' : 'personne'}` : `${n} sur ${total}`;
+  };
+  const actualiser = () => {
+    masquerIndex();
+    afficherCompteur();
+    zoneListe.replaceChildren(...liste());
+  };
+
+  const d = lireDonnees();
+  const moi = ficheMoi(lireReglages(), d)?.id;
+  if (puce === 'famille' && !moi) puce = 'tous';
+  if (puce === 'groupe' && !d.groupes.some((g) => g.id === groupeChoisi)) groupeChoisi = d.groupes[0]?.id ?? '';
+  if ((puce === 'groupe' || puce === 'amis') && d.groupes.length === 0) puce = 'tous';
+  const rangPuces = h('div', { class: 'puces puces-liste', role: 'group', 'aria-label': 'Filtrer les fiches' });
+  const rangSous = h('div', { class: 'puces puces-liste', role: 'group' });
+  const bouton = (libelle: string, actif: boolean, onclick: () => void) =>
+    h('button', { type: 'button', class: 'puce', 'aria-pressed': String(actif), onclick }, libelle);
+  const dessinerPuces = () => {
+    const dispo = PUCES.filter((x) => (x.filtre === 'famille' ? !!moi : x.filtre === 'amis' || x.filtre === 'groupe' ? d.groupes.length > 0 : true));
+    rangPuces.replaceChildren(
+      ...dispo.map((x) =>
+        bouton(x.libelle, puce === x.filtre, () => {
+          puce = x.filtre;
+          if (puce === 'groupe' && !groupeChoisi) groupeChoisi = d.groupes[0]?.id ?? '';
+          dessinerPuces();
+          actualiser();
+        }),
+      ),
+    );
+    rangSous.hidden = puce !== 'groupe' && puce !== 'acompleter';
+    rangSous.setAttribute('aria-label', puce === 'groupe' ? 'Groupe d’amis' : 'Informations manquantes');
+    rangSous.replaceChildren(
+      ...(puce === 'groupe'
+        ? d.groupes.map((g) =>
+            bouton(nomGroupe(d, g), groupeChoisi === g.id, () => {
+              groupeChoisi = g.id;
+              dessinerPuces();
+              actualiser();
+            }),
+          )
+        : puce === 'acompleter'
+          ? MANQUES.map((m) =>
+              bouton(m.libelle, manquesChoisis.has(m.manque), () => {
+                if (!manquesChoisis.delete(m.manque)) manquesChoisis.add(m.manque);
+                dessinerPuces();
+                actualiser();
+              }),
+            )
+          : []),
+    );
+  };
+  dessinerPuces();
 
   const champ = h('input', {
     type: 'search',
@@ -95,8 +177,7 @@ export function ecranPersonnes(): HTMLElement {
     enterkeyhint: 'search',
     oninput: () => {
       filtre = champ.value;
-      masquerIndex();
-      zoneListe.replaceChildren(...liste());
+      actualiser();
     },
   });
   const entete = h(
@@ -104,8 +185,11 @@ export function ecranPersonnes(): HTMLElement {
     { class: 'entete-accueil' },
     titre,
     h('label', { class: 'champ-filtre' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Filtrer par nom'), champ),
+    rangPuces,
+    rangSous,
   );
   const { index, bulle } = indexLettres(grouperParLettre(personnesListees(lireDonnees()), lireReglages().tri), zoneListe, entete);
+  afficherCompteur();
   masquerIndex();
 
   return h(

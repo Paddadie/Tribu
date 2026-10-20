@@ -615,7 +615,13 @@ describe('import', () => {
 
   it('pose la question en cas de conflit, et « Annuler l’import » ne change rien', async () => {
     const { donnees } = famille();
-    const doublon = { ...donnees, personnes: donnees.personnes.map((p, i) => (i === 0 ? { ...p, id: 'autre-id' } : p)).slice(0, 1), unions: [], filiations: [], groupes: [] };
+    const doublon = {
+      ...donnees,
+      personnes: donnees.personnes.map((p, i) => (i === 0 ? { ...p, id: 'autre-id' } : p)).slice(0, 1),
+      unions: [],
+      filiations: [],
+      groupes: [],
+    };
     await demarrer(donnees, '#/reglages');
 
     await choisirFichier('sauvegarde.json', exporterJson(doublon));
@@ -1284,5 +1290,27 @@ describe('accueil, agenda et dates', () => {
     const union = { ...donnees.unions[0], marie: true, date: `${new Date().getFullYear() - 10}-01-01` };
     await demarrer({ ...donnees, unions: [union] }, `#/union/${union.id}/${ids.Anne}`);
     expect(ecran().querySelector('.duree-union')!.textContent).toBe('10 ans · noces d’étain');
+  });
+});
+
+describe('filtres de la liste', () => {
+  it('propose seulement les filtres utiles, indique ce qui manque et garde l’index masqué', async () => {
+    const { donnees } = famille();
+    await demarrer(donnees, '#/personnes');
+    const puces = () => [...ecran().querySelectorAll('.puces-liste button')].map((b) => b.textContent);
+    // Ni « Moi » ni groupe : pas de Famille, Amis proches ni Un groupe.
+    expect(puces()).toEqual(['Toutes', 'À compléter']);
+
+    await toucher(trouver('button', 'À compléter'));
+    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
+    expect(ecran().textContent).toContain('Naissance inconnue');
+    expect(ecran().querySelector<HTMLElement>('.index')!.hidden).toBe(true);
+    await toucher(trouver('button', 'Décès'));
+    expect(ecran().querySelector('.vide')?.textContent).toBe('Aucun résultat.');
+    expect(ecran().textContent).toContain('0 sur 4');
+
+    await toucher(trouver('button', 'Toutes'));
+    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
+    expect(ecran().querySelector<HTMLElement>('.index')!.hidden).toBe(false);
   });
 });

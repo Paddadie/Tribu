@@ -11,6 +11,7 @@ Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run
 - src/modele/arbreGlobal.ts : `disposerArbre(d, moi)` → places, couples, branches, `groupes`, `etiquettes`. partie.ts : `disposerPartie` en étapes (blocs, générations, classe `Lignes`). parentSansNom.ts : parent « ? ».
 - src/modele/anonymiser.ts + fixtures/arbre-anonyme.json : vrai arbre anonymisé ; arbreGlobal.fixture.test.ts = invariants et instantané (à régénérer avec `-u` seulement si la disposition change exprès).
 - src/modele/evenements.ts : `evenementsAVenir(d, aujourdhui, jours, {fetes})` (anniversaires, unions, fêtes, décès) ; noces.ts (`dureeUnion`, nom des noces) ; fetes.ts (calendrier des prénoms, `entreesCalendrier`).
+- src/modele/filtres.ts : filtres de la liste (`filtrerListe`, `manquesDe`, `familleDe`).
 - src/ui/accueil.ts (salutation, recherche, Aujourd'hui, Bientôt, souvenir, raccourcis), personnes.ts (`#/personnes`, liste + index), agenda.ts (`#/agenda`).
 - src/ui/ : fiche.ts, arbre.ts (`dessinFoyer`, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts. src/main.ts : routes et View Transition.
 - src/style.css : jetons en tête ; blocs « Dessins de la fiche », « Arbre global », « États communs », « Animations » en fin.

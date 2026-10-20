@@ -413,6 +413,39 @@
   font-size: var(--t2);
 }
 
+.puces.puces-liste {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow: visible;
+}
+
+/* Les puces se partagent la largeur de chaque ligne. */
+.puces-liste .puce {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.puces[hidden] {
+  display: none;
+}
+
+.pastilles-manque {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.pastille-manque {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pastille);
+  color: var(--chaud);
+  font-size: var(--t1);
+}
+
 .puce[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--accent);
