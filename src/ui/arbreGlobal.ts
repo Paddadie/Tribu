@@ -2,45 +2,35 @@
 // une bulle sous la famille (maquette A). On s'y déplace au doigt (glisser, pincer, double toucher) ou à la
 // souris (molette) ; toucher une personne ouvre sa fiche. Le placement vient de `disposerArbre` (modèle testé).
 
-import { disposerArbre, type Disposition, type GroupeDessine, type Point } from '../modele/arbreGlobal';
+import { disposerArbre, type Disposition, type Point } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { filtrerParNom, nomComplet } from '../modele/liste';
 import { enregistrerParentSansNom, estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Personne } from '../modele/types';
-import { LIGNE_EN_PLUS, noeud } from './arbre';
+import { noeud } from './arbre';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { avatarPersonne } from './lignePersonne';
+import {
+  calculerCadres,
+  hautEtiquette,
+  LARG,
+  positions,
+  R,
+  SOUS_NOM,
+  traitsArbre,
+  zoneBulle,
+  type Cadre,
+} from './geometrieArbre';
 import { lienRetour } from './navigation';
 
 const SVG = 'http://www.w3.org/2000/svg';
-/** Pixels entre deux places voisines, et entre deux générations (à l'échelle 1). */
-const PAS_X = 80;
-const PAS_Y = 140;
-/** Rayon de l'avatar, largeur d'un nœud. */
-const R = 19;
-const LARG = 76;
-/** Sous l'avatar, le nom (sur 2 lignes si besoin) et l'année : un trait qui part d'un parent seul commence en dessous. */
-const SOUS_NOM = R + 40 + LIGNE_EN_PLUS;
-const MARGE = 70;
 const ECHELLE_MIN = 0.2;
 const ECHELLE_MAX = 3;
 /** En dessous de cette échelle, les noms s'effacent : il ne reste que les pastilles. */
 const ECHELLE_LOIN = 0.6;
 
-/** Cadre d'un groupe d'amis, en pixels : de l'étiquette (haut) au nom de la dernière ligne (bas). */
-interface Cadre {
-  groupe: GroupeDessine;
-  x: number;
-  y: number;
-  l: number;
-  ha: number;
-}
-/** Dans la bulle : le cadre commence 56 px au-dessus du centre de l'avatar, la zone « TES AMIS » 34 px plus haut. */
-const HAUT_CADRE = R + 56;
-const HAUT_ZONE = 34;
-const MARGE_CADRE = 8;
 /** Hauteur d'une étiquette de famille (sa ligne de texte). */
 const HAUT_ETIQUETTE = 16;
 
@@ -84,17 +74,6 @@ const couleurGroupe = (i: number) => couleurTrait(i + 5);
 
 const borne = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-/** Courbe douce passant par tous les points, partant et arrivant à la verticale. */
-function lisse(points: Point[]): string {
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    const [a, b] = [points[i - 1], points[i]];
-    const dy = (b.y - a.y) / 2;
-    d += ` C ${a.x} ${a.y + dy}, ${b.x} ${b.y - dy}, ${b.x} ${b.y}`;
-  }
-  return d;
-}
-
 export function ecranArbre(): HTMLElement {
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d);
@@ -130,7 +109,7 @@ class Carte {
   readonly vue: HTMLElement;
   private readonly calque: HTMLElement;
   private readonly noeuds = new Map<string, HTMLElement>();
-  private readonly centres = new Map<string, Point>();
+  private readonly centres: Map<string, Point>;
   private readonly largeur: number;
   private readonly hauteur: number;
   private v: Vue = { tx: 0, ty: 0, s: 1 };
@@ -159,15 +138,12 @@ class Carte {
   constructor(disp: Disposition, moi: Personne) {
     this.disp = disp;
     this.moi = moi;
-    const xs = disp.places.map((p) => p.x);
-    const ys = disp.places.map((p) => p.y);
-    const ox = MARGE + LARG / 2 - Math.min(...xs) * PAS_X;
-    const oy = MARGE + R - Math.min(...ys) * PAS_Y;
-    this.largeur = ox + Math.max(...xs) * PAS_X + LARG / 2 + MARGE;
-    this.hauteur = oy + Math.max(...ys) * PAS_Y + SOUS_NOM + MARGE;
-    const px = (p: Point): Point => ({ x: ox + p.x * PAS_X, y: oy + p.y * PAS_Y });
+    const pos = positions(disp);
+    this.largeur = pos.largeur;
+    this.hauteur = pos.hauteur;
+    const px = pos.px;
+    this.centres = pos.centres;
 
-    for (const pl of disp.places) this.centres.set(pl.personne.id, px(pl));
     const noeuds = disp.places.map((pl) => {
       const c = this.centres.get(pl.personne.id)!;
       const n = noeud(pl.personne, moi.id, c.x, c.y, R, { annee: true, larg: LARG });
@@ -182,7 +158,7 @@ class Carte {
       return n;
     });
 
-    this.cadres = this.calculerCadres();
+    this.cadres = calculerCadres(disp, this.centres);
     disp.groupes.forEach((g, i) => {
       for (const m of g.membres) {
         const n = this.noeuds.get(m);
@@ -270,13 +246,10 @@ class Carte {
       if (lignee !== undefined) c.setAttribute('style', `stroke: ${couleurTrait(lignee)}`);
       s.append(c);
     };
-    const centre = (id: string) => this.centres.get(id)!;
-
     // Bulle des amis, derrière tout le reste : la zone « TES AMIS » et, dedans, un cadre par groupe.
-    let hautBulle: Point | undefined;
-    const zoneBulle = this.zoneBulle();
-    if (zoneBulle) {
-      const { g, dr, ha, ba } = zoneBulle;
+    const bulle = zoneBulle(this.disp, this.centres, this.cadres);
+    if (bulle) {
+      const { g, dr, ha, ba } = bulle;
       const zone = document.createElementNS(SVG, 'rect');
       for (const [k, val] of Object.entries({ x: g, y: ha, width: dr - g, height: ba - ha, rx: 28, class: 'zone-amis' })) zone.setAttribute(k, String(val));
       const titre = document.createElementNS(SVG, 'text');
@@ -289,54 +262,10 @@ class Carte {
         r.setAttribute('style', `--cc: ${couleurGroupe(this.cadres.indexOf(c))}`);
         s.append(r);
       }
-      hautBulle = { x: (g + dr) / 2, y: ha };
     }
 
-    for (const c of this.disp.couples) {
-      const [a, b] = [centre(c.a), centre(c.b)].sort((p, q) => p.x - q.x);
-      // Même ligne : trait droit, même quand l'écart est grand (chaîne d'ex). Lignes différentes : courbe.
-      const d = a.y === b.y ? `M ${a.x + R} ${a.y} H ${b.x - R}` : `M ${a.x} ${a.y - R} C ${a.x} ${a.y - R - 46}, ${b.x} ${b.y - R - 46}, ${b.x} ${b.y - R}`;
-      // Marié(e) : trait plein ; en couple : pointillé court ; séparé(e) : gris.
-      trait(d, `trait couple${c.marie ? '' : ' libre'}${c.separe ? ' ex' : ''}`, c.separe ? undefined : c.lignee);
-    }
-
-    for (const br of this.disp.branches) {
-      const bus = px({ x: 0, y: br.bus }).y;
-      // Un parent inconnu n'a ni nom ni trait : seul le trait commun relie les frères et sœurs.
-      const origines = br.origines.filter((o) => !o.inconnu).map((o) => ({ ...px(o), seul: o.parent !== undefined }));
-      const enfants = br.enfants.map((e) => ({ ...px(e), adoptif: e.adoptif }));
-      const classe = enfants.every((e) => e.adoptif) ? 'trait pointille' : 'trait';
-      for (const o of origines) trait(`M ${o.x} ${o.seul ? o.y + SOUS_NOM : o.y} V ${bus}`, classe, br.lignee);
-      const xs = [...origines, ...enfants].map((p) => p.x);
-      if (Math.max(...xs) - Math.min(...xs) > 0.5) trait(`M ${Math.min(...xs)} ${bus} H ${Math.max(...xs)}`, classe, br.lignee);
-      for (const e of enfants) trait(`M ${e.x} ${bus} V ${e.y - R - 3}`, e.adoptif ? 'trait pointille' : 'trait', br.lignee);
-    }
-
-    const courbe = (a: Point, b: Point) => {
-      if (a.y === b.y) {
-        const [g, dr] = a.x < b.x ? [a, b] : [b, a];
-        return `M ${g.x + R} ${g.y} H ${dr.x - R}`;
-      }
-      const [hi, ba] = a.y < b.y ? [a, b] : [b, a];
-      const m = (ba.y - hi.y) / 2;
-      return `M ${hi.x} ${hi.y + SOUS_NOM} C ${hi.x} ${hi.y + SOUS_NOM + m}, ${ba.x} ${ba.y - R - m}, ${ba.x} ${ba.y - R - 3}`;
-    };
-    for (const a of this.disp.amities) trait(courbe(centre(a.a), centre(a.b)), 'trait ami');
-    if (hautBulle) trait(lisse(this.versBulle(hautBulle)), 'trait ami');
+    for (const t of traitsArbre(this.disp, { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres }, bulle, this.moi.id)) trait(t.d, t.classe, t.lignee);
     return s;
-  }
-
-  /** Un cadre par groupe : le rectangle qui entoure les membres et leurs familles dans la bulle. */
-  private calculerCadres(): Cadre[] {
-    return this.disp.groupes.flatMap((groupe) => {
-      const c = groupe.ids.map((id) => this.centres.get(id)).filter((p): p is Point => p !== undefined);
-      if (c.length === 0) return [];
-      const x = Math.min(...c.map((p) => p.x)) - LARG / 2 - MARGE_CADRE;
-      const y = Math.min(...c.map((p) => p.y)) - HAUT_CADRE;
-      return [
-        { groupe, x, y, l: Math.max(...c.map((p) => p.x)) + LARG / 2 + MARGE_CADRE - x, ha: Math.max(...c.map((p) => p.y)) + SOUS_NOM + MARGE_CADRE - y },
-      ];
-    });
   }
 
   /** Une entrée par lignée de l'arbre principal (par ordre alphabétique), nommée d'après son étiquette « Famille X ». */
@@ -432,16 +361,6 @@ class Carte {
   }
 
   /** Zone « TES AMIS » : autour de tous les cadres et de toute personne de la bulle ; absente sans bulle. */
-  private zoneBulle(): { g: number; dr: number; ha: number; ba: number } | undefined {
-    const pts = this.disp.places.filter((p) => p.bulle).map((p) => this.centres.get(p.personne.id)!);
-    if (pts.length === 0) return undefined;
-    const g = Math.min(...pts.map((p) => p.x - LARG / 2), ...this.cadres.map((c) => c.x)) - 14;
-    const dr = Math.max(...pts.map((p) => p.x + LARG / 2), ...this.cadres.map((c) => c.x + c.l)) + 14;
-    const ha = Math.min(...pts.map((p) => p.y - HAUT_CADRE), ...this.cadres.map((c) => c.y)) - HAUT_ZONE;
-    const ba = Math.max(...pts.map((p) => p.y + SOUS_NOM + MARGE_CADRE), ...this.cadres.map((c) => c.y + c.ha)) + 14;
-    return { g, dr, ha, ba };
-  }
-
   /** Textes posés sur le dessin : nom et effectif de chaque groupe, nom de famille au-dessus de chaque lignée. */
   private legendes(px: (p: Point) => Point): HTMLElement[] {
     const placer = (el: HTMLElement, x: number, y: number) => {
@@ -450,7 +369,7 @@ class Carte {
       return el;
     };
     const d = lireDonnees();
-    const bulle = this.zoneBulle();
+    const bulle = zoneBulle(this.disp, this.centres, this.cadres);
     const titres = this.cadres.map((c) => {
       const nom = nomGroupe(
         d,
@@ -468,14 +387,7 @@ class Carte {
     });
     const familles = this.disp.etiquettes.map((e) => {
       const c = px(e);
-      // Une fratrie reliée par un trait commun (parents non renseignés) : le nom se met au-dessus du trait, pas dessous.
-      let haut = c.y - R - 24;
-      for (const br of e.fratrie ? this.disp.branches : []) {
-        const bus = px({ x: 0, y: br.bus }).y;
-        const xs = br.enfants.map((f) => px(f).x);
-        if (bus >= c.y - R - 24 || bus < c.y - PAS_Y || !br.enfants.some((f) => px(f).y === c.y)) continue;
-        if (c.x >= Math.min(...xs) - 1 && c.x <= Math.max(...xs) + 1) haut = Math.min(haut, bus - 24);
-      }
+      const haut = hautEtiquette(this.disp, px, e);
       const el = placer(h('div', { class: 'etiquette-famille' }, e.texte), c.x, haut);
       if (e.lignee !== undefined) el.style.setProperty('--cc', couleurTrait(e.lignee));
       // Dans la bulle, de loin, les titres des groupes suffisent.
@@ -485,33 +397,6 @@ class Carte {
       return el;
     });
     return [...titres, ...familles];
-  }
-
-  /**
-   * Passage du pointillé de Moi jusqu'à la bulle : il descend en se glissant, à chaque ligne de la famille
-   * sous Moi, dans l'espace libre le plus proche entre deux personnes (sans traverser de nom).
-   */
-  private versBulle(arrivee: Point): Point[] {
-    const m = this.centres.get(this.moi.id)!;
-    const points: Point[] = [{ x: m.x, y: m.y + SOUS_NOM }];
-    const lignes = new Map<number, number[]>();
-    for (const p of this.disp.places) {
-      const c = this.centres.get(p.personne.id)!;
-      if (!p.bulle && c.y > m.y) lignes.set(c.y, [...(lignes.get(c.y) ?? []), c.x]);
-    }
-    let x = m.x;
-    for (const [y, xs] of [...lignes].sort((a, b) => a[0] - b[0])) {
-      xs.sort((a, b) => a - b);
-      const libre = (v: number) => xs.every((c) => Math.abs(c - v) >= LARG / 2 + 4);
-      if (!libre(x)) {
-        const trous = [xs[0] - LARG, xs[xs.length - 1] + LARG];
-        for (let i = 1; i < xs.length; i++) if (xs[i] - xs[i - 1] >= LARG + 8) trous.push((xs[i] + xs[i - 1]) / 2);
-        x = trous.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
-      }
-      points.push({ x, y: y + 6 });
-    }
-    points.push(arrivee);
-    return points;
   }
 
   // ——— Vue : translation et échelle ———

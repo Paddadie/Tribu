@@ -622,6 +622,39 @@ describe('import', () => {
     expect(ecran().textContent).toContain('L’export contient tes notes en clair : garde le fichier pour toi.');
   });
 
+  it('l’export agenda est grisé sans date complète, actif avec une naissance datée', async () => {
+    const vide = creerPersonne(donneesVides(), { prenom: 'Xavier', nom: 'Test' }).donnees;
+    await demarrer(vide, '#/reglages');
+    expect(ecran().textContent).toContain('Aucune date complète pour l’instant');
+    expect((trouver('button', 'Exporter vers l’agenda') as HTMLButtonElement).disabled).toBe(true);
+
+    const datee = creerPersonne(donneesVides(), { prenom: 'Yvonne', nom: 'Test', naissance: '1980-04-02' }).donnees;
+    await demarrer(datee, '#/reglages');
+    expect(ecran().textContent).toContain('1 naissance · 0 décès · 0 union');
+    expect((trouver('button', 'Exporter vers l’agenda') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('l’export de l’arbre en image est grisé sans Moi, actif avec Moi', async () => {
+    const d = creerPersonne(donneesVides(), { prenom: 'Zoé', nom: 'Test' });
+    await demarrer(d.donnees, '#/reglages');
+    expect((trouver('button', 'Exporter l’arbre en PNG') as HTMLButtonElement).disabled).toBe(true);
+    expect(ecran().textContent).toContain('Choisis ta fiche dans Réglages → Moi.');
+
+    await demarrer(d.donnees, '#/reglages', { moi: d.personne.id });
+    expect((trouver('button', 'Exporter l’arbre en PNG') as HTMLButtonElement).disabled).toBe(false);
+    expect(ecran().textContent).toContain('image d’environ');
+  });
+
+  it('Vérifier mes données liste une fiche « Test » isolée, avec un lien vers la fiche', async () => {
+    const d = creerPersonne(donneesVides(), { prenom: 'Paul', nom: 'Test' });
+    await demarrer(d.donnees, '#/reglages');
+    await toucher(trouver('a', 'Vérifier mes données'));
+    expect(ecran().textContent).toContain('Personnes isolées · 1');
+    expect(ecran().textContent).toContain('Fiches « Test » · 1');
+    expect(ecran().textContent).toContain('Aucun doublon probable.');
+    expect(ecran().querySelector<HTMLAnchorElement>('a.ligne')!.getAttribute('href')).toBe(`#/personne/${d.personne.id}`);
+  });
+
   it('un fichier illisible est refusé sans toucher aux données', async () => {
     const { donnees } = famille();
     await demarrer(donnees, '#/reglages');

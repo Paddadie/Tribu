@@ -178,9 +178,9 @@ Règles valables partout : maquette validée par Paul avant tout changement visi
 - [x] `migrer()` v4 → v5 testé ; les imports v1 à v4 restent acceptés.
 
 ### Étape 3 — Fonctionnalités (1 à 2 sessions, maquette d'abord)
-- [ ] FEATURE-11 : Réglages → « Exporter les dates vers un agenda » : `.ics` avec naissances, décès et mariages, événements annuels (RRULE), UID stables (id + type), naissance sans année, 29 février ; partage ou téléchargement ; aide : importer dans un agenda dédié « Tribu », notifications la veille et le jour même, réexporter après des ajouts.
-- [ ] FEATURE-13 : Réglages → « Vérifier mes données » : doublons probables, personnes isolées, dates incohérentes, fiches « Test ».
-- [ ] FEATURE-14 : Réglages → export PNG de l'arbre global (dessin sur canvas, noms compris).
+- [x] FEATURE-11 (codé le 20/10 sur maquette validée ; l’âge n’est pas dans le titre : impossible dans un événement récurrent, l’année va en description) : Réglages → « Exporter les dates vers un agenda » : `.ics` avec naissances, décès et mariages, événements annuels (RRULE), UID stables (id + type), naissance sans année, 29 février ; partage ou téléchargement ; aide : importer dans un agenda dédié « Tribu », notifications la veille et le jour même, réexporter après des ajouts.
+- [x] FEATURE-13 (codé le 20/10 sur maquette validée) : Réglages → « Vérifier mes données » : doublons probables, personnes isolées, dates incohérentes, fiches « Test ».
+- [x] FEATURE-14 : Réglages → export PNG de l'arbre global (dessin sur canvas, noms compris).
 
 ### Après la V3
 - FEATURE-16 : fusion à l'import d'abord (utile aussi pour changer de téléphone), puis plusieurs groupes par personne, puis lecture seule. FEATURE-17 : photos.

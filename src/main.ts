@@ -16,6 +16,7 @@ import { ecranLien } from "./ui/lien";
 import { demarrerNavigation, profondeurCourante, remplacer } from "./ui/navigation";
 import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
+import { ecranVerification } from "./ui/verification";
 
 // Routage par hash (compatible GitHub Pages) :
 //   #/                 liste          #/personne/<id>   fiche
@@ -26,6 +27,7 @@ import { ecranUnion } from "./ui/union";
 //   #/parent/<id>      ajout d'un parent à la personne    #/enfant/<id>   ajout d'un enfant
 //   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
+//   #/verification    vérification des données (doublons, isolés, dates)
 //   #/arbre            arbre de tous les liens autour de « Moi »
 //   #/groupes          groupes d'amis      #/groupe/nouveau   création      #/groupe/<id>   détail      #/groupe/<id>/ajouter   ajout d'un membre
 const app = document.querySelector<HTMLElement>("#app");
@@ -38,6 +40,7 @@ function vue(route: string): HTMLElement {
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages();
   if (section === "arbre") return ecranArbre();
+  if (section === "verification") return ecranVerification();
   if (section === "groupes") return ecranGroupes();
   if (section === "groupe" && id === "nouveau") return ecranNouveauGroupe();
   if (section === "groupe") {

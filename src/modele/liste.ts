@@ -46,7 +46,7 @@ export function couleurFamille(p: Pick<Personne, 'nom'> & { nomNaissance?: strin
 }
 
 /** Minuscules, sans accents : « Éloïse » → « eloise ». */
-function simplifier(texte: string): string {
+export function simplifier(texte: string): string {
   return texte.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr');
 }
 

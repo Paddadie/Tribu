@@ -17,7 +17,7 @@ export const MESSAGES_EXPORT: Record<IssueExport, string> = {
 export const MESSAGE_EXPORT_IMPOSSIBLE = 'Export impossible sur cet appareil.';
 
 /** Déclenche le téléchargement d'un fichier. */
-export function telecharger(nom: string, contenu: string, type = 'application/json'): void {
+export function telecharger(nom: string, contenu: BlobPart, type = 'application/json'): void {
   const url = URL.createObjectURL(new Blob([contenu], { type }));
   const lien = h('a', { href: url, download: nom });
   document.body.append(lien);
@@ -35,7 +35,7 @@ type Partage = Pick<Navigator, 'share' | 'canShare'>;
  */
 export async function exporterFichier(
   nom: string,
-  contenu: string,
+  contenu: BlobPart,
   type = 'application/json',
   partage: Partial<Partage> = navigator,
   repli: typeof telecharger = telecharger,

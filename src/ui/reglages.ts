@@ -1,7 +1,9 @@
-// Écran Réglages : affichage (tri de la liste, thème), sauvegarde (export par
+// Écran Réglages : affichage (tri de la liste, thème), exports (agenda .ics, arbre en PNG), sauvegarde (export par
 // partage ou téléchargement, import JSON avec confirmation avant écrasement),
 // effacement des données, version. Import et effacement sont annulables.
 
+import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from '../modele/agenda';
+import { disposerArbre } from '../modele/arbreGlobal';
 import type { Tri } from '../modele/liste';
 import { donneesVides, personnesVisibles } from '../modele/modele';
 import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
@@ -14,6 +16,7 @@ import { lireDonnees, lireReglages, modifierReglages } from './etat';
 import { messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { lienRetour } from './navigation';
+import { arbrePng, dimensionsArbre, NOM_FICHIER_ARBRE } from './arbreImage';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
@@ -47,6 +50,12 @@ export function ecranReglages(): HTMLElement {
   const erreurEffacement = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const resumeExport = h('p', { class: 'secondaire' });
   const dateExport = h('b', {});
+  const resumeAgenda = h('p', { class: 'secondaire' });
+  const messageAgenda = h('p', { class: 'secondaire', role: 'status' });
+  const boutonAgenda = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterAgenda() }, 'Exporter vers l’agenda');
+  const resumeImage = h('p', { class: 'secondaire' });
+  const messageImage = h('p', { class: 'secondaire', role: 'status' });
+  const boutonImage = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterImage() }, 'Exporter l’arbre en PNG');
   const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
   const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
 
@@ -77,6 +86,19 @@ export function ecranReglages(): HTMLElement {
     const n = personnesVisibles(lireDonnees()).length;
     resumeExport.textContent = `Enregistre ${pluriel(n)} et leurs liens dans ${nomFichierExport(new Date())}.`;
     dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
+    const bilan = bilanAgenda(evenementsAgenda(lireDonnees()));
+    const total = bilan.naissances + bilan.deces + bilan.unions;
+    resumeAgenda.textContent =
+      total === 0
+        ? 'Aucune date complète pour l’instant : ajoute le jour et le mois d’une naissance, d’un décès ou d’une union.'
+        : `${bilan.naissances} ${bilan.naissances > 1 ? 'naissances' : 'naissance'} · ${bilan.deces} ${bilan.deces > 1 ? 'décès' : 'décès'} · ${bilan.unions} ${bilan.unions > 1 ? 'unions' : 'union'}. Les fiches sans jour ni mois sont ignorées.`;
+    boutonAgenda.disabled = total === 0;
+    const moi = ficheMoi(lireReglages(), lireDonnees());
+    if (moi) {
+      const dim = dimensionsArbre(disposerArbre(lireDonnees(), moi.id));
+      resumeImage.textContent = `${pluriel(n)} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
+    } else resumeImage.textContent = 'Choisis ta fiche dans Réglages → Moi.';
+    boutonImage.disabled = !moi;
     boutonEffacer.disabled = n === 0;
     aideEffacer.hidden = n > 0;
     dessinerMoi();
@@ -93,6 +115,34 @@ export function ecranReglages(): HTMLElement {
     } catch {
       messageExport.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
       messageExport.className = 'erreur';
+    }
+  };
+
+  const exporterAgenda = async () => {
+    const evenements = evenementsAgenda(lireDonnees());
+    if (evenements.length === 0) return;
+    try {
+      const issue = await exporterFichier(NOM_FICHIER_AGENDA, construireIcs(evenements, new Date()), 'text/calendar');
+      messageAgenda.textContent = MESSAGES_EXPORT[issue];
+      messageAgenda.className = issue === 'annule' ? 'secondaire' : 'succes';
+    } catch {
+      messageAgenda.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
+      messageAgenda.className = 'erreur';
+    }
+  };
+
+  const exporterImage = async () => {
+    const moi = ficheMoi(lireReglages(), lireDonnees());
+    if (!moi) return;
+    try {
+      const maintenant = new Date();
+      const png = await arbrePng(disposerArbre(lireDonnees(), moi.id), lireDonnees(), moi, maintenant);
+      const issue = await exporterFichier(NOM_FICHIER_ARBRE(maintenant), png, 'image/png');
+      messageImage.textContent = MESSAGES_EXPORT[issue];
+      messageImage.className = issue === 'annule' ? 'secondaire' : 'succes';
+    } catch {
+      messageImage.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
+      messageImage.className = 'erreur';
     }
   };
 
@@ -194,6 +244,58 @@ export function ecranReglages(): HTMLElement {
       h(
         'section',
         { class: 'groupe-reglages' },
+        h('h2', { class: 'titre-section' }, 'Exports'),
+        h(
+          'div',
+          { class: 'carte bloc-reglages' },
+          h(
+            'div',
+            { class: 'reglage' },
+            h('h3', {}, 'Exporter les dates vers un agenda'),
+            h(
+              'p',
+              { class: 'secondaire' },
+              'Crée un fichier avec les anniversaires de naissance, les souvenirs de décès et les anniversaires d’union de tes proches. Chaque date revient chaque année.',
+            ),
+            resumeAgenda,
+            boutonAgenda,
+            messageAgenda,
+            h(
+              'details',
+              {},
+              h('summary', {}, 'Comment l’utiliser'),
+              h(
+                'ol',
+                { class: 'secondaire' },
+                h('li', {}, 'Crée un agenda dédié, nommé « Tribu », dans ton application d’agenda.'),
+                h('li', {}, 'Importe le fichier dans cet agenda, pas dans ton agenda principal.'),
+                h('li', {}, 'Règle les notifications de cet agenda : la veille et le jour même.'),
+                h('li', {}, 'Après des ajouts dans Tribu, exporte de nouveau et réimporte : les événements existants sont mis à jour, sans doublon.'),
+              ),
+            ),
+          ),
+        ),
+        h(
+          'div',
+          { class: 'carte bloc-reglages' },
+          h(
+            'div',
+            { class: 'reglage' },
+            h('h3', {}, 'Exporter l’arbre en image'),
+            h(
+              'p',
+              { class: 'secondaire' },
+              'Dessine tout l’arbre global (famille et amis) dans une image PNG, avec les noms. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+            ),
+            resumeImage,
+            boutonImage,
+            messageImage,
+          ),
+        ),
+      ),
+      h(
+        'section',
+        { class: 'groupe-reglages' },
         h('h2', { class: 'titre-section' }, 'Sauvegarde'),
         h(
           'div',
@@ -219,7 +321,29 @@ export function ecranReglages(): HTMLElement {
           ),
         ),
       ),
-      h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Données'), boutonEffacer, aideEffacer, erreurEffacement),
+      h(
+        'section',
+        { class: 'groupe-reglages' },
+        h('h2', { class: 'titre-section' }, 'Données'),
+        h(
+          'div',
+          { class: 'carte' },
+          h(
+            'a',
+            { class: 'ligne ligne-lien', href: '#/verification' },
+            h(
+              'span',
+              { class: 'ligne-texte' },
+              h('span', { class: 'ligne-nom' }, 'Vérifier mes données'),
+              h('span', { class: 'secondaire' }, 'Doublons, fiches isolées, dates incohérentes'),
+            ),
+            icone('chevron', 20),
+          ),
+        ),
+        boutonEffacer,
+        aideEffacer,
+        erreurEffacement,
+      ),
       h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),
     ),
   );
