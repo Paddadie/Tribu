@@ -23,7 +23,7 @@ import { ecranVerification } from "./ui/verification";
 // Routage par hash (compatible GitHub Pages) :
 //   #/                 accueil        #/personnes       toutes les fiches     #/personne/<id>   fiche
 //   #/agenda           dates des 12 prochains mois
-//   #/reglages         réglages (tri, thème, sauvegarde)
+//   #/reglages[/<onglet>]  réglages en onglets : general, exports, sauvegarde, donnees
 //   #/nouveau          création       #/nouveau/<texte>  création, prénom et nom tirés de la recherche
 //   #/modifier/<id>    modification
 //   #/conjoint/<id>    ajout d'un conjoint à la personne      #/ami/<id>   ajout d'un ami
@@ -43,7 +43,7 @@ function vue(route: string): HTMLElement {
   if (brut !== null) return ecranIllisible(brut, () => (route === "#/" ? afficher() : remplacer("#/")));
   const [, section, id] = route.split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
-  if (section === "reglages") return ecranReglages();
+  if (section === "reglages") return ecranReglages(id);
   if (section === "arbre") {
     const cle = route.split("/")[3];
     const focus = (id === "famille" || id === "groupe") && cle ? { quoi: id as FocusArbre["quoi"], cle: decodeURIComponent(cle) } : undefined;

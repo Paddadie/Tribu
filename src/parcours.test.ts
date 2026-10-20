@@ -635,6 +635,21 @@ describe('import', () => {
     expect(bandeau()!.textContent).toContain('1 déjà présente');
   });
 
+  it('découpe les réglages en onglets : Général par défaut, onglet choisi par l’adresse ou au toucher', async () => {
+    await demarrer(famille().donnees, '#/reglages');
+    const panneau = (id: string) => ecran().querySelector<HTMLElement>(`#panneau-${id}`)!;
+    expect(panneau('general').hidden).toBe(false);
+    expect(panneau('exports').hidden).toBe(true);
+    (ecran().querySelector('#onglet-sauvegarde') as HTMLElement).click();
+    expect(panneau('sauvegarde').hidden).toBe(false);
+    expect(panneau('general').hidden).toBe(true);
+    expect(location.hash).toBe('#/reglages/sauvegarde');
+    await demarrer(famille().donnees, '#/reglages/donnees');
+    expect(panneau('donnees').hidden).toBe(false);
+    await demarrer(famille().donnees, '#/reglages/inconnu');
+    expect(panneau('general').hidden).toBe(false);
+  });
+
   it('prévient que l’export contient les notes en clair', async () => {
     await demarrer(famille().donnees, '#/reglages');
     expect(ecran().textContent).toContain('L’export contient tes notes en clair : garde le fichier pour toi.');

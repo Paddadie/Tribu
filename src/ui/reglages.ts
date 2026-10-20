@@ -17,7 +17,7 @@ import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
 import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
-import { lienRetour } from './navigation';
+import { lienRetour, remplacer } from './navigation';
 import { arbrePng, dimensionsArbre, NOM_FICHIER_ARBRE } from './arbreImage';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
@@ -34,10 +34,19 @@ function choix<T extends string>(nom: string, legende: string, options: [T, stri
   return h('fieldset', { class: 'champ' }, h('legend', {}, legende), h('div', { class: 'choix-groupe' }, ...boutons));
 }
 
+export const ONGLETS_REGLAGES = [
+  { id: 'general', libelle: 'Général', icone: 'reglages' },
+  { id: 'exports', libelle: 'Exports', icone: 'haut' },
+  { id: 'sauvegarde', libelle: 'Sauvegarde', icone: 'echange' },
+  { id: 'donnees', libelle: 'Données', icone: 'coche' },
+] as const;
+export type OngletReglages = (typeof ONGLETS_REGLAGES)[number]['id'];
 
-export function ecranReglages(): HTMLElement {
+/** `onglet` : fin de l'adresse `#/reglages/<onglet>` ; un nom inconnu ouvre l'onglet Général. */
+export function ecranReglages(onglet?: string): HTMLElement {
   const retour = '#/';
   const reglages = lireReglages();
+  const actif: OngletReglages = ONGLETS_REGLAGES.find((o) => o.id === onglet)?.id ?? 'general';
 
   const messageExport = h('p', { class: 'secondaire', role: 'status' });
   const erreurImport = h('p', { class: 'erreur', role: 'alert', hidden: true });
@@ -190,6 +199,34 @@ export function ecranReglages(): HTMLElement {
 
   const date = new Date(__BUILD_DATE__).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
+  // Onglets : tous les panneaux restent dans la page (état et messages conservés), un seul est visible.
+  const panneau = (id: OngletReglages, ...enfants: Parameters<typeof h>[2][]) =>
+    h('div', { class: 'panneau', id: `panneau-${id}`, role: 'tabpanel', hidden: id !== actif }, ...enfants);
+  const boutons = ONGLETS_REGLAGES.map((o) =>
+    h(
+      'button',
+      {
+        type: 'button',
+        role: 'tab',
+        class: 'onglet',
+        id: `onglet-${o.id}`,
+        'aria-controls': `panneau-${o.id}`,
+        'aria-selected': String(o.id === actif),
+        onclick: () => ouvrirOnglet(o.id),
+      },
+      icone(o.icone, 22),
+      h('span', {}, o.libelle),
+    ),
+  );
+  const onglets = h('div', { class: 'onglets', role: 'tablist' }, ...boutons);
+  const ouvrirOnglet = (id: OngletReglages) => {
+    for (const o of ONGLETS_REGLAGES) {
+      document.getElementById(`panneau-${o.id}`)!.hidden = o.id !== id;
+      document.getElementById(`onglet-${o.id}`)!.setAttribute('aria-selected', String(o.id === id));
+    }
+    remplacer(`#/reglages/${id}`, false);
+  };
+
   return h(
     'div',
     { class: 'ecran' },
@@ -202,162 +239,179 @@ export function ecranReglages(): HTMLElement {
     h(
       'div',
       { class: 'contenu' },
-      h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Moi'), carteMoi, aideMoi),
-      h(
-        'section',
-        { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'Amis'),
+      onglets,
+      panneau(
+        'general',
+        h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Moi'), carteMoi, aideMoi),
         h(
-          'div',
-          { class: 'carte' },
-          h(
-            'a',
-            { class: 'ligne ligne-lien', href: '#/groupes' },
-            icone('ami', 24),
-            h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Groupes d’amis'), h('span', { class: 'secondaire' }, 'Noms et membres')),
-            icone('chevron', 20),
-          ),
-        ),
-      ),
-      h(
-        'section',
-        { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'Affichage'),
-        h(
-          'div',
-          { class: 'carte bloc-reglages' },
-          choix<Tri>(
-            'tri',
-            'Trier la liste par',
-            [
-              ['prenom', 'Prénom'],
-              ['nom', 'Nom'],
-            ],
-            reglages.tri,
-            (tri) => modifierReglages({ tri }),
-          ),
-          choix<Theme>(
-            'theme',
-            'Thème',
-            [
-              ['auto', 'Auto'],
-              ['clair', 'Clair'],
-              ['sombre', 'Sombre'],
-            ],
-            reglages.theme,
-            (theme) => modifierReglages({ theme }),
-          ),
-          bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', reglages.fetes, (fetes) => modifierReglages({ fetes })),
-        ),
-      ),
-      h(
-        'section',
-        { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'Exports'),
-        h(
-          'div',
-          { class: 'carte bloc-reglages' },
+          'section',
+          { class: 'groupe-reglages' },
+          h('h2', { class: 'titre-section' }, 'Amis'),
           h(
             'div',
-            { class: 'reglage' },
-            h('h3', {}, 'Exporter les dates vers un agenda'),
+            { class: 'carte' },
             h(
-              'p',
-              { class: 'secondaire' },
-              'Crée un fichier avec les anniversaires de naissance, les souvenirs de décès et les anniversaires d’union de tes proches. Chaque date revient chaque année.',
+              'a',
+              { class: 'ligne ligne-lien', href: '#/groupes' },
+              icone('ami', 24),
+              h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Groupes d’amis'), h('span', { class: 'secondaire' }, 'Noms et membres')),
+              icone('chevron', 20),
             ),
-            bascule('fetes-ics', 'Inclure les fêtes', 'Une date par prénom au calendrier', reglages.fetesDansIcs, (fetesDansIcs) => {
-              modifierReglages({ fetesDansIcs });
-              maj();
-            }),
-            resumeAgenda,
-            boutonAgenda,
-            messageAgenda,
+          ),
+        ),
+        h(
+          'section',
+          { class: 'groupe-reglages' },
+          h('h2', { class: 'titre-section' }, 'Affichage'),
+          h(
+            'div',
+            { class: 'carte bloc-reglages' },
+            choix<Tri>(
+              'tri',
+              'Trier la liste par',
+              [
+                ['prenom', 'Prénom'],
+                ['nom', 'Nom'],
+              ],
+              reglages.tri,
+              (tri) => modifierReglages({ tri }),
+            ),
+            choix<Theme>(
+              'theme',
+              'Thème',
+              [
+                ['auto', 'Auto'],
+                ['clair', 'Clair'],
+                ['sombre', 'Sombre'],
+              ],
+              reglages.theme,
+              (theme) => modifierReglages({ theme }),
+            ),
+            bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', reglages.fetes, (fetes) => modifierReglages({ fetes })),
+          ),
+        ),
+      ),
+      panneau(
+        'exports',
+        h(
+          'section',
+          { class: 'groupe-reglages' },
+          h('h2', { class: 'titre-section' }, 'Exports'),
+          h(
+            'div',
+            { class: 'carte bloc-reglages' },
             h(
-              'details',
-              {},
-              h('summary', {}, 'Comment l’utiliser'),
+              'div',
+              { class: 'reglage' },
+              h('h3', {}, 'Exporter les dates vers un agenda'),
               h(
-                'ol',
+                'p',
                 { class: 'secondaire' },
-                h('li', {}, 'Crée un agenda dédié, nommé « Tribu », dans ton application d’agenda.'),
-                h('li', {}, 'Importe le fichier dans cet agenda, pas dans ton agenda principal.'),
-                h('li', {}, 'Règle les notifications de cet agenda : la veille et le jour même.'),
-                h('li', {}, 'Après des ajouts dans Tribu, exporte de nouveau et réimporte : les événements existants sont mis à jour, sans doublon.'),
+                'Crée un fichier avec les anniversaires de naissance, les souvenirs de décès et les anniversaires d’union de tes proches. Chaque date revient chaque année.',
+              ),
+              bascule('fetes-ics', 'Inclure les fêtes', 'Une date par prénom au calendrier', reglages.fetesDansIcs, (fetesDansIcs) => {
+                modifierReglages({ fetesDansIcs });
+                maj();
+              }),
+              resumeAgenda,
+              boutonAgenda,
+              messageAgenda,
+              h(
+                'details',
+                {},
+                h('summary', {}, 'Comment l’utiliser'),
+                h(
+                  'ol',
+                  { class: 'secondaire' },
+                  h('li', {}, 'Crée un agenda dédié, nommé « Tribu », dans ton application d’agenda.'),
+                  h('li', {}, 'Importe le fichier dans cet agenda, pas dans ton agenda principal.'),
+                  h('li', {}, 'Règle les notifications de cet agenda : la veille et le jour même.'),
+                  h('li', {}, 'Après des ajouts dans Tribu, exporte de nouveau et réimporte : les événements existants sont mis à jour, sans doublon.'),
+                ),
               ),
             ),
           ),
-        ),
-        h(
-          'div',
-          { class: 'carte bloc-reglages' },
           h(
             'div',
-            { class: 'reglage' },
-            h('h3', {}, 'Exporter l’arbre en image'),
+            { class: 'carte bloc-reglages' },
             h(
-              'p',
-              { class: 'secondaire' },
-              'Dessine tout l’arbre global (famille et amis) dans une image PNG, avec les noms. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+              'div',
+              { class: 'reglage' },
+              h('h3', {}, 'Exporter l’arbre en image'),
+              h(
+                'p',
+                { class: 'secondaire' },
+                'Dessine tout l’arbre global (famille et amis) dans une image PNG, avec les noms. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+              ),
+              resumeImage,
+              boutonImage,
+              messageImage,
             ),
-            resumeImage,
-            boutonImage,
-            messageImage,
           ),
         ),
       ),
-      h(
-        'section',
-        { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'Sauvegarde'),
+      panneau(
+        'sauvegarde',
         h(
-          'div',
-          { class: 'carte bloc-reglages' },
+          'section',
+          { class: 'groupe-reglages' },
+          h('h2', { class: 'titre-section' }, 'Sauvegarde'),
           h(
             'div',
-            { class: 'reglage' },
-            h('h3', {}, 'Exporter'),
-            h('p', { class: 'date-export' }, h('span', { class: 'secondaire' }, 'Dernier export'), dateExport),
-            resumeExport,
-            h('p', { class: 'secondaire' }, 'L’export contient tes notes en clair : garde le fichier pour toi.'),
-            h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporter() }, 'Exporter mes données'),
-            messageExport,
-          ),
-          h(
-            'div',
-            { class: 'reglage' },
-            h('h3', {}, 'Importer'),
-            h('p', { class: 'secondaire' }, 'Fusionne un fichier exporté avec les données de cet appareil. Rien n’est effacé ; en cas de conflit ou de doute, je te demande.'),
-            h('button', { type: 'button', class: 'bouton', onclick: () => fichier.click() }, 'Choisir un fichier…'),
-            fichier,
-            erreurImport,
-          ),
-        ),
-      ),
-      h(
-        'section',
-        { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'Données'),
-        h(
-          'div',
-          { class: 'carte' },
-          h(
-            'a',
-            { class: 'ligne ligne-lien', href: '#/verification' },
+            { class: 'carte bloc-reglages' },
             h(
-              'span',
-              { class: 'ligne-texte' },
-              h('span', { class: 'ligne-nom' }, 'Vérifier mes données'),
-              h('span', { class: 'secondaire' }, 'Doublons, fiches isolées, dates incohérentes'),
+              'div',
+              { class: 'reglage' },
+              h('h3', {}, 'Exporter'),
+              h('p', { class: 'date-export' }, h('span', { class: 'secondaire' }, 'Dernier export'), dateExport),
+              resumeExport,
+              h('p', { class: 'secondaire' }, 'L’export contient tes notes en clair : garde le fichier pour toi.'),
+              h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporter() }, 'Exporter mes données'),
+              messageExport,
             ),
-            icone('chevron', 20),
+            h(
+              'div',
+              { class: 'reglage' },
+              h('h3', {}, 'Importer'),
+              h(
+                'p',
+                { class: 'secondaire' },
+                'Fusionne un fichier exporté avec les données de cet appareil. Rien n’est effacé ; en cas de conflit ou de doute, je te demande.',
+              ),
+              h('button', { type: 'button', class: 'bouton', onclick: () => fichier.click() }, 'Choisir un fichier…'),
+              fichier,
+              erreurImport,
+            ),
           ),
         ),
-        boutonEffacer,
-        aideEffacer,
-        erreurEffacement,
       ),
-      h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),
+      panneau(
+        'donnees',
+        h(
+          'section',
+          { class: 'groupe-reglages' },
+          h('h2', { class: 'titre-section' }, 'Données'),
+          h(
+            'div',
+            { class: 'carte' },
+            h(
+              'a',
+              { class: 'ligne ligne-lien', href: '#/verification' },
+              h(
+                'span',
+                { class: 'ligne-texte' },
+                h('span', { class: 'ligne-nom' }, 'Vérifier mes données'),
+                h('span', { class: 'secondaire' }, 'Doublons, fiches isolées, dates incohérentes'),
+              ),
+              icone('chevron', 20),
+            ),
+          ),
+          boutonEffacer,
+          aideEffacer,
+          erreurEffacement,
+        ),
+        h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),
+      ),
     ),
   );
 }

@@ -306,6 +306,68 @@ fieldset.champ legend {
   border-top: 1px solid var(--bord);
 }
 
+/* Onglets des réglages : barre fixe sous le titre, un panneau visible à la fois. */
+.onglets {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-l);
+  background: var(--carte);
+  box-shadow: var(--ombre-basse);
+}
+
+.onglet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 8px 2px 7px;
+  border: 0;
+  border-radius: var(--rayon-m);
+  background: none;
+  color: var(--secondaire);
+  font: inherit;
+  font-size: var(--t1);
+  font-weight: var(--gras);
+  cursor: pointer;
+}
+
+.onglet[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--sur-accent);
+}
+
+.onglet:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panneau:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: apparition-panneau 0.25s ease;
+}
+
+@keyframes apparition-panneau {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panneau:not([hidden]) {
+    animation: none;
+  }
+}
+
 .reglage h3 {
   margin: 0;
   font-size: var(--t3);
