@@ -243,7 +243,7 @@ class Carte {
       const c = document.createElementNS(SVG, 'path');
       c.setAttribute('class', classe);
       c.setAttribute('d', d);
-      if (lignee !== undefined) c.setAttribute('style', `stroke: ${couleurTrait(lignee)}`);
+      if (lignee !== undefined) c.style.stroke = couleurTrait(lignee);
       s.append(c);
     };
     // Bulle des amis, derrière tout le reste : la zone « TES AMIS » et, dedans, un cadre par groupe.
@@ -259,7 +259,7 @@ class Carte {
       for (const c of this.cadres) {
         const r = document.createElementNS(SVG, 'rect');
         for (const [k, val] of Object.entries({ x: c.x, y: c.y, width: c.l, height: c.ha, rx: 16, class: 'cadre-groupe' })) r.setAttribute(k, String(val));
-        r.setAttribute('style', `--cc: ${couleurGroupe(this.cadres.indexOf(c))}`);
+        r.style.setProperty('--cc', couleurGroupe(this.cadres.indexOf(c)));
         s.append(r);
       }
     }

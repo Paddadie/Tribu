@@ -15,6 +15,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(balise: K, attributs: A
   for (const [cle, valeur] of Object.entries(attributs)) {
     if (valeur === undefined || valeur === null || valeur === false) continue;
     if (cle === 'class') el.className = String(valeur);
+    // Par le CSSOM : la CSP du build (style-src 'self') bloque un attribut style posé en texte.
+    else if (cle === 'style') el.style.cssText = String(valeur);
     else if (cle.startsWith('on') && typeof valeur === 'function') {
       el.addEventListener(cle.slice(2), valeur as EventListener);
     } else if (PROPRIETES.has(cle)) (el as unknown as Attributs)[cle] = valeur;
