@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { assemblerDate, comparateur, decouperDate, filtrerParNom, grouperParLettre, initiales, libelleAdoptif, libelleMarie, libelleNaissance, nomComplet, nomListe, nomsConnus, teinteFamille } from './liste';
+import {
+  assemblerDate,
+  comparateur,
+  decouperDate,
+  filtrerParNom,
+  grouperParLettre,
+  initiales,
+  libelleAdoptif,
+  libelleMarie,
+  libelleNaissance,
+  nomComplet,
+  nomListe,
+  nomsConnus,
+  couleurFamille,
+  NB_COULEURS,
+} from './liste';
 import type { Personne } from './types';
 
 let n = 0;
@@ -8,7 +23,7 @@ function p(prenom: string, nom: string, naissance?: string): Personne {
 }
 
 describe('nomsConnus', () => {
-  it('regroupe casse et accents, garde la graphie la plus fréquente, les plus répandus d\'abord', () => {
+  it("regroupe casse et accents, garde la graphie la plus fréquente, les plus répandus d'abord", () => {
     const liste = [p('A', 'Dupont'), p('B', 'Martin'), p('C', 'martin'), p('D', 'Martin'), p('E', 'Dupont'), p('F', 'Éloi'), p('G', 'Eloi')];
     expect(nomsConnus(liste)).toEqual(['Martin', 'Dupont', 'Eloi']);
   });
@@ -34,19 +49,30 @@ describe('nomComplet et initiales', () => {
   });
 });
 
-describe('teinteFamille', () => {
+describe('couleurFamille', () => {
+  const c = (nom: string, nomNaissance?: string) => couleurFamille({ nom, nomNaissance });
   it('est stable pour un même nom, sans tenir compte de la casse, des accents ni des espaces', () => {
-    expect(teinteFamille('Lefèvre')).toBe(teinteFamille('  LEFEVRE '));
-    expect(teinteFamille('Martin')).toBe(teinteFamille('Martin'));
+    expect(c('Lefèvre')).toBe(c('  LEFEVRE '));
+    expect(c('Martin')).toBe(c('Martin'));
   });
-  it("n'en donne aucune pour un nom vide", () => {
-    expect(teinteFamille('')).toBeUndefined();
-    expect(teinteFamille(' - ')).toBeUndefined();
+  it('reste entre 0 et 11', () => {
+    for (const nom of ['Martin', 'Roux', 'Benali', 'Lefèvre', 'Moreau', 'Dubois']) {
+      expect(c(nom)).toBeGreaterThanOrEqual(0);
+      expect(c(nom)).toBeLessThan(NB_COULEURS);
+    }
   });
-  it('répartit des noms variés sur plusieurs teintes', () => {
+  it('prend le nom actuel, le nom de naissance à défaut', () => {
+    expect(c('Martin', 'Roux')).toBe(c('Martin'));
+    expect(c('', 'Roux')).toBe(c('Roux'));
+  });
+  it("n'en donne aucune sans nom", () => {
+    expect(c('')).toBeUndefined();
+    expect(c(' - ')).toBeUndefined();
+    expect(c('', '')).toBeUndefined();
+  });
+  it('répartit des noms variés sur plusieurs couleurs', () => {
     const noms = ['Martin', 'Roux', 'Benali', 'Lefèvre', 'Moreau', 'Dubois', 'Girard', 'Bernard', 'Petit', 'Durand'];
-    const teintes = new Set(noms.map(teinteFamille));
-    expect(teintes.size).toBeGreaterThanOrEqual(5);
+    expect(new Set(noms.map((n) => c(n))).size).toBeGreaterThanOrEqual(5);
   });
 });
 

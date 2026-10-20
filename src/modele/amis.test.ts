@@ -1,15 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { amis, chemin, foyer, nomGroupe } from './deductions';
-import { aDesLiens, ajouterAuGroupe, ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides, groupesDe, renommerGroupe, retirerDuGroupe, separerUnion, sontAmis, supprimerGroupe, supprimerPersonne } from './modele';
+import { amis, chemin, foyer, nomGroupe, raisonGroupe } from './deductions';
+import {
+  aDesLiens,
+  ajouterAuGroupe,
+  ajouterFiliation,
+  ajouterUnion,
+  creerGroupe,
+  creerPersonne,
+  donneesVides,
+  groupesDe,
+  renommerGroupe,
+  retirerDuGroupe,
+  separerUnion,
+  sontAmis,
+  supprimerGroupe,
+  supprimerPersonne,
+} from './modele';
 import { etiquette, motsChemin } from './parente';
 import type { Donnees, Sexe, TypeFiliation } from './types';
 
 /**
- * Famille de la maquette FEAT-09 (sexe entre crochets, parents après la flèche ; Thomas est « Moi ») :
- * Agnès [F] ∞ Bruno [M] ; Sophie [F], Hugo [M] ← Agnès, Bruno ; Marc [M] ∞ Sophie ; Thomas [M] ← Marc, Sophie
+ * Famille de la maquette FEAT-09 (sexe entre crochets, parents après la flèche ; Mathis est « Moi ») :
+ * Agnès [F] ∞ Bruno [M] ; Sophie [F], Hugo [M] ← Agnès, Bruno ; Marc [M] ∞ Sophie ; Mathis [M] ← Marc, Sophie
  * Hugo + Nadia [F] ; Camille [F] ← Hugo, Nadia ; Jade [F] ← Hugo, Nadia (adoptée) ; Camille + Théo [M] ; Lou [F] ← Camille, Théo
- * Jean [M] ∞ Claire [F] ; Inès [F] ← Jean, Claire ; Thomas ∞ Inès ; Rose [F], Élio [M] ← Thomas, Inès
- * Amis : Thomas – Karim [M], Inès – Julie [F]. Samia [F] → mère de Karim ; Karim + Léa [F] ; Naël [M] ← Karim, Léa.
+ * Jean [M] ∞ Claire [F] ; Inès [F] ← Jean, Claire ; Mathis ∞ Inès ; Rose [F], Élio [M] ← Mathis, Inès
+ * Amis : Mathis – Karim [M], Inès – Julie [F]. Samia [F] → mère de Karim ; Karim + Léa [F] ; Naël [M] ← Karim, Léa.
  * Sacha [?] : personne sans aucun lien.
  */
 function famille() {
@@ -25,7 +40,7 @@ function famille() {
     parents.forEach((p) => (d = ajouterFiliation(d, id[p], id[e], type).donnees));
   const ami = (a: string, b: string) => (d = creerGroupe(d, [id[a], id[b]]).donnees);
 
-  pers('Thomas', 'M', '1990');
+  pers('Mathis', 'M', '1990');
   pers('Marc', 'M', '1962');
   pers('Sophie', 'F', '1964');
   pers('Agnès', 'F', '1941');
@@ -53,38 +68,38 @@ function famille() {
   union('Hugo', 'Nadia');
   union('Camille', 'Théo');
   union('Jean', 'Claire', true);
-  union('Thomas', 'Inès', true);
+  union('Mathis', 'Inès', true);
   union('Karim', 'Léa');
 
   enfant('Sophie', ['Agnès', 'Bruno']);
   enfant('Hugo', ['Agnès', 'Bruno']);
-  enfant('Thomas', ['Marc', 'Sophie']);
+  enfant('Mathis', ['Marc', 'Sophie']);
   enfant('Camille', ['Hugo', 'Nadia']);
   enfant('Jade', ['Hugo', 'Nadia'], 'adoptif');
   enfant('Lou', ['Camille', 'Théo']);
   enfant('Inès', ['Jean', 'Claire']);
-  enfant('Rose', ['Thomas', 'Inès']);
-  enfant('Élio', ['Thomas', 'Inès']);
+  enfant('Rose', ['Mathis', 'Inès']);
+  enfant('Élio', ['Mathis', 'Inès']);
   enfant('Karim', ['Samia']);
   enfant('Naël', ['Karim', 'Léa']);
 
-  ami('Thomas', 'Karim');
+  ami('Mathis', 'Karim');
   ami('Inès', 'Julie');
 
   return { d, id };
 }
 
 const { d, id } = famille();
-const prenoms = (x: Donnees, vers: string) => chemin(x, id.Thomas, id[vers])?.map((e) => e.personne.prenom);
+const prenoms = (x: Donnees, vers: string) => chemin(x, id.Mathis, id[vers])?.map((e) => e.personne.prenom);
 const phrase = (x: Donnees, vers: string) => {
-  const etapes = chemin(x, id.Thomas, id[vers]);
+  const etapes = chemin(x, id.Mathis, id[vers]);
   return etapes && ['Toi', ...motsChemin(etapes)].join(' → ');
 };
-const lib = (x: Donnees, vers: string) => etiquette(x, id.Thomas, id[vers]);
+const lib = (x: Donnees, vers: string) => etiquette(x, id.Mathis, id[vers]);
 
 describe('groupes d’amis', () => {
   it('rendent amies, entre elles, toutes les personnes du groupe', () => {
-    const x = creerGroupe(d, [id.Thomas, id.Julie, id.Sacha], ' Lycée ').donnees;
+    const x = creerGroupe(d, [id.Mathis, id.Julie, id.Sacha], ' Lycée ').donnees;
     expect(x.groupes[x.groupes.length - 1].nom).toBe('Lycée');
     expect(sontAmis(x, id.Julie, id.Sacha)).toBe(true);
     expect(sontAmis(x, id.Julie, id.Karim)).toBe(false);
@@ -96,20 +111,20 @@ describe('groupes d’amis', () => {
     expect(() => creerGroupe(d, [id.Karim, id.Karim])).toThrow('au moins deux');
     expect(() => creerGroupe(d, [id.Karim, 'fantôme'])).toThrow('introuvable');
     // Famille comprise : une cousine peut aussi être une amie.
-    expect(creerGroupe(d, [id.Thomas, id.Camille]).donnees.groupes).toHaveLength(3);
+    expect(creerGroupe(d, [id.Mathis, id.Camille]).donnees.groupes).toHaveLength(3);
   });
 
   it('se lisent des deux côtés, par ordre alphabétique', () => {
-    const x = creerGroupe(d, [id.Thomas, id.Julie]).donnees;
-    expect(amis(x, id.Thomas).map((p) => p.prenom)).toEqual(['Julie', 'Karim']);
-    expect(amis(x, id.Karim).map((p) => p.prenom)).toEqual(['Thomas']);
-    expect(groupesDe(x, id.Thomas)).toHaveLength(2);
+    const x = creerGroupe(d, [id.Mathis, id.Julie]).donnees;
+    expect(amis(x, id.Mathis).map((p) => p.prenom)).toEqual(['Julie', 'Karim']);
+    expect(amis(x, id.Karim).map((p) => p.prenom)).toEqual(['Mathis']);
+    expect(groupesDe(x, id.Mathis)).toHaveLength(2);
   });
 
   it('accueillent un nouveau membre, une seule fois', () => {
     const g = d.groupes[0];
     const x = ajouterAuGroupe(d, g.id, id.Julie);
-    expect(amis(x, id.Karim).map((p) => p.prenom)).toEqual(['Julie', 'Thomas']);
+    expect(amis(x, id.Karim).map((p) => p.prenom)).toEqual(['Julie', 'Mathis']);
     expect(() => ajouterAuGroupe(x, g.id, id.Julie)).toThrow('déjà');
     expect(() => ajouterAuGroupe(d, 'fantôme', id.Julie)).toThrow('introuvable');
   });
@@ -120,7 +135,7 @@ describe('groupes d’amis', () => {
     expect(retirerDuGroupe(trois, g.id, id.Julie).groupes).toHaveLength(2);
     const reste = retirerDuGroupe(d, g.id, id.Karim);
     expect(reste.groupes.map((x) => x.id)).not.toContain(g.id);
-    expect(amis(reste, id.Thomas)).toEqual([]);
+    expect(amis(reste, id.Mathis)).toEqual([]);
     expect(() => retirerDuGroupe(d, g.id, id.Julie)).toThrow('pas dans');
   });
 
@@ -140,21 +155,28 @@ describe('groupes d’amis', () => {
   });
 
   it('prennent un nom par défaut tiré des membres', () => {
-    expect(nomGroupe(d, d.groupes[0])).toBe('Groupe de Karim, Thomas');
+    expect(nomGroupe(d, d.groupes[0])).toBe('Groupe de Karim, Mathis');
     expect(nomGroupe(d, renommerGroupe(d, d.groupes[0].id, 'Copains').groupes[0])).toBe('Copains');
+  });
+
+  it('disent pourquoi une personne déjà groupée ne peut pas entrer', () => {
+    const personne = (i: string) => d.personnes.find((p) => p.id === i)!;
+    expect(raisonGroupe(d, personne(id.Karim), d.groupes[0])).toBe('Déjà dans le groupe');
+    expect(raisonGroupe(d, personne(id.Karim), d.groupes[1])).toBe('Déjà dans « Groupe de Karim, Mathis »');
+    expect(raisonGroupe(d, personne(id.Karim))).toBe('Déjà dans « Groupe de Karim, Mathis »');
   });
 });
 
 describe('chemin depuis « Moi »', () => {
   it('passe par la famille, du plus court, en suivant les parents d’abord', () => {
-    expect(prenoms(d, 'Lou')).toEqual(['Thomas', 'Sophie', 'Hugo', 'Camille', 'Lou']);
+    expect(prenoms(d, 'Lou')).toEqual(['Mathis', 'Sophie', 'Hugo', 'Camille', 'Lou']);
     expect(phrase(d, 'Lou')).toBe('Toi → ta mère → son frère → sa fille → sa fille');
     expect(phrase(d, 'Jean')).toBe('Toi → ton épouse → son père');
   });
 
   it('va directement à un proche (pas de dessin pour un lien direct)', () => {
-    expect(prenoms(d, 'Inès')).toEqual(['Thomas', 'Inès']);
-    expect(prenoms(d, 'Karim')).toEqual(['Thomas', 'Karim']);
+    expect(prenoms(d, 'Inès')).toEqual(['Mathis', 'Inès']);
+    expect(prenoms(d, 'Karim')).toEqual(['Mathis', 'Karim']);
   });
 
   it('passe par un ami pour qui n’est pas de la famille', () => {
@@ -164,33 +186,33 @@ describe('chemin depuis « Moi »', () => {
   });
 
   it('préfère la famille même quand une amitié serait plus courte', () => {
-    const x = creerGroupe(d, [id.Thomas, id.Camille]).donnees;
-    expect(prenoms(x, 'Camille')).toEqual(['Thomas', 'Sophie', 'Hugo', 'Camille']);
+    const x = creerGroupe(d, [id.Mathis, id.Camille]).donnees;
+    expect(prenoms(x, 'Camille')).toEqual(['Mathis', 'Sophie', 'Hugo', 'Camille']);
   });
 
   it('ne passe jamais par un ex', () => {
     const union = d.unions.find((u) => u.personneA === id.Karim && u.personneB === id.Léa)!;
     const x = separerUnion(d, union.id);
     // Léa reste reliée par son fils, plus par le couple.
-    expect(prenoms(x, 'Léa')).toEqual(['Thomas', 'Karim', 'Naël', 'Léa']);
+    expect(prenoms(x, 'Léa')).toEqual(['Mathis', 'Karim', 'Naël', 'Léa']);
     const sansFils = separerUnion(supprimerPersonne(d, id.Naël), union.id);
     expect(prenoms(sansFils, 'Léa')).toBeUndefined();
   });
 
   it('rien pour soi-même ni pour une personne sans lien', () => {
-    expect(chemin(d, id.Thomas, id.Thomas)).toBeUndefined();
+    expect(chemin(d, id.Mathis, id.Mathis)).toBeUndefined();
     expect(prenoms(d, 'Sacha')).toBeUndefined();
   });
 });
 
 describe('étiquettes courtes', () => {
   it('famille : sans possessif, conjoint marié dit « Époux » ou « Épouse »', () => {
-    expect(lib(d, 'Thomas')).toBe('Toi');
+    expect(lib(d, 'Mathis')).toBe('Toi');
     expect(lib(d, 'Hugo')).toBe('Oncle');
     expect(lib(d, 'Camille')).toBe('Cousine');
     expect(lib(d, 'Inès')).toBe('Épouse');
     expect(lib(d, 'Jean')).toBe('Beau-père');
-    expect(etiquette(d, id.Inès, id.Thomas)).toBe('Époux');
+    expect(etiquette(d, id.Inès, id.Mathis)).toBe('Époux');
   });
 
   it('un lien de famille sans nom usuel n’a pas d’étiquette', () => {
@@ -210,7 +232,11 @@ describe('étiquettes courtes', () => {
 
   it('hors famille : le lien le plus court avec l’ami, pas le détour par ses parents', () => {
     let x = d;
-    for (const [prenom, sexe] of [['Zoé', 'F'], ['Eli', 'M'], ['Tom', 'M']] as const) {
+    for (const [prenom, sexe] of [
+      ['Zoé', 'F'],
+      ['Eli', 'M'],
+      ['Tom', 'M'],
+    ] as const) {
       const r = creerPersonne(x, { prenom, nom: 'X', sexe, naissance: '2000' });
       x = r.donnees;
       id[prenom] = r.personne.id;
@@ -220,17 +246,17 @@ describe('étiquettes courtes', () => {
     x = ajouterFiliation(x, id.Eli, id.Tom, 'biologique').donnees;
     expect(lib(x, 'Zoé')).toBe('Sœur de Karim');
     expect(lib(x, 'Tom')).toBe('Neveu de Karim');
-    const etapes = chemin(x, id.Thomas, id.Tom)!;
+    const etapes = chemin(x, id.Mathis, id.Tom)!;
     expect(['Toi', ...motsChemin(etapes, x)].join(' → ')).toBe('Toi → ton ami → son neveu');
-    expect(['Toi', ...motsChemin(chemin(x, id.Thomas, id.Zoé)!, x)].join(' → ')).toBe('Toi → ton ami → sa sœur');
+    expect(['Toi', ...motsChemin(chemin(x, id.Mathis, id.Zoé)!, x)].join(' → ')).toBe('Toi → ton ami → sa sœur');
   });
 
   it('la famille l’emporte sur l’amitié', () => {
-    expect(lib(creerGroupe(d, [id.Thomas, id.Camille]).donnees, 'Camille')).toBe('Cousine');
+    expect(lib(creerGroupe(d, [id.Mathis, id.Camille]).donnees, 'Camille')).toBe('Cousine');
   });
 
   it('accorde selon le sexe, forme mixte sans sexe connu', () => {
-    const x = creerGroupe(d, [id.Thomas, id.Sacha]).donnees;
+    const x = creerGroupe(d, [id.Mathis, id.Sacha]).donnees;
     expect(lib(x, 'Sacha')).toBe('Ami(e)');
     expect(phrase(x, 'Sacha')).toBe('Toi → ton ami(e)');
     expect(lib(creerGroupe(d, [id.Karim, id.Sacha]).donnees, 'Sacha')).toBe('Ami(e) de Karim');
@@ -245,7 +271,7 @@ describe('famille proche (dessin de la fiche)', () => {
   const noms = (ps: { personne: { prenom: string } }[]) => ps.map((x) => x.personne.prenom);
 
   it('parents, conjoint, frères et sœurs, enfants avec leur lien', () => {
-    const f = foyer(d, id.Hugo, id.Thomas);
+    const f = foyer(d, id.Hugo, id.Mathis);
     expect(noms(f.parents)).toEqual(['Agnès', 'Bruno']);
     expect(f.manque).toBe(0);
     expect(f.conjoint?.personne.prenom).toBe('Nadia');
@@ -257,27 +283,47 @@ describe('famille proche (dessin de la fiche)', () => {
     ]);
   });
 
+  it('demi-frères et sœurs reliés à leur parent dessiné en commun, du plus âgé au plus jeune', () => {
+    expect(foyer(d, id.Hugo, id.Mathis).demis).toEqual([]);
+    let y = d;
+    const ajout = (prenom: string, naissance: string, parents: string[]) => {
+      const r = creerPersonne(y, { prenom, nom: 'X', naissance });
+      y = r.donnees;
+      for (const par of parents) y = ajouterFiliation(y, par, r.personne.id, 'biologique').donnees;
+      return r.personne.id;
+    };
+    const autre = ajout('Yves', '1950', []);
+    ajout('Zoé', '1985', [id.Agnès, autre]);
+    ajout('Axel', '1975', [id.Bruno]);
+    const f = foyer(y, id.Hugo, id.Mathis);
+    expect(f.demis.map((x) => [x.personne.prenom, x.parent])).toEqual([
+      ['Axel', id.Bruno],
+      ['Zoé', id.Agnès],
+    ]);
+    expect(f.fratrie.map((p) => p.prenom)).toEqual(['Sophie']);
+  });
+
   it('les enfants d’une autre union passent avant ceux du couple', () => {
     const x = creerPersonne(d, { prenom: 'Malo', nom: 'X', naissance: '2014' });
     const malo = x.personne.id;
     const y = ajouterFiliation(x.donnees, id.Théo, malo, 'biologique').donnees;
-    expect(foyer(y, id.Théo, id.Thomas).enfants.map((e) => [e.personne.prenom, e.duCouple])).toEqual([
+    expect(foyer(y, id.Théo, id.Mathis).enfants.map((e) => [e.personne.prenom, e.duCouple])).toEqual([
       ['Malo', false],
       ['Lou', true],
     ]);
   });
 
   it('case « + Parent » pour la famille seulement, et au plus deux parents montrés', () => {
-    expect(foyer(d, id.Marc, id.Thomas).manque).toBe(1);
-    expect(foyer(d, id.Samia, id.Thomas).manque).toBe(0);
+    expect(foyer(d, id.Marc, id.Mathis).manque).toBe(1);
+    expect(foyer(d, id.Samia, id.Mathis).manque).toBe(0);
     expect(foyer(d, id.Samia).manque).toBe(1);
-    expect(foyer(d, id.Karim, id.Thomas).manque).toBe(0);
+    expect(foyer(d, id.Karim, id.Mathis).manque).toBe(0);
     // Deux parents biologiques et un adoptif : les biologiques sont montrés.
     const x = creerPersonne(d, { prenom: 'Paul', nom: 'X' });
-    const z = ajouterFiliation(x.donnees, x.personne.id, id.Thomas, 'adoptif').donnees;
+    const z = ajouterFiliation(x.donnees, x.personne.id, id.Mathis, 'adoptif').donnees;
     // Filiation adoptive enregistrée en premier : l'ordre de saisie ne compte pas.
     const y = { ...z, filiations: [z.filiations[z.filiations.length - 1], ...z.filiations.slice(0, -1)] };
-    const f = foyer(y, id.Thomas, id.Thomas);
+    const f = foyer(y, id.Mathis, id.Mathis);
     expect(noms(f.parents)).toEqual(['Marc', 'Sophie']);
     expect(f.manque).toBe(0);
   });

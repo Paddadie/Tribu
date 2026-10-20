@@ -5,12 +5,12 @@
 import { disposerArbre, type Disposition, type GroupeDessine, type Point } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { filtrerParNom, nomComplet } from '../modele/liste';
-import { estVirtuel } from '../modele/parentSansNom';
+import { enregistrerParentSansNom, estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Personne } from '../modele/types';
 import { LIGNE_EN_PLUS, noeud } from './arbre';
 import { h, icone } from './dom';
-import { lireDonnees, lireReglages } from './etat';
+import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { avatarPersonne } from './lignePersonne';
 import { lienRetour } from './navigation';
 
@@ -41,13 +41,16 @@ interface Cadre {
 const HAUT_CADRE = R + 56;
 const HAUT_ZONE = 34;
 const MARGE_CADRE = 8;
+/** Hauteur d'une étiquette de famille (sa ligne de texte). */
+const HAUT_ETIQUETTE = 16;
 
-/** Une famille de la liste « Familles » : nom, couleur de lignée, effectif et zone occupée (pixels). */
+/** Une famille de la liste « Familles » : nom, couleur de lignée, effectif, zone occupée (pixels) et personne la plus haute, qui pulse à l'arrivée. */
 interface FamilleListee {
   nom: string;
   lignee: number;
   n: number;
   zone: Zone;
+  cible: string;
 }
 interface Zone {
   x: number;
@@ -62,8 +65,15 @@ interface Vue {
   s: number;
 }
 
+/** Vue choisie par sa puce (pleine tant qu'on ne s'en écarte pas) ; aucune après un déplacement ou un autre saut. */
+type VueActive = 'toi' | 'tout' | undefined;
+
 /** Zoom et position gardés pendant la session : au retour d'une fiche, l'arbre est tel qu'on l'a laissé. */
 let vueGardee: Vue | undefined;
+let activeGardee: VueActive;
+/** Vues quittées par un saut (Toi, Tout, Familles, Amis, recherche) : « Revenir » les reprend une à une. */
+const pile: { v: Vue; active: VueActive }[] = [];
+const PILE_MAX = 30;
 let astuceMontree = false;
 
 /** Douze couleurs pastel de CSS (--c0 à --c11) : une par nom de famille ; les groupes d'amis reprennent la série en décalé. */
@@ -131,10 +141,20 @@ class Carte {
   private readonly moi: Personne;
   private cadres: Cadre[] = [];
   private familles: FamilleListee[] = [];
-  /** Liste ouverte par « Familles » ou « Amis », posée au-dessus des commandes. */
-  private readonly feuille = h('div', { class: 'feuille-arbre', hidden: true });
+  /** Noms de famille posés sur le calque (centre et bas en pixels, effectif de la lignée, largeur mesurée une fois). */
+  private readonly etiquettes: { el: HTMLElement; x: number; bas: number; poids: number; l?: number }[] = [];
+  /** Échelle pour laquelle les chevauchements d'étiquettes ont été réglés (0 : de près, toutes visibles). */
+  private echelleEtiquettes = 0;
+  /** Liste ouverte par « Familles » ou « Amis », posée au-dessus des commandes : elle en glisse et s'y replie (CSS). */
+  private readonly feuille = h('div', { class: 'feuille-arbre' });
   private feuilleOuverte: 'familles' | 'amis' | undefined;
   private readonly puces = new Map<string, HTMLElement>();
+  private readonly puceToi: HTMLElement;
+  private readonly puceTout: HTMLElement;
+  private readonly revenir: HTMLElement;
+  private active: VueActive;
+  /** Barre des puces, en bas : le dessin passe dessous, « Tout » cadre l'arbre au-dessus. */
+  private readonly barreBas: HTMLElement;
 
   constructor(disp: Disposition, moi: Personne) {
     this.disp = disp;
@@ -170,33 +190,51 @@ class Carte {
         n?.style.setProperty('--cg', couleurGroupe(i));
       }
     });
+    // Petit anneau de groupe (UX-21) : la couleur du cadre si le groupe est dans la bulle, sinon la suite de la série.
+    const rangs = new Map(disp.groupes.map((g, i) => [g.id, i]));
+    for (const a of disp.anneaux) {
+      if (!rangs.has(a.groupe)) rangs.set(a.groupe, rangs.size);
+      const anneau = h('span', { class: 'anneau-groupe', 'aria-hidden': 'true' });
+      anneau.style.setProperty('--cg', couleurGroupe(rangs.get(a.groupe)!));
+      this.noeuds.get(a.id)?.querySelector('.avatar')?.append(anneau);
+    }
     this.familles = this.calculerFamilles();
     this.calque = h('div', { class: 'calque' }, this.traits(px), ...this.legendes(px), ...noeuds);
     this.calque.addEventListener('pointerdown', () => this.fermerFeuille());
     this.calque.style.width = `${this.largeur}px`;
     this.calque.style.height = `${this.hauteur}px`;
     const astuce = !astuceMontree && h('div', { class: 'astuce-arbre', 'aria-hidden': 'true' }, 'Glisse pour te déplacer, pince pour zoomer');
+    this.puceToi = h('button', { type: 'button', class: 'puce-arbre', onclick: () => this.sauter(this.surPersonne(moi.id, 1), 'toi', [moi.id]) }, 'Toi');
+    this.puceTout = h('button', { type: 'button', class: 'puce-arbre', onclick: () => this.sauter(this.toutVoir(), 'tout') }, 'Tout');
+    this.revenir = h(
+      'button',
+      { type: 'button', class: 'rond-arbre revenir', 'aria-label': 'Revenir à la vue d’avant', hidden: true, onclick: () => this.revenirEnArriere() },
+      icone('revenir', 22),
+    );
+    this.barreBas = h(
+      'div',
+      { class: 'commandes-arbre gauche' },
+      this.puceToi,
+      this.puceTout,
+      this.familles.length > 0 && this.puceListe('familles', 'Familles'),
+      this.cadres.length > 0 && this.puceListe('amis', 'Amis'),
+    );
     this.vue = h(
       'div',
       { class: 'vue-arbre' },
       this.calque,
       astuce,
-      h(
-        'div',
-        { class: 'commandes-arbre gauche' },
-        h('button', { type: 'button', class: 'puce-arbre accent', onclick: () => this.aller(this.surPersonne(moi.id, 1)) }, 'Toi'),
-        h('button', { type: 'button', class: 'puce-arbre', onclick: () => this.aller(this.toutVoir()) }, 'Tout'),
-        this.familles.length > 0 && this.puceListe('familles', 'Familles'),
-        this.cadres.length > 0 && this.puceListe('amis', 'Amis'),
-      ),
       this.feuille,
+      this.barreBas,
       h(
         'div',
         { class: 'commandes-arbre droite' },
+        this.revenir,
         h('button', { type: 'button', class: 'rond-arbre', 'aria-label': 'Zoomer', onclick: () => this.zoomCentre(1.5) }, icone('plus', 22)),
         h('button', { type: 'button', class: 'rond-arbre', 'aria-label': 'Dézoomer', onclick: () => this.zoomCentre(1 / 1.5) }, icone('moins', 22)),
       ),
     );
+    this.marquer(vueGardee ? activeGardee : 'toi');
     if (astuce) {
       astuceMontree = true;
       setTimeout(() => astuce.classList.add('cachee'), 3500);
@@ -204,14 +242,17 @@ class Carte {
     this.gestes();
     // Taille connue une fois l'écran dans la page : première vue (gardée, sinon centrée sur Moi), puis bornes
     // à chaque changement de taille (rotation). Rien à taille nulle (tests).
-    new ResizeObserver(() => {
+    const observateur = new ResizeObserver(() => {
+      // Écran quitté : l'observateur se déconnecte (l'écran suivant ne le garde pas en vie).
+      if (this.pret && !this.vue.isConnected) return observateur.disconnect();
       if (this.vue.clientWidth === 0) return;
       if (!this.pret) {
         this.pret = true;
         this.v = vueGardee ? { ...vueGardee } : this.surPersonne(moi.id, 1);
       }
       this.appliquer();
-    }).observe(this.vue);
+    });
+    observateur.observe(this.vue);
   }
 
   // ——— Dessin ———
@@ -254,10 +295,7 @@ class Carte {
     for (const c of this.disp.couples) {
       const [a, b] = [centre(c.a), centre(c.b)].sort((p, q) => p.x - q.x);
       // Même ligne : trait droit, même quand l'écart est grand (chaîne d'ex). Lignes différentes : courbe.
-      const d =
-        a.y === b.y
-          ? `M ${a.x + R} ${a.y} H ${b.x - R}`
-          : `M ${a.x} ${a.y - R} C ${a.x} ${a.y - R - 46}, ${b.x} ${b.y - R - 46}, ${b.x} ${b.y - R}`;
+      const d = a.y === b.y ? `M ${a.x + R} ${a.y} H ${b.x - R}` : `M ${a.x} ${a.y - R} C ${a.x} ${a.y - R - 46}, ${b.x} ${b.y - R - 46}, ${b.x} ${b.y - R}`;
       // Marié(e) : trait plein ; en couple : pointillé court ; séparé(e) : gris.
       trait(d, `trait couple${c.marie ? '' : ' libre'}${c.separe ? ' ex' : ''}`, c.separe ? undefined : c.lignee);
     }
@@ -295,17 +333,19 @@ class Carte {
       if (c.length === 0) return [];
       const x = Math.min(...c.map((p) => p.x)) - LARG / 2 - MARGE_CADRE;
       const y = Math.min(...c.map((p) => p.y)) - HAUT_CADRE;
-      return [{ groupe, x, y, l: Math.max(...c.map((p) => p.x)) + LARG / 2 + MARGE_CADRE - x, ha: Math.max(...c.map((p) => p.y)) + SOUS_NOM + MARGE_CADRE - y }];
+      return [
+        { groupe, x, y, l: Math.max(...c.map((p) => p.x)) + LARG / 2 + MARGE_CADRE - x, ha: Math.max(...c.map((p) => p.y)) + SOUS_NOM + MARGE_CADRE - y },
+      ];
     });
   }
 
-  /** Une entrée par lignée de l'arbre principal (de gauche à droite), nommée d'après son étiquette « Famille X ». */
+  /** Une entrée par lignée de l'arbre principal (par ordre alphabétique), nommée d'après son étiquette « Famille X ». */
   private calculerFamilles(): FamilleListee[] {
-    const parLignee = new Map<number, Point[]>();
+    const parLignee = new Map<number, (Point & { id: string })[]>();
     const noms = new Map<number, Map<string, number>>();
     for (const p of this.disp.places) {
       if (p.lignee === undefined || estVirtuel(p.personne.id)) continue;
-      parLignee.set(p.lignee, [...(parLignee.get(p.lignee) ?? []), this.centres.get(p.personne.id)!]);
+      parLignee.set(p.lignee, [...(parLignee.get(p.lignee) ?? []), { ...this.centres.get(p.personne.id)!, id: p.personne.id }]);
       // Sans étiquette (lignée dont la racine a des parents), le nom le plus répandu de la lignée la nomme.
       const nom = p.personne.nom.trim();
       if (nom) {
@@ -316,13 +356,18 @@ class Carte {
     }
     const plusRepandu = (lignee: number) => [...(noms.get(lignee) ?? [])].sort((a, b) => b[1] - a[1])[0]?.[0];
     return [...parLignee]
-      .sort((a, b) => a[0] - b[0])
       .map(([lignee, pts]) => {
         const x = Math.min(...pts.map((p) => p.x)) - LARG / 2;
         const y = Math.min(...pts.map((p) => p.y)) - R - 24;
-        const nom = this.disp.etiquettes.find((e) => e.lignee === lignee)?.texte ?? (plusRepandu(lignee) ? `Famille ${plusRepandu(lignee)}` : `Famille ${lignee + 1}`);
-        return { nom, lignee, n: pts.length, zone: { x, y, l: Math.max(...pts.map((p) => p.x)) + LARG / 2 - x, ha: Math.max(...pts.map((p) => p.y)) + SOUS_NOM - y } };
-      });
+        const l = Math.max(...pts.map((p) => p.x)) + LARG / 2 - x;
+        const nom =
+          this.disp.etiquettes.find((e) => e.lignee === lignee)?.texte ?? (plusRepandu(lignee) ? `Famille ${plusRepandu(lignee)}` : `Famille ${lignee + 1}`);
+        // Cible : sur la ligne la plus haute, la personne la plus proche du milieu de la famille.
+        const haut = pts.filter((p) => p.y === Math.min(...pts.map((q) => q.y)));
+        const cible = haut.reduce((a, b) => (Math.abs(b.x - (x + l / 2)) < Math.abs(a.x - (x + l / 2)) ? b : a)).id;
+        return { nom, lignee, n: pts.length, cible, zone: { x, y, l, ha: Math.max(...pts.map((p) => p.y)) + SOUS_NOM - y } };
+      })
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
   }
 
   // ——— Listes « Familles » et « Amis » ———
@@ -334,7 +379,7 @@ class Carte {
   }
 
   private fermerFeuille(): void {
-    this.feuille.hidden = true;
+    this.feuille.classList.remove('ouverte');
     this.feuilleOuverte = undefined;
     for (const b of this.puces.values()) b.setAttribute('aria-expanded', 'false');
   }
@@ -345,29 +390,44 @@ class Carte {
     if (etait === quoi) return;
     this.feuilleOuverte = quoi;
     this.puces.get(quoi)?.setAttribute('aria-expanded', 'true');
-    const ligne = (pastille: HTMLElement, nom: string, detail: string, zone: Zone) =>
-      h('button', { type: 'button', class: 'ligne-feuille', onclick: () => this.aller(this.surZone(zone)) }, pastille, h('span', { class: 'nom-feuille' }, nom), h('small', {}, detail));
+    const ligne = (pastille: HTMLElement, nom: string, detail: string, zone: Zone, cibles: string[]) =>
+      h(
+        'button',
+        { type: 'button', class: 'ligne-feuille', onclick: () => this.sauter(this.surZone(zone), undefined, cibles) },
+        pastille,
+        h('span', { class: 'nom-feuille' }, nom),
+        h('small', {}, detail),
+      );
     const lignes =
       quoi === 'familles'
         ? this.familles.map((f) => {
             const pastille = h('span', { class: 'pastille-feuille' });
             pastille.style.background = couleur(f.lignee);
-            return ligne(pastille, f.nom, `${f.n} pers.`, f.zone);
+            return ligne(pastille, f.nom, `${f.n} pers.`, f.zone, [f.cible]);
           })
         : this.cadres.map((c, i) => {
             const d = lireDonnees();
             const pastille = h('span', { class: 'pastille-feuille anneau' });
             pastille.style.borderColor = couleurGroupe(i);
-            return ligne(pastille, nomGroupe(d, d.groupes.find((g) => g.id === c.groupe.id)!), `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`, c);
+            return ligne(
+              pastille,
+              nomGroupe(
+                d,
+                d.groupes.find((g) => g.id === c.groupe.id)!,
+              ),
+              `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`,
+              c,
+              c.groupe.membres,
+            );
           });
     this.feuille.replaceChildren(h('h2', {}, quoi === 'familles' ? 'Familles' : 'Groupes d’amis'), ...lignes);
-    this.feuille.hidden = false;
+    this.feuille.classList.add('ouverte');
   }
 
   /** Vue qui montre toute la zone (jusqu'à l'échelle 1,2), un peu au-dessus du centre pour laisser la place aux commandes. */
   private surZone(z: Zone): Vue {
     const marge = 40;
-    const s = borne(Math.min(this.vue.clientWidth / (z.l + marge), (this.vue.clientHeight * 0.75) / (z.ha + marge), 1.2), ECHELLE_MIN, ECHELLE_MAX);
+    const s = borne(Math.min(this.vue.clientWidth / (z.l + marge), (this.vue.clientHeight * 0.75) / (z.ha + marge), 1.2), this.echelleMin(), ECHELLE_MAX);
     return { s, tx: this.vue.clientWidth / 2 - (z.x + z.l / 2) * s, ty: this.vue.clientHeight * 0.42 - (z.y + z.ha / 2) * s };
   }
 
@@ -390,9 +450,18 @@ class Carte {
       return el;
     };
     const d = lireDonnees();
+    const bulle = this.zoneBulle();
     const titres = this.cadres.map((c) => {
-      const nom = nomGroupe(d, d.groupes.find((g) => g.id === c.groupe.id)!);
-      const el = h('div', { class: 'cadre-titre' }, h('span', { class: 'cadre-nom' }, nom), c.l > 150 && h('span', { class: 'cadre-n' }, `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`));
+      const nom = nomGroupe(
+        d,
+        d.groupes.find((g) => g.id === c.groupe.id)!,
+      );
+      const el = h(
+        'div',
+        { class: 'cadre-titre' },
+        h('span', { class: 'cadre-nom' }, nom),
+        c.l > 150 && h('span', { class: 'cadre-n' }, `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`),
+      );
       el.style.width = `${c.l - 24}px`;
       el.style.setProperty('--cc', couleurGroupe(this.cadres.indexOf(c)));
       return placer(el, c.x + 12, c.y + 8);
@@ -409,6 +478,10 @@ class Carte {
       }
       const el = placer(h('div', { class: 'etiquette-famille' }, e.texte), c.x, haut);
       if (e.lignee !== undefined) el.style.setProperty('--cc', couleurTrait(e.lignee));
+      // Dans la bulle, de loin, les titres des groupes suffisent.
+      if (bulle && c.y > bulle.ha) el.classList.add('dans-bulle');
+      const poids = this.disp.places.filter((p) => e.lignee !== undefined && p.lignee === e.lignee).length;
+      this.etiquettes.push({ el, x: c.x, bas: haut + HAUT_ETIQUETTE, poids });
       return el;
     });
     return [...titres, ...familles];
@@ -443,10 +516,25 @@ class Carte {
 
   // ——— Vue : translation et échelle ———
 
+  /** Hauteur où l'arbre se voit en entier : au-dessus de la barre des puces. */
+  private hauteurUtile(): number {
+    return this.vue.clientHeight - this.barreBas.offsetHeight;
+  }
+
+  /** Échelle qui cadre tout l'arbre (jamais au-delà de 1). */
+  private echelleTout(): number {
+    return Math.min(this.vue.clientWidth / this.largeur, this.hauteurUtile() / this.hauteur, 1);
+  }
+
+  /** On dézoome jusqu'à ECHELLE_MIN, ou plus loin si c'est ce qu'il faut pour voir tout l'arbre (UX-16). */
+  private echelleMin(): number {
+    return Math.min(ECHELLE_MIN, Math.max(0.02, this.echelleTout()));
+  }
+
   private borner(v: Vue): Vue {
     const l = this.vue.clientWidth;
     const ha = this.vue.clientHeight;
-    const s = borne(v.s, ECHELLE_MIN, ECHELLE_MAX);
+    const s = borne(v.s, this.echelleMin(), ECHELLE_MAX);
     // Toujours un bout d'arbre au milieu de l'écran : on ne peut pas le perdre de vue.
     return { s, tx: borne(v.tx, l / 2 - this.largeur * s, l / 2), ty: borne(v.ty, ha / 2 - this.hauteur * s, ha / 2) };
   }
@@ -456,7 +544,27 @@ class Carte {
     this.calque.style.transform = `translate(${this.v.tx}px, ${this.v.ty}px) scale(${this.v.s})`;
     this.calque.style.setProperty('--s', String(this.v.s));
     this.vue.classList.toggle('loin', this.v.s < ECHELLE_LOIN);
+    this.eviterChevauchements();
     vueGardee = { ...this.v };
+  }
+
+  /**
+   * De loin, les noms de famille gardent leur taille à l'écran (CSS) : ceux qui en chevaucheraient un autre se
+   * masquent, en gardant d'abord les familles les plus nombreuses. De près, ils sont tous là.
+   */
+  private eviterChevauchements(): void {
+    const s = this.v.s < ECHELLE_LOIN ? this.v.s : 0;
+    if (s === this.echelleEtiquettes) return;
+    this.echelleEtiquettes = s;
+    const gardees: { g: number; d: number; ha: number; ba: number }[] = [];
+    for (const e of [...this.etiquettes].filter((x) => !x.el.classList.contains('dans-bulle')).sort((a, b) => b.poids - a.poids)) {
+      e.l ??= e.el.offsetWidth || undefined;
+      // À l'écran, de loin : la largeur mesurée, le bas de l'étiquette reste à sa place (origine du changement d'échelle).
+      const r = { g: e.x * s - (e.l ?? 0) / 2, d: e.x * s + (e.l ?? 0) / 2, ba: e.bas * s, ha: e.bas * s - HAUT_ETIQUETTE };
+      const masquee = s > 0 && gardees.some((o) => r.g < o.d + 8 && o.g < r.d + 8 && r.ha < o.ba + 4 && o.ha < r.ba + 4);
+      e.el.classList.toggle('masquee', masquee);
+      if (!masquee) gardees.push(r);
+    }
   }
 
   /** Vue qui met la personne au milieu de l'écran (un peu au-dessus, la place des commandes en bas). */
@@ -465,21 +573,72 @@ class Carte {
     return { s, tx: this.vue.clientWidth / 2 - c.x * s, ty: this.vue.clientHeight * 0.42 - c.y * s };
   }
 
+  /** Tout l'arbre, centré au-dessus de la barre des puces. */
   private toutVoir(): Vue {
-    const l = this.vue.clientWidth;
-    const ha = this.vue.clientHeight;
-    const s = borne(Math.min(l / this.largeur, ha / this.hauteur, 1), ECHELLE_MIN, ECHELLE_MAX);
-    return { s, tx: (l - this.largeur * s) / 2, ty: (ha - this.hauteur * s) / 2 };
+    const s = borne(this.echelleTout(), this.echelleMin(), ECHELLE_MAX);
+    return { s, tx: (this.vue.clientWidth - this.largeur * s) / 2, ty: (this.hauteurUtile() - this.hauteur * s) / 2 };
   }
 
   private zoomAutour(x: number, y: number, facteur: number, depuis: Vue = this.v): Vue {
-    const s = borne(depuis.s * facteur, ECHELLE_MIN, ECHELLE_MAX);
+    const s = borne(depuis.s * facteur, this.echelleMin(), ECHELLE_MAX);
     const k = s / depuis.s;
     return { s, tx: x - (x - depuis.tx) * k, ty: y - (y - depuis.ty) * k };
   }
 
   private zoomCentre(facteur: number): void {
+    this.libre();
     this.aller(this.zoomAutour(this.vue.clientWidth / 2, this.vue.clientHeight / 2, facteur));
+  }
+
+  /** Saut vers une vue (puce, liste, recherche) : la vue quittée va sur la pile, les cibles pulsent à l'arrivée. */
+  private sauter(cible: Vue, active?: VueActive, cibles: string[] = []): void {
+    const fin = this.borner(cible);
+    const v = this.v;
+    const ailleurs = Math.abs(fin.s - v.s) > v.s * 1e-3 || Math.abs(fin.tx - v.tx) > 1 || Math.abs(fin.ty - v.ty) > 1;
+    if (ailleurs) {
+      pile.push({ v: { ...v }, active: this.active });
+      if (pile.length > PILE_MAX) pile.shift();
+    }
+    this.marquer(active);
+    this.aller(fin);
+    this.pulser(cibles);
+  }
+
+  private revenirEnArriere(): void {
+    const avant = pile.pop();
+    if (!avant) return;
+    this.marquer(avant.active);
+    this.aller(avant.v);
+  }
+
+  /** Un geste ou le zoom écarte de la vue choisie : plus aucune puce pleine, et la feuille se replie. */
+  private libre(): void {
+    this.fermerFeuille();
+    if (this.active) this.marquer(undefined);
+  }
+
+  /** Puce pleine pour la vue active ; « Revenir » n'apparaît que s'il y a une vue où revenir. */
+  private marquer(active: VueActive): void {
+    this.active = activeGardee = active;
+    for (const [puce, quoi] of [
+      [this.puceToi, 'toi'],
+      [this.puceTout, 'tout'],
+    ] as const) {
+      puce.classList.toggle('accent', active === quoi);
+      puce.setAttribute('aria-pressed', String(active === quoi));
+    }
+    this.revenir.hidden = pile.length === 0;
+  }
+
+  private pulser(ids: string[]): void {
+    for (const id of ids) {
+      const n = this.noeuds.get(id);
+      if (!n) continue;
+      n.classList.remove('pouls');
+      void n.offsetWidth;
+      n.classList.add('pouls');
+      setTimeout(() => n.classList.remove('pouls'), 3400);
+    }
   }
 
   /** Va vers une vue, en glissant (320 ms) sauf si les animations sont réduites. */
@@ -525,7 +684,7 @@ class Carte {
       const [a, b] = [...pointeurs.values()];
       return { ecart: Math.hypot(a.x - b.x, a.y - b.y) || 1, milieu: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
     };
-    const horsCarte = (e: Event) => (e.target as Element).closest('.commandes-arbre, .recherche-arbre');
+    const horsCarte = (e: Event) => (e.target as Element).closest('.commandes-arbre, .recherche-arbre, .feuille-arbre');
 
     this.vue.addEventListener('pointerdown', (e) => {
       if (horsCarte(e)) return;
@@ -538,6 +697,7 @@ class Carte {
       } else if (pointeurs.size === 2) {
         pince = mesure();
         glisse = true;
+        this.libre();
         for (const id of pointeurs.keys()) this.vue.setPointerCapture?.(id);
       }
     });
@@ -550,6 +710,7 @@ class Carte {
         // Un toucher reste un toucher (ouverture de fiche) tant que le doigt bouge peu.
         if (!glisse && depart && Math.hypot(p.x - depart.x, p.y - depart.y) > 8) {
           glisse = true;
+          this.libre();
           this.vue.setPointerCapture?.(e.pointerId);
         }
         if (glisse) {
@@ -571,6 +732,7 @@ class Carte {
       if (pointeurs.size === 0 && !glisse && e.type === 'pointerup' && e.pointerType === 'touch' && !(e.target as Element).closest('.noeud')) {
         const p = local(e);
         if (dernierToucher && e.timeStamp - dernierToucher.t < 320 && Math.hypot(p.x - dernierToucher.p.x, p.y - dernierToucher.p.y) < 30) {
+          this.libre();
           this.aller(this.zoomAutour(p.x, p.y, 1.8));
           dernierToucher = undefined;
         } else dernierToucher = { t: e.timeStamp, p };
@@ -589,10 +751,22 @@ class Carte {
       },
       true,
     );
+    // Toucher un parent « ? » l'enregistre, puis ouvre sa vraie fiche : la route n'écrit jamais.
+    this.vue.addEventListener('click', (e) => {
+      const lien = (e.target as Element).closest<HTMLAnchorElement>('a.noeud');
+      const id = lien?.dataset.id;
+      if (!id || !estVirtuel(id)) return;
+      e.preventDefault();
+      const creation = enregistrerParentSansNom(lireDonnees(), id);
+      if (!creation) return;
+      modifierDonnees(() => creation.donnees);
+      location.hash = `#/personne/${creation.personne.id}`;
+    });
     // Double clic à la souris seulement : au doigt, le double toucher est géré plus haut (Android enverrait les deux).
     this.vue.addEventListener('dblclick', (e) => {
       if (typePointeur !== 'mouse' || horsCarte(e) || (e.target as Element).closest('.noeud')) return;
       const p = local(e);
+      this.libre();
       this.aller(this.zoomAutour(p.x, p.y, 1.8));
     });
     this.vue.addEventListener(
@@ -600,6 +774,7 @@ class Carte {
       (e) => {
         e.preventDefault();
         cancelAnimationFrame(this.animation);
+        this.libre();
         const p = local(e);
         this.v = this.zoomAutour(p.x, p.y, Math.exp(-e.deltaY * 0.002));
         this.appliquer();
@@ -623,9 +798,9 @@ class Carte {
     const remplir = () => {
       const trouves = champ.value.trim() ? filtrerParNom(personnes, champ.value) : [];
       liste.replaceChildren(
-        ...trouves.slice(0, 8).map((p) =>
-          h('li', {}, h('button', { type: 'button', onclick: () => this.montrer(p.id) }, avatarPersonne(p), nomComplet(p) || 'Sans nom')),
-        ),
+        ...trouves
+          .slice(0, 8)
+          .map((p) => h('li', {}, h('button', { type: 'button', onclick: () => this.montrer(p.id) }, avatarPersonne(p), nomComplet(p) || 'Sans nom'))),
       );
     };
     champ.addEventListener('input', remplir);
@@ -638,15 +813,13 @@ class Carte {
     champ.focus();
   }
 
-  /** Centre la personne cherchée et la fait pulser. */
+  /**
+   * Centre la personne cherchée et la fait pulser. Le focus passe sur son nœud (un lien vers sa fiche) :
+   * la recherche sert d'accès aux personnes au clavier et au lecteur d'écran (A11Y-02).
+   */
   private montrer(id: string): void {
     this.basculerRecherche();
-    this.aller(this.surPersonne(id, Math.max(this.v.s, 1)));
-    const n = this.noeuds.get(id);
-    if (!n) return;
-    n.classList.remove('pouls');
-    void n.offsetWidth;
-    n.classList.add('pouls');
-    setTimeout(() => n.classList.remove('pouls'), 3400);
+    this.sauter(this.surPersonne(id, Math.max(this.v.s, 1)), undefined, [id]);
+    this.noeuds.get(id)?.focus({ preventScroll: true });
   }
 }

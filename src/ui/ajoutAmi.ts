@@ -2,21 +2,20 @@
 // - La personne est déjà dans un groupe : on y ajoute les amis choisis (une personne n'est que dans un groupe).
 // - Sinon : en haut les groupes à rejoindre, en dessous les personnes pour former un nouveau groupe.
 
-import { nomGroupe, relation } from '../modele/deductions';
+import { nomGroupe, raisonGroupe, relation } from '../modele/deductions';
 import { avecDe } from '../modele/liste';
 import { ajouterAuGroupe, creerGroupe, groupesDe } from '../modele/modele';
 import { ficheMoi } from '../modele/reglages';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
-import { raisonGroupe } from './groupes';
 import { garderSaisie, lienRetour, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
 import { signaler } from './surbrillance';
 
 const appel = (p: Personne) => p.prenom || p.nom;
 
-/** « Karim, Thomas, Julie » : les membres d'un groupe, sans la personne éventuelle `sauf`. */
+/** « Karim, Mathis, Julie » : les membres d'un groupe, sans la personne éventuelle `sauf`. */
 function resume(d: Donnees, g: GroupeAmis, sauf?: string): string {
   const noms = d.personnes.filter((p) => g.membres.includes(p.id) && p.id !== sauf).map(appel);
   return noms.length > 3 ? `${noms.slice(0, 3).join(', ')}… (${noms.length})` : noms.join(', ');

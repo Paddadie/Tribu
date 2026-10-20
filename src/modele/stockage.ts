@@ -2,8 +2,8 @@
 // fichier JSON. Le `Storage` est injecté pour pouvoir tester sans navigateur.
 
 import { migrer } from './migration';
-import { donneesVides, MAX_PARENTS_PAR_TYPE } from './modele';
-import type { Donnees } from './types';
+import { donneesVides, estDateSansAnneeValide, estDateValide, MAX_PARENTS_PAR_TYPE } from './modele';
+import type { Donnees, Filiation } from './types';
 
 export const CLE_STOCKAGE = 'tribu:donnees';
 /** Copie d'un contenu illisible trouvé sous CLE_STOCKAGE. */
@@ -15,12 +15,28 @@ function estObjet(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/** Vrai si quelqu'un est son propre ancêtre (parcours en profondeur du graphe parent → enfant). */
+function aBoucleDeFiliation(filiations: Filiation[]): boolean {
+  const enfants = new Map<string, string[]>();
+  for (const f of filiations) enfants.set(f.parent, [...(enfants.get(f.parent) ?? []), f.enfant]);
+  const etat = new Map<string, 'en cours' | 'fini'>();
+  const visiter = (id: string): boolean => {
+    if (etat.get(id) === 'en cours') return true;
+    if (etat.get(id) === 'fini') return false;
+    etat.set(id, 'en cours');
+    if ((enfants.get(id) ?? []).some(visiter)) return true;
+    etat.set(id, 'fini');
+    return false;
+  };
+  return [...enfants.keys()].some(visiter);
+}
+
 /**
  * Vérifie la forme et la cohérence des données : types des champs, ids uniques,
  * liens pointant vers des personnes existantes, règles de filiation, groupes d'amis cohérents.
  */
 export function estDonneesValides(v: unknown): v is Donnees {
-  if (!estObjet(v) || v.version !== 4) return false;
+  if (!estObjet(v) || v.version !== 5) return false;
   const { personnes, unions, filiations, groupes } = v;
   if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations) || !Array.isArray(groupes)) return false;
 
@@ -34,6 +50,7 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (p.nomNaissance !== undefined && typeof p.nomNaissance !== 'string') return false;
     if (p.sexe !== undefined && p.sexe !== 'F' && p.sexe !== 'M') return false;
     if (p.inconnu !== undefined && p.inconnu !== true) return false;
+    if (p.sansNom !== undefined && p.sansNom !== true) return false;
     ids.add(p.id);
   }
 
@@ -44,6 +61,7 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (typeof u.marie !== 'boolean') return false;
     if (u.statut !== 'actuelle' && u.statut !== 'separee') return false;
     if (typeof u.personneA !== 'string' || typeof u.personneB !== 'string') return false;
+    if (u.date !== undefined && (typeof u.date !== 'string' || !(estDateValide(u.date) || estDateSansAnneeValide(u.date)))) return false;
     if (!ids.has(u.personneA) || !ids.has(u.personneB) || u.personneA === u.personneB) return false;
     // Un seul conjoint actuel par personne.
     if (u.statut === 'actuelle') {
@@ -69,6 +87,7 @@ export function estDonneesValides(v: unknown): v is Donnees {
     parentsParType.set(cle, n);
     idsLiens.add(f.id);
   }
+  if (aBoucleDeFiliation(filiations as Filiation[])) return false;
 
   // Groupes d'amis : au moins deux membres existants, sans doublon.
   for (const g of groupes) {

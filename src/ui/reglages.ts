@@ -11,14 +11,10 @@ import { ouvrirChoixMoi } from './choixMoi';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
+import { messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { lienRetour } from './navigation';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
-
-export const pluriel = (n: number) => `${n} ${n > 1 ? 'personnes' : 'personne'}`;
-
-/** « 3 personnes importées. » */
-export const messageImport = (n: number) => `${pluriel(n)} importée${n > 1 ? 's' : ''}.`;
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
 function choix<T extends string>(nom: string, legende: string, options: [T, string][], actuel: T, choisir: (v: T) => void): HTMLElement {
@@ -37,8 +33,8 @@ function choix<T extends string>(nom: string, legende: string, options: [T, stri
 function avertissementRemplacement(fichier: string, importees: number, actuelles: number): string {
   const perte =
     actuelles > 1
-      ? `Vos ${actuelles} personnes actuelles seront perdues, sauf si vous les avez exportées.`
-      : 'Votre personne actuelle sera perdue, sauf si vous l’avez exportée.';
+      ? `Tes ${actuelles} personnes actuelles seront perdues, sauf si tu les as exportées.`
+      : 'Ta personne actuelle sera perdue, sauf si tu l’as exportée.';
   return `Le fichier ${fichier} contient ${pluriel(importees)}. ${perte}`;
 }
 
@@ -64,10 +60,15 @@ export function ecranReglages(): HTMLElement {
         { type: 'button', class: 'ligne ligne-choix', onclick: () => ouvrirChoixMoi(dessinerMoi) },
         ...(moi
           ? [...contenuLigne(moi, undefined, 'Ma fiche'), h('span', { class: 'action-ligne' }, 'Changer')]
-          : [h('span', { class: 'avatar avatar-vide' }, icone('plus', 20)), h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom action-ligne' }, 'Choisir ma fiche'))]),
+          : [
+              h('span', { class: 'avatar avatar-vide' }, icone('plus', 20)),
+              h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom action-ligne' }, 'Choisir ma fiche')),
+            ]),
       ),
     );
-    aideMoi.textContent = moi ? 'Chaque fiche affiche son lien avec toi : « ta cousine », « ton oncle par alliance ».' : 'Chaque fiche affichera son lien avec toi.';
+    aideMoi.textContent = moi
+      ? 'Chaque fiche affiche son lien avec toi : « ta cousine », « ton oncle par alliance ».'
+      : 'Chaque fiche affichera son lien avec toi.';
   };
   const aideMoi = h('p', { class: 'secondaire aide-section' });
 
@@ -108,7 +109,8 @@ export function ecranReglages(): HTMLElement {
       changerAvecAnnulation(() => importees, messageImport(personnesVisibles(importees).length), 'Import annulé.');
       maj();
     } catch (e) {
-      erreurImport.textContent = e instanceof Error ? `${e.message}. Vos données n’ont pas été modifiées.` : 'Import impossible. Vos données n’ont pas été modifiées.';
+      erreurImport.textContent =
+        e instanceof Error ? `${e.message}. Tes données n’ont pas été modifiées.` : 'Import impossible. Tes données n’ont pas été modifiées.';
       erreurImport.hidden = false;
     }
   });
@@ -116,7 +118,7 @@ export function ecranReglages(): HTMLElement {
   const effacer = async () => {
     const n = personnesVisibles(lireDonnees()).length;
     if (n === 0) return;
-    const message = `Effacer toutes les données ? ${pluriel(n)} et tous leurs liens seront supprimés de cet appareil. Pensez à exporter d’abord.`;
+    const message = `Effacer toutes les données ? ${pluriel(n)} et tous leurs liens seront supprimés de cet appareil. Pense à exporter d’abord.`;
     if (!(await confirmer(message, 'Effacer'))) return;
     erreurEffacement.hidden = true;
     try {
@@ -166,8 +168,27 @@ export function ecranReglages(): HTMLElement {
         h(
           'div',
           { class: 'carte bloc-reglages' },
-          choix<Tri>('tri', 'Trier la liste par', [['prenom', 'Prénom'], ['nom', 'Nom']], reglages.tri, (tri) => modifierReglages({ tri })),
-          choix<Theme>('theme', 'Thème', [['auto', 'Auto'], ['clair', 'Clair'], ['sombre', 'Sombre']], reglages.theme, (theme) => modifierReglages({ theme })),
+          choix<Tri>(
+            'tri',
+            'Trier la liste par',
+            [
+              ['prenom', 'Prénom'],
+              ['nom', 'Nom'],
+            ],
+            reglages.tri,
+            (tri) => modifierReglages({ tri }),
+          ),
+          choix<Theme>(
+            'theme',
+            'Thème',
+            [
+              ['auto', 'Auto'],
+              ['clair', 'Clair'],
+              ['sombre', 'Sombre'],
+            ],
+            reglages.theme,
+            (theme) => modifierReglages({ theme }),
+          ),
         ),
       ),
       h(
@@ -183,6 +204,7 @@ export function ecranReglages(): HTMLElement {
             h('h3', {}, 'Exporter'),
             h('p', { class: 'date-export' }, h('span', { class: 'secondaire' }, 'Dernier export'), dateExport),
             resumeExport,
+            h('p', { class: 'secondaire' }, 'L’export contient tes notes en clair : garde le fichier pour toi.'),
             h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporter() }, 'Exporter mes données'),
             messageExport,
           ),
@@ -197,14 +219,7 @@ export function ecranReglages(): HTMLElement {
           ),
         ),
       ),
-      h(
-        'section',
-        { class: 'groupe-reglages' },
-        h('h2', { class: 'titre-section' }, 'Données'),
-        boutonEffacer,
-        aideEffacer,
-        erreurEffacement,
-      ),
+      h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Données'), boutonEffacer, aideEffacer, erreurEffacement),
       h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),
     ),
   );

@@ -32,7 +32,7 @@ const champ = (libelle: string, id: string, controle: HTMLElement) =>
  * `suffixe` distingue les ids de deux dates sur le même écran ; `de` complète les libellés (« de naissance ») ;
  * `sansAnnee` admet aussi jour et mois sans année.
  */
-function champDate(suffixe: string, de: string, valeur: string | undefined, sansAnnee = false) {
+export function champDate(suffixe: string, de: string, valeur: string | undefined, sansAnnee = false) {
   const date = decouperDate(valeur);
   const jour = h('input', { id: `jour${suffixe}`, type: 'text', inputmode: 'numeric', maxlength: 2, placeholder: 'JJ', value: date.jour, autocomplete: 'off', 'aria-label': `Jour ${de}` });
   const mois = h(

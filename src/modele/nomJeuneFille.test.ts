@@ -29,6 +29,19 @@ describe('nom de jeune fille', () => {
     expect(nom(modifierUnion(d0, c.union, true), c.a)).toMatchObject({ nom: 'Martin', nomNaissance: 'Durand' });
   });
 
+  it('case « Prend le nom » décochée : le mariage ne change aucun nom', () => {
+    const c = couple('F', 'Durand', 'M', 'Martin');
+    const d = modifierUnion(c.d, c.union, true, false);
+    expect(d.unions[0].marie).toBe(true);
+    expect(nom(d, c.a)).toMatchObject({ nom: 'Durand' });
+    expect(nom(d, c.a).nomNaissance).toBeUndefined();
+    const neuf = donneesVides();
+    const a = creerPersonne(neuf, { prenom: 'A', nom: 'Durand', sexe: 'F' });
+    const b = creerPersonne(a.donnees, { prenom: 'B', nom: 'Martin', sexe: 'M' });
+    const u = ajouterUnion(b.donnees, a.personne.id, b.personne.id, true, 'actuelle', undefined, false);
+    expect(nom(u.donnees, a.personne.id).nom).toBe('Durand');
+  });
+
   it('couple non marié, séparé ou couple de femmes : rien ne change', () => {
     const c = couple('F', 'Durand', 'M', 'Martin');
     expect(nom(modifierUnion(c.d, c.union, false), c.a).nom).toBe('Durand');

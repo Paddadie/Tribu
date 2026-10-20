@@ -2,8 +2,22 @@
 // famille élargie déduite, ajout d'un proche, modification, suppression avec confirmation.
 
 import { detailPersonne, libelleAge, libelleAgeDeces } from '../modele/age';
-import { chemin, nomGroupe, conjoint, enfantsDuCouple, exConjoints, familleElargie, foyer, fratrie, liensEnfants, liensParents, parentsCommuns, type Lien, type Parent } from '../modele/deductions';
-import { avecDe, comparateur, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, nomComplet } from '../modele/liste';
+import {
+  chemin,
+  nomGroupe,
+  conjoint,
+  enfantsDuCouple,
+  exConjoints,
+  familleElargie,
+  foyer,
+  fratrie,
+  liensEnfants,
+  liensParents,
+  parentsCommuns,
+  type Lien,
+  type Parent,
+} from '../modele/deductions';
+import { avecDe, comparateur, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, libelleUnion, nomComplet } from '../modele/liste';
 import { aDesLiens, enCouple, estDecede, groupesDe, retirerDuGroupe, supprimerPersonne } from '../modele/modele';
 import { etiquette as etiquetteMoi, libelleRelation } from '../modele/parente';
 import { estParentSansNom } from '../modele/parentSansNom';
@@ -30,9 +44,7 @@ function ligneProche(c: Personne, etiquette: Enfant, hrefModifier: string, libel
 
 /** Ligne touchable d'un frère, d'une sœur ou d'un demi : déduite des parents, donc sans crayon. `via` = parents communs (demis). */
 function ligneFratrie(c: Personne, via: Personne[] = []): HTMLElement {
-  const detail = [detailPersonne(c, new Date()), via.length > 0 && `par ${via.map((x) => x.prenom || x.nom).join(' et ')}`]
-    .filter(Boolean)
-    .join(' · ');
+  const detail = [detailPersonne(c, new Date()), via.length > 0 && `par ${via.map((x) => x.prenom || x.nom).join(' et ')}`].filter(Boolean).join(' · ');
   return h('div', { class: 'ligne' }, h('a', { class: 'ligne-lien', href: `#/personne/${c.id}` }, ...contenuLigne(c, undefined, detail)));
 }
 
@@ -41,10 +53,7 @@ function sectionsFratrie(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
   const { freresSoeurs, demis } = fratrie(d, p.id);
   const freres = freresSoeurs.length > 0 ? section('Frères et sœurs', ...freresSoeurs.map((f) => ligneFratrie(f))) : null;
-  return [
-    freres,
-    demis.length > 0 ? section('Demi-frères et demi-sœurs', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null,
-  ];
+  return [freres, demis.length > 0 ? section('Demi-frères et demi-sœurs', ...demis.map((f) => ligneFratrie(f, parentsCommuns(d, p.id, f.id)))) : null];
 }
 
 function section(titre: string, ...lignes: HTMLElement[]): HTMLElement {
@@ -101,7 +110,11 @@ function sectionAmis(p: Personne, erreur: HTMLElement): HTMLElement | null {
           'div',
           { class: 'groupe-amis-titre' },
           h('a', { class: 'groupe-amis-nom', href: `#/groupe/${g.id}` }, nomGroupe(d, g)),
-          h('button', { type: 'button', class: 'bouton-icone', 'aria-label': `Quitter le groupe ${nomGroupe(d, g)}`, onclick: () => quitter(g) }, icone('croix', 20)),
+          h(
+            'button',
+            { type: 'button', class: 'bouton-icone', 'aria-label': `Quitter le groupe ${nomGroupe(d, g)}`, onclick: () => quitter(g) },
+            icone('croix', 20),
+          ),
         ),
         ...d.personnes
           .filter((m) => g.membres.includes(m.id) && m.id !== p.id)
@@ -158,7 +171,9 @@ function sectionFiliation(titre: string, liens: Lien[], p: Personne): HTMLElemen
 /** Ligne d'un conjoint ou d'un ex : naissance, âge, enfants du couple, étiquette « Marié(e) » ; le crayon ouvre l'union. */
 function ligneUnion(p: Personne, { union, personne: c }: { union: Union; personne: Personne }): HTMLElement {
   const n = enfantsDuCouple(lireDonnees(), p.id, c.id).length;
-  const detail = [detailPersonne(c, new Date()), n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`].filter(Boolean).join(' · ');
+  const detail = [detailPersonne(c, new Date()), union.date && `Union ${libelleUnion(union.date)}`, n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`]
+    .filter(Boolean)
+    .join(' · ');
   return ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${union.id}/${p.id}`, 'Modifier l’union', detail);
 }
 
@@ -199,7 +214,7 @@ function ouvrirChoixProche(p: Personne): void {
     { class: 'feuille', 'aria-label': 'Ajouter un proche', oncancel: fermer },
     h('h2', { class: 'feuille-titre' }, `Qui ajouter pour ${p.prenom || p.nom} ?`),
     option('Un conjoint', aConjoint ? 'Un seul conjoint à la fois' : 'Déjà dans la liste ou nouveau', 'coeur', `#/conjoint/${p.id}`, aConjoint),
-    option('Un ex', 'Une union terminée, même en couple aujourd’hui', 'coeur', `#/ex/${p.id}`),
+    option('Un ex', 'Une union terminée, même en couple aujourd’hui', 'coeurBrise', `#/ex/${p.id}`),
     option('Un parent', 'Biologique ou adoptif', 'haut', `#/parent/${p.id}`),
     option('Un enfant', 'Biologique ou adoptif', 'bas', `#/enfant/${p.id}`),
     option('Un frère ou une sœur', parents.length > 0 ? `Enfant ${avecDe(enumerer(parents))}` : 'Parents inconnus', 'cote', `#/frere/${p.id}`),
@@ -218,9 +233,7 @@ function ouvrirChoixProche(p: Personne): void {
 export function fiche(p: Personne): HTMLElement {
   const maintenant = new Date();
   // Naissance, décès, puis âge (« 34 ans » ou « Morte à 82 ans ») sur sa propre ligne, plus appuyée.
-  const dates = [libelleNaissance(p.naissance, p.sexe), libelleDeces(p.deces, p.sexe, estDecede(p))]
-    .filter(Boolean)
-    .map((t) => h('span', {}, majuscule(t)));
+  const dates = [libelleNaissance(p.naissance, p.sexe), libelleDeces(p.deces, p.sexe, estDecede(p))].filter(Boolean).map((t) => h('span', {}, majuscule(t)));
   const age = estDecede(p) ? libelleAgeDeces(p, maintenant) : libelleAge(p, maintenant);
   if (age) dates.push(h('span', { class: 'age' }, majuscule(age)));
   const lien = lienMoi(p);
@@ -255,13 +268,13 @@ export function fiche(p: Personne): HTMLElement {
       avatarPersonne(p, true),
       h('h1', {}, nomComplet(p)),
       p.nomNaissance && h('span', { class: 'dates secondaire' }, `née ${p.nomNaissance}`),
-      lien &&h('span', { class: 'lien-moi' }, lien),
+      lien && h('span', { class: 'lien-moi' }, lien),
       dates.length > 0 && h('span', { class: 'dates secondaire' }, ...dates),
     ),
     h(
       'div',
       { class: 'contenu' },
-      h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
+      h('button', { type: 'button', class: 'bouton bouton-contour', onclick: () => ouvrirChoixProche(p) }, icone('plus', 18), 'Ajouter un proche'),
       p.note && h('div', { class: 'carte note' }, h('h2', { class: 'titre-section titre-note' }, 'Note'), h('p', {}, p.note)),
       ...sectionsDessins(p),
       ...sectionsConjoint(p),

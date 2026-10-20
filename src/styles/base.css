@@ -1,0 +1,148 @@
+:root {
+  /* Échelle de texte : 5 tailles, pas d'autre. */
+  --t1: 12px;
+  --t2: 14px;
+  --t3: 16px;
+  --t4: 20px;
+  --t5: 28px;
+  /* Rayons, ombres, graisses : 3 rayons, 2 ombres, 2 graisses. */
+  --rayon-s: 12px;
+  --rayon-m: 16px;
+  --rayon-l: 22px;
+  --ombre-basse: 0 4px 14px rgb(0 0 0 / 0.12);
+  --ombre-haute: 0 8px 28px rgb(0 0 0 / 0.18);
+  --gras: 600;
+  --av-sat: 38%;
+  --av-fond: 88%;
+  --av-sat-texte: 42%;
+  --av-texte: 26%;
+  --fond: #f3f6f4;
+  --encre: #1f2a27;
+  --secondaire: #56635f;
+  --accent: #2f6f5e;
+  --accent-clair: #dcebe5;
+  --accent-texte: #1f5546;
+  --chaud: #766b5f;
+  --pastille: #ebe8e3;
+  --carte: #ffffff;
+  --bord: #e1e8e4;
+  --bord-champ: #c9d3cf;
+  --trait: #aebcb7;
+  --trait-ex: #9aa4a0;
+  --danger: #a32a2a;
+  --danger-bord: #e3bdbd;
+  --erreur-fond: #fbeaea;
+  --succes-fond: #e4f2ea;
+  --sur-accent: #fff;
+  --sur-danger: #fff;
+  --ombre-bouton: rgba(20, 60, 50, 0.3);
+  --voile: rgba(20, 30, 26, 0.5);
+  /* Couleurs des noms de famille (avatars, dessins, arbre global) et des groupes d'amis. */
+  --sur-pastel: #1f2a27;
+  --c0: #8fcfb8;
+  --c1: #f2b98a;
+  --c2: #aab0f0;
+  --c3: #f0a8c8;
+  --c4: #8fc3ec;
+  --c5: #f0a99c;
+  --c6: #d6c16f;
+  --c7: #b79de0;
+  --c8: #9ed67f;
+  --c9: #7fd0d6;
+  --c10: #e2a0e0;
+  --c11: #c8b48f;
+}
+
+/* Thème sombre : data-theme="sombre" est posé par etat.ts, pour le réglage
+   « Sombre » ou pour « Auto » quand le téléphone est en sombre. */
+:root[data-theme='sombre'] {
+  color-scheme: dark;
+  --av-sat: 24%;
+  --av-fond: 24%;
+  --av-sat-texte: 55%;
+  --av-texte: 82%;
+  --fond: #121a17;
+  --encre: #e6eeea;
+  --secondaire: #9aaba5;
+  --accent: #62bfa4;
+  --accent-clair: #1f3b33;
+  --accent-texte: #9fdcc9;
+  --chaud: #a89e91;
+  --pastille: #26302c;
+  --carte: #1b2622;
+  --bord: #2a3833;
+  --bord-champ: #3d4d47;
+  --trait: #4d605a;
+  --trait-ex: #6f7c77;
+  --danger: #ef8a8a;
+  --danger-bord: #6b3535;
+  --erreur-fond: #3a2020;
+  --succes-fond: #1d3a2d;
+  --sur-accent: #0c1f19;
+  --sur-danger: #2a0d0d;
+  --c0: #6fb89f;
+  --c1: #dfa070;
+  --c2: #8f96dd;
+  --c3: #de8db0;
+  --c4: #72a9d6;
+  --c5: #de8e80;
+  --c6: #bfa954;
+  --c7: #9d85cc;
+  --c8: #86bd68;
+  --c9: #62b5bb;
+  --c10: #c985c7;
+  --c11: #ae9a76;
+  --ombre-bouton: rgba(0, 0, 0, 0.5);
+  --voile: rgba(0, 0, 0, 0.65);
+}
+
+/* Avant le script (thème pas encore posé) : fond sombre si le téléphone l'est, sans éclair clair au lancement. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --fond: #121a17;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--fond);
+  color: var(--encre);
+  font-family: 'Figtree Variable', system-ui, sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+main {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.secondaire {
+  font-size: var(--t2);
+  color: var(--secondaire);
+}
+

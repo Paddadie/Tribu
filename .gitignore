@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dev-dist/
+captures/
 
 # Fichiers Claude : local uniquement
 CLAUDE.md

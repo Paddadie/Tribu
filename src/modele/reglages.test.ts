@@ -44,7 +44,7 @@ describe('réglages', () => {
 });
 
 describe('ficheMoi', () => {
-  const { donnees, personne } = creerPersonne(donneesVides(), { prenom: 'Paul', nom: 'D' });
+  const { donnees, personne } = creerPersonne(donneesVides(), { prenom: 'Jean', nom: 'Dupont' });
   it('donne ma fiche quand elle existe', () => {
     expect(ficheMoi({ ...REGLAGES_PAR_DEFAUT, moi: personne.id }, donnees)).toBe(personne);
   });

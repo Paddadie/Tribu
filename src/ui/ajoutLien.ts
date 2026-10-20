@@ -27,7 +27,12 @@ const appel = (p: Personne) => p.prenom || p.nom;
 /** Case à cocher en carte : libellé et précision. */
 function caseACocher(libelle: string, detail: string, onchange: () => void): { noeud: HTMLElement; boite: HTMLInputElement } {
   const boite = h('input', { type: 'checkbox', class: 'boite', checked: true, onchange });
-  const noeud = h('label', { class: 'case' }, boite, h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, libelle), detail && h('span', { class: 'secondaire' }, detail)));
+  const noeud = h(
+    'label',
+    { class: 'case' },
+    boite,
+    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, libelle), detail && h('span', { class: 'secondaire' }, detail)),
+  );
   return { noeud, boite };
 }
 
@@ -39,8 +44,7 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
   // Enfant : le conjoint éventuel, second parent coché d'office.
   const couple = role === 'enfant' ? conjoint(d, p.id)?.personne : undefined;
   const caseConjoint =
-    couple &&
-    caseACocher(`Ajouter aussi ${appel(couple)} comme parent`, couple.sexe === 'F' ? 'Sa conjointe' : 'Son conjoint', () => selecteur.rafraichir());
+    couple && caseACocher(`Ajouter aussi ${appel(couple)} comme parent`, couple.sexe === 'F' ? 'Sa conjointe' : 'Son conjoint', () => selecteur.rafraichir());
 
   // Frère ou sœur : une case par parent connu, toutes cochées.
   const parentsConnus = role === 'frere' ? liensParents(d, p.id).map((l) => l.personne) : [];
@@ -120,7 +124,7 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
       { class: 'champ' },
       h('legend', {}, 'Enfant de'),
       h('div', { class: 'carte' }, ...casesParents.map((c) => c.noeud)),
-      casesParents.length > 1 && h('p', { class: 'aide' }, 'Décochez un parent pour un demi-frère ou une demi-sœur.'),
+      casesParents.length > 1 && h('p', { class: 'aide' }, 'Décoche un parent pour un demi-frère ou une demi-sœur.'),
     );
 
   return h(
@@ -146,7 +150,8 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
           h('legend', {}, 'Type de lien'),
           h('div', { class: 'choix-groupe' }, optionType('biologique', 'Biologique'), optionType('adoptif', 'Adoptif')),
         ),
-      sansParentConnu && h('p', { class: 'aide' }, 'Parents inconnus : les deux seront frères ou sœurs. Ajoutez un parent à l’un d’eux, il le deviendra pour tous.'),
+      sansParentConnu &&
+        h('p', { class: 'aide' }, 'Parents inconnus : les deux seront frères ou sœurs. Ajoute un parent à l’un d’eux, il le deviendra pour tous.'),
       selecteur.onglets,
       selecteur.zone,
       selecteur.pied,

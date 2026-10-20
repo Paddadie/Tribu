@@ -7,8 +7,7 @@ import { ajoutConjoint } from "./ui/ajoutConjoint";
 import { ajoutLien } from "./ui/ajoutLien";
 import { EVENEMENT_RAFRAICHIR } from "./ui/annulation";
 import { ecranArbre } from "./ui/arbreGlobal";
-import { enregistrerParentSansNom, estVirtuel } from "./modele/parentSansNom";
-import { appliquerTheme, lireBrutIllisible, lireDonnees, modifierDonnees } from "./ui/etat";
+import { appliquerTheme, lireBrutIllisible, lireDonnees } from "./ui/etat";
 import { fiche } from "./ui/fiche";
 import { formulaire } from "./ui/formulaire";
 import { ecranAjoutMembre, ecranGroupe, ecranGroupes, ecranNouveauGroupe } from "./ui/groupes";
@@ -46,15 +45,6 @@ function vue(route: string): HTMLElement {
     if (groupe) return route.split("/")[3] === "ajouter" ? ecranAjoutMembre(groupe) : ecranGroupe(groupe);
   }
   if (section === "nouveau") return formulaire(undefined);
-  if (section === "personne" && id && estVirtuel(id)) {
-    // Parent « ? » touché dans l'arbre : on l'enregistre, puis on ouvre sa fiche à la place de cette entrée.
-    const creation = enregistrerParentSansNom(lireDonnees(), id);
-    if (creation) {
-      modifierDonnees(() => creation.donnees);
-      remplacer(`#/personne/${creation.personne.id}`, false);
-      return fiche(creation.personne);
-    }
-  }
   if (section === "personne" && personne) return fiche(personne);
   if (section === "modifier" && personne) return formulaire(personne);
   if (section === "conjoint" && personne) return ajoutConjoint(personne);

@@ -1,9 +1,9 @@
 // Gestion des groupes d'amis (Réglages → Groupes d'amis) : liste, création, détail d'un groupe
 // (nom, membres, ajout d'un membre, suppression). Tous les membres d'un groupe sont amis entre eux.
 
-import { nomGroupe } from '../modele/deductions';
+import { nomGroupe, raisonGroupe } from '../modele/deductions';
 import { comparateur, filtrerParNom, nomListe } from '../modele/liste';
-import { ajouterAuGroupe, creerGroupe, groupesDe, groupesDeLaFamille, personnesVisibles, renommerGroupe, retirerDuGroupe, supprimerGroupe } from '../modele/modele';
+import { ajouterAuGroupe, creerGroupe, groupesDe, personnesVisibles, renommerGroupe, retirerDuGroupe, supprimerGroupe } from '../modele/modele';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { confirmer } from './confirmer';
@@ -224,17 +224,6 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void supprimer() }, 'Supprimer le groupe'),
     ),
   );
-}
-
-/**
- * Pourquoi une personne ne peut pas entrer dans un groupe : elle est déjà groupée, ou un membre de sa famille
- * appartient à un autre groupe (toute la famille d'un membre compte dans son groupe). `cible` : le groupe visé, s'il existe.
- */
-export function raisonGroupe(d: Donnees, c: Personne, cible?: GroupeAmis): string | undefined {
-  const propre = groupesDe(d, c.id)[0];
-  if (propre) return propre.id === cible?.id ? 'Déjà dans le groupe' : `Déjà dans « ${nomGroupe(d, propre)} »`;
-  const autre = groupesDeLaFamille(d, c.id).find((g) => g.id !== cible?.id);
-  return autre ? `Famille d’un membre de « ${nomGroupe(d, autre)} »` : undefined;
 }
 
 /** Ajout d'un membre à un groupe : personne existante pas encore groupée, ou nouvelle personne. */

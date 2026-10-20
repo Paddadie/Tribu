@@ -2,7 +2,7 @@
 // recalcule depuis les données.
 
 import { comparateur } from './liste';
-import { anneeDe, estInconnu } from './modele';
+import { anneeDe, estInconnu, groupesDe, groupesDeLaFamille } from './modele';
 import { estParentSansNom } from './parentSansNom';
 import type { Donnees, Filiation, GroupeAmis, Personne, Union } from './types';
 
@@ -44,9 +44,7 @@ export function conjoint(d: Donnees, id: string): { union: Union; personne: Pers
 
 /** Ex-conjoints (unions séparées), dans l'ordre des unions ; purement informatif, sans effet sur la parenté. */
 export function exConjoints(d: Donnees, id: string): { union: Union; personne: Personne }[] {
-  return d.unions
-    .filter((u) => u.statut === 'separee' && (u.personneA === id || u.personneB === id))
-    .flatMap((u) => autreDeLUnion(d, u, id) ?? []);
+  return d.unions.filter((u) => u.statut === 'separee' && (u.personneA === id || u.personneB === id)).flatMap((u) => autreDeLUnion(d, u, id) ?? []);
 }
 
 export interface Lien {
@@ -95,7 +93,9 @@ export function enfantsDuCouple(d: Donnees, idA: string, idB: string): Personne[
 export function parentsCommuns(d: Donnees, idA: string, idB: string): Personne[] {
   const deA = new Set(d.filiations.filter((f) => f.enfant === idA).map((f) => f.parent));
   const communs = d.filiations.filter((f) => f.enfant === idB && deA.has(f.parent)).map((f) => f.parent);
-  return parId(d, communs).filter((p) => !estInconnu(p)).sort(parPrenom);
+  return parId(d, communs)
+    .filter((p) => !estInconnu(p))
+    .sort(parPrenom);
 }
 
 /**
@@ -145,11 +145,7 @@ export interface Sang {
  * - alliance « conjoint » : `vers` est de la famille de sang de mon conjoint (`base` = lien conjoint → vers) ;
  * - alliance « sien » : `vers` est le conjoint de quelqu'un de ma famille de sang (`base` = lien de → conjoint de vers).
  */
-export type Relation =
-  | { type: 'soi' }
-  | { type: 'conjoint'; marie: boolean }
-  | Sang
-  | { type: 'alliance'; cote: 'conjoint' | 'sien'; base: Sang };
+export type Relation = { type: 'soi' } | { type: 'conjoint'; marie: boolean } | Sang | { type: 'alliance'; cote: 'conjoint' | 'sien'; base: Sang };
 
 type Parents = Map<string, Set<string>>;
 
@@ -193,8 +189,7 @@ function sang(d: Donnees, parents: Parents, de: string, vers: string): Sang | un
   const pDe = parents.get(de) ?? new Set<string>();
   const pVers = parents.get(vers) ?? new Set<string>();
   const demi = montee === 1 && descente === 1 && (pDe.size !== pVers.size || [...pDe].some((p) => !pVers.has(p)));
-  const direct =
-    montee === 1 && descente === 0 ? { parent: vers, enfant: de } : montee === 0 && descente === 1 ? { parent: de, enfant: vers } : undefined;
+  const direct = montee === 1 && descente === 0 ? { parent: vers, enfant: de } : montee === 0 && descente === 1 ? { parent: de, enfant: vers } : undefined;
   const adoptif = !!direct && d.filiations.some((f) => f.parent === direct.parent && f.enfant === direct.enfant && f.type === 'adoptif');
   return { type: 'sang', montee, descente, demi, adoptif };
 }
@@ -284,8 +279,22 @@ export function amis(d: Donnees, id: string): Personne[] {
 /** Nom d'un groupe d'amis ; sans nom, « Groupe de Paul, Julie ». */
 export function nomGroupe(d: Donnees, g: GroupeAmis): string {
   if (g.nom.trim()) return g.nom.trim();
-  const prenoms = d.personnes.filter((p) => g.membres.includes(p.id)).sort(parPrenom).map((p) => p.prenom || p.nom);
+  const prenoms = d.personnes
+    .filter((p) => g.membres.includes(p.id))
+    .sort(parPrenom)
+    .map((p) => p.prenom || p.nom);
   return `Groupe de ${prenoms.slice(0, 3).join(', ')}${prenoms.length > 3 ? '…' : ''}`;
+}
+
+/**
+ * Pourquoi une personne ne peut pas entrer dans un groupe : elle est déjà groupée, ou un membre de sa famille
+ * appartient à un autre groupe (toute la famille d'un membre compte dans son groupe). `cible` : le groupe visé, s'il existe.
+ */
+export function raisonGroupe(d: Donnees, c: Personne, cible?: GroupeAmis): string | undefined {
+  const propre = groupesDe(d, c.id)[0];
+  if (propre) return propre.id === cible?.id ? 'Déjà dans le groupe' : `Déjà dans « ${nomGroupe(d, propre)} »`;
+  const autre = groupesDeLaFamille(d, c.id).find((g) => g.id !== cible?.id);
+  return autre ? `Famille d’un membre de « ${nomGroupe(d, autre)} »` : undefined;
 }
 
 /**
@@ -390,6 +399,8 @@ export interface Foyer {
   conjoint?: { personne: Personne; marie: boolean; separe?: boolean };
   /** Frères et sœurs (mêmes parents), du plus âgé au plus jeune. */
   fratrie: Personne[];
+  /** Demi-frères et demi-sœurs qui ont exactement un parent dessiné en commun (`parent` : son id), du plus âgé au plus jeune. */
+  demis: { personne: Personne; parent: string }[];
   /** Enfants : ceux d'une autre union d'abord, puis ceux du couple ; du plus âgé au plus jeune dans chaque groupe. */
   enfants: { personne: Personne; adoptif: boolean; duCouple: boolean }[];
 }
@@ -407,8 +418,14 @@ export function foyer(d: Donnees, id: string, moi?: string): Foyer {
     adoptif: filiation.type === 'adoptif',
     duCouple: !!cj && d.filiations.some((f) => f.parent === cj.personne.id && f.enfant === personne.id),
   }));
+  const dessines = tousParents.slice(0, 2);
+  const fr = fratrie(d, id);
+  const demis = fr.demis.flatMap((personne) => {
+    const communs = dessines.filter(({ personne: par }) => d.filiations.some((f) => f.parent === par.id && f.enfant === personne.id));
+    return communs.length === 1 ? [{ personne, parent: communs[0].personne.id }] : [];
+  });
   return {
-    parents: tousParents.slice(0, 2).map(({ filiation, personne }) => ({ personne, adoptif: filiation.type === 'adoptif' })),
+    parents: dessines.map(({ filiation, personne }) => ({ personne, adoptif: filiation.type === 'adoptif' })),
     manque: famille && tousParents.length < 2 ? 1 : 0,
     parentsSepares:
       tousParents.length >= 2 &&
@@ -417,7 +434,8 @@ export function foyer(d: Donnees, id: string, moi?: string): Foyer {
         return u.statut === 'separee' && ((u.personneA === a && u.personneB === b) || (u.personneA === b && u.personneB === a));
       }),
     conjoint: cj,
-    fratrie: fratrie(d, id).freresSoeurs,
+    fratrie: fr.freresSoeurs,
+    demis,
     enfants: [...enfants.filter((e) => !e.duCouple), ...enfants.filter((e) => e.duCouple)],
   };
 }

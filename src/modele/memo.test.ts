@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageEntre, detailPersonne, libelleAge, libelleAgeDeces, libelleDelai, prochainsAnniversaires } from './age';
+import { ageEntre, anniversairesDeces, detailPersonne, libelleAge, libelleAgeDeces, libelleDelai, prochainsAnniversaires } from './age';
 import { conjoint, exConjoints, relation } from './deductions';
 import { libelleDeces } from './liste';
 import { migrer } from './migration';
@@ -32,7 +32,7 @@ function avec(...noms: string[]): { d: Donnees; ids: string[] } {
 /** Date locale, comme `new Date()` sur le téléphone. */
 const le = (annee: number, mois: number, jour: number) => new Date(annee, mois - 1, jour);
 
-describe('migration v1 → v2 → v3 → v4', () => {
+describe('migration v1 → v2 → v3 → v4 → v5', () => {
   const v1 = {
     version: 1,
     personnes: [
@@ -44,9 +44,9 @@ describe('migration v1 → v2 → v3 → v4', () => {
     filiations: [{ id: 'f1', parent: 'a', enfant: 'c', type: 'biologique' }],
   };
 
-  it('donne le statut « actuelle » aux unions, aucun groupe d’amis, et passe en version 4, sans rien perdre', () => {
+  it('donne le statut « actuelle » aux unions, aucun groupe d’amis, et passe en version 5, sans rien perdre', () => {
     const v3 = migrer(v1) as Donnees;
-    expect(v3.version).toBe(4);
+    expect(v3.version).toBe(5);
     expect(v3.unions).toEqual([{ id: 'u1', personneA: 'a', personneB: 'b', marie: true, statut: 'actuelle' }]);
     expect(v3.personnes).toEqual(v1.personnes);
     expect(v3.filiations).toEqual(v1.filiations);
@@ -57,7 +57,7 @@ describe('migration v1 → v2 → v3 → v4', () => {
   it('un contenu v2 reçoit une liste de groupes vide, sans rien perdre', () => {
     const v2 = { version: 2, personnes: v1.personnes, unions: [], filiations: v1.filiations };
     const v3 = migrer(v2) as Donnees;
-    expect(v3).toEqual({ ...v2, version: 4, groupes: [] });
+    expect(v3).toEqual({ ...v2, version: 5, groupes: [] });
     expect(estDonneesValides(v3)).toBe(true);
     expect(v2.version).toBe(2);
   });
@@ -68,12 +68,33 @@ describe('migration v1 → v2 → v3 → v4', () => {
     expect(v1.unions[0]).not.toHaveProperty('statut');
   });
 
-  it('laisse un contenu v4 ou inconnu tel quel', () => {
-    const v3 = donneesVides();
-    expect(migrer(v3)).toBe(v3);
+  it('laisse un contenu v5 ou inconnu tel quel', () => {
+    const v5 = donneesVides();
+    expect(migrer(v5)).toBe(v5);
     expect(migrer(null)).toBeNull();
     expect(migrer('x')).toBe('x');
-    expect(migrer({ version: 4 })).toEqual({ version: 4 });
+    expect(migrer({ version: 6 })).toEqual({ version: 6 });
+  });
+
+  it('v4 → v5 : le parent sans nom reçoit `sansNom`, rien d’autre ne change', () => {
+    const v4 = {
+      version: 4,
+      personnes: [
+        { id: 'a', prenom: 'Parent inconnu', nom: '', note: '' },
+        { id: 'b', prenom: 'Parent inconnu', nom: 'Martin', note: '' },
+        { id: 'c', prenom: 'Parent inconnu', nom: '', note: '', inconnu: true },
+        { id: 'd', prenom: 'Anne', nom: 'X', note: '' },
+      ],
+      unions: [{ id: 'u', personneA: 'b', personneB: 'd', marie: true, statut: 'actuelle' }],
+      filiations: [],
+      groupes: [],
+    };
+    const v5 = migrer(v4) as Donnees;
+    expect(v5.version).toBe(5);
+    expect(v5.personnes.map((p) => !!p.sansNom)).toEqual([true, false, false, false]);
+    expect(v5.unions).toEqual(v4.unions);
+    expect(estDonneesValides(v5)).toBe(true);
+    expect(v4.personnes[0]).not.toHaveProperty('sansNom');
   });
 
   it('un v1 qui avait deux unions pour une personne reste lisible : la seconde devient séparée', () => {
@@ -85,7 +106,7 @@ describe('migration v1 → v2 → v3 → v4', () => {
 
   it('un ancien export s’importe', () => {
     const d = importerJson(JSON.stringify(v1, null, 2));
-    expect(d.version).toBe(4);
+    expect(d.version).toBe(5);
     expect(d.unions[0].statut).toBe('actuelle');
   });
 
@@ -117,9 +138,12 @@ describe('migration v3 → v4 : amitiés en groupes', () => {
 
   it('réunit les amis d’amis en un groupe sans nom, sans toucher aux autres', () => {
     const d = migrer(v3) as Donnees;
-    expect(d.version).toBe(4);
+    expect(d.version).toBe(5);
     expect(d).not.toHaveProperty('amities');
-    expect(d.groupes.map((g) => [...g.membres].sort())).toEqual([['a', 'b', 'c'], ['d', 'e']]);
+    expect(d.groupes.map((g) => [...g.membres].sort())).toEqual([
+      ['a', 'b', 'c'],
+      ['d', 'e'],
+    ]);
     expect(d.groupes.every((g) => g.nom === '' && g.id !== '')).toBe(true);
     expect(d.personnes).toEqual(v3.personnes);
     expect(estDonneesValides(d)).toBe(true);
@@ -284,7 +308,10 @@ describe('âge', () => {
   });
 
   it('un décès sans année (ou sans date) ne donne aucun âge, ni actuel ni au décès', () => {
-    for (const p of [{ naissance: '1941-05-03', decede: true as const }, { naissance: '1941-05-03', deces: '--01-14' }]) {
+    for (const p of [
+      { naissance: '1941-05-03', decede: true as const },
+      { naissance: '1941-05-03', deces: '--01-14' },
+    ]) {
       expect(libelleAge(p, auj)).toBe('');
       expect(libelleAgeDeces(p, auj)).toBe('');
     }
@@ -300,6 +327,31 @@ describe('âge', () => {
     expect(detailPersonne({ ...base, naissance: '1963-06-02', decede: true }, auj)).toBe('1963 – ?');
     expect(detailPersonne({ ...base, naissance: '1963', deces: '--01-14' }, auj)).toBe('1963 – ?');
     expect(detailPersonne({ ...base, sexe: 'F', decede: true }, auj)).toBe('décédée');
+  });
+});
+
+describe('anniversaires de décès', () => {
+  const auj = le(2026, 10, 19);
+  const p = (prenom: string, deces?: string): Personne => ({ id: prenom, prenom, nom: 'X', note: '', ...(deces ? { deces } : {}) });
+  const resume = (l: Personne[], jour = auj) => anniversairesDeces(l, jour).map((a) => [a.personne.prenom, a.dans, a.annees]);
+
+  it('aujourd’hui puis demain, avec les années écoulées', () => {
+    const l = [p('Demain', '2015-10-20'), p('Aujourd’hui', '2001-10-19'), p('Après-demain', '2015-10-21'), p('Hier', '2015-10-18')];
+    expect(resume(l)).toEqual([
+      ['Aujourd’hui', 0, 25],
+      ['Demain', 1, 11],
+    ]);
+  });
+
+  it('ignore les dates partielles, les décès sans date et ceux de moins d’un an', () => {
+    const l = [p('Année', '2015'), p('Mois', '2015-10'), { ...p('Sans'), decede: true as const }, p('Cette année', '2026-10-19'), p('Vivant')];
+    expect(resume(l)).toEqual([]);
+  });
+
+  it('passe l’année et place un 29 février le 28 les années non bissextiles', () => {
+    expect(resume([p('Nouvel an', '2000-01-01')], le(2026, 12, 31))).toEqual([['Nouvel an', 1, 27]]);
+    expect(resume([p('Bissextile', '2000-02-29')], le(2027, 2, 28))).toEqual([['Bissextile', 0, 27]]);
+    expect(resume([p('Bissextile', '2000-02-29')], le(2028, 2, 28))).toEqual([['Bissextile', 1, 28]]);
   });
 });
 

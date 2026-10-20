@@ -3,9 +3,10 @@
 // Séparation et suppression sont annulables depuis le bandeau.
 
 import { nomComplet } from '../modele/liste';
-import { modifierUnion, retablirUnion, separerUnion, supprimerUnion } from '../modele/modele';
+import { modifierDateUnion, modifierUnion, retablirUnion, separerUnion, supprimerUnion } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
+import { champDate } from './champsPersonne';
 import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
 import { signaler } from './surbrillance';
@@ -32,10 +33,28 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
   };
 
   const marie = h('input', { id: 'marie', type: 'checkbox', class: 'bascule', checked: union.marie });
+  const date = champDate('-union', 'de l’union', union.date, true);
+  // « Prend le nom » ne sert qu'au passage à « marié » d'un couple actuel (voir `modifierUnion`).
+  const prendLeNom = h('input', { id: 'prend-nom', type: 'checkbox', class: 'bascule', checked: true });
+  const lignePrendLeNom = h(
+    'label',
+    { class: 'carte interrupteur', for: 'prend-nom', hidden: true },
+    h(
+      'span',
+      { class: 'ligne-texte' },
+      h('span', { class: 'ligne-nom' }, `Prend le nom de ${prenomAutre}`),
+      h('span', { class: 'secondaire' }, 'La femme du couple garde son nom de jeune fille'),
+    ),
+    prendLeNom,
+  );
+  const majPrendLeNom = () => (lignePrendLeNom.hidden = separee || union.marie || !marie.checked);
+  marie.addEventListener('change', majPrendLeNom);
+  majPrendLeNom();
 
   const enregistrer = () => {
     try {
-      modifierDonnees((x) => modifierUnion(x, union.id, marie.checked));
+      const dateUnion = date.lire();
+      modifierDonnees((x) => modifierDateUnion(modifierUnion(x, union.id, marie.checked, prendLeNom.checked), union.id, dateUnion));
       signaler(autre.id);
       revenir(retour);
     } catch (e) {
@@ -87,9 +106,16 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
       h(
         'label',
         { class: 'carte interrupteur', for: 'marie' },
-        h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Marié(e)'), h('span', { class: 'secondaire' }, 'Éteint pour un couple non marié')),
+        h(
+          'span',
+          { class: 'ligne-texte' },
+          h('span', { class: 'ligne-nom' }, 'Marié(e)'),
+          h('span', { class: 'secondaire' }, 'Éteint pour un couple non marié'),
+        ),
         marie,
       ),
+      lignePrendLeNom,
+      h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union (facultative)'), date.groupe),
       erreur,
       h('button', { type: 'button', class: 'bouton bouton-plein', onclick: enregistrer }, 'Enregistrer'),
       separee

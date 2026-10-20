@@ -26,11 +26,16 @@ export function ouvrirChoixMoi(apres: () => void): void {
     const personnes = filtrerParNom(personnesVisibles(lireDonnees()).sort(comparateur(tri)), filtre);
     liste.replaceChildren(
       ...(personnes.length === 0
-        ? [h('p', { class: 'vide' }, filtre ? 'Aucun résultat.' : 'Aucune personne. Créez-en une depuis la liste.')]
+        ? [h('p', { class: 'vide' }, filtre ? 'Aucun résultat.' : 'Aucune personne. Crées-en une depuis la liste.')]
         : personnes.map((p) =>
             h(
               'button',
-              { type: 'button', class: `ligne ligne-choix${p.id === actuelle ? ' choisie' : ''}`, 'aria-pressed': p.id === actuelle, onclick: () => choisir(p.id) },
+              {
+                type: 'button',
+                class: `ligne ligne-choix${p.id === actuelle ? ' choisie' : ''}`,
+                'aria-pressed': p.id === actuelle,
+                onclick: () => choisir(p.id),
+              },
               ...contenuLigne(p, nomListe(p, tri)),
             ),
           )),

@@ -1,0 +1,45 @@
+/* ——— États communs : appui et focus identiques partout (UI-06, ANIM-04) ——— */
+
+a,
+button,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bouton,
+.bouton-icone,
+.ajout,
+.option,
+.bouton-nom,
+.bandeau-action {
+  transition:
+    transform 90ms ease-out,
+    background-color 90ms ease-out;
+}
+
+.bouton:active,
+.bouton-icone:active,
+.ajout:active,
+.option:active,
+.bouton-nom:active,
+.bandeau-action:active {
+  transform: scale(0.97);
+}
+
+.ligne {
+  transition: background-color 90ms ease-out;
+}
+
+a.ligne:active,
+button.ligne:active,
+.ligne:has(> .ligne-lien:active),
+.case:active,
+.option:active {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+

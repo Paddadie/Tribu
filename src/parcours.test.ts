@@ -314,11 +314,11 @@ describe('ajout d’un lien', () => {
 
   it('enfant d’un couple : relié aux deux parents en une saisie, nom du père prérempli', async () => {
     const lea = creerPersonne(donneesVides(), { prenom: 'Léa', nom: 'Dubois', sexe: 'F' });
-    const thomas = creerPersonne(lea.donnees, { prenom: 'Thomas', nom: 'Petit', sexe: 'M' });
+    const thomas = creerPersonne(lea.donnees, { prenom: 'Mathis', nom: 'Petit', sexe: 'M' });
     const d = ajouterUnion(thomas.donnees, lea.personne.id, thomas.personne.id).donnees;
     await demarrer(d, `#/enfant/${lea.personne.id}`);
 
-    expect(trouver('label.case', 'Ajouter aussi Thomas comme parent').querySelector('input')!.checked).toBe(true);
+    expect(trouver('label.case', 'Ajouter aussi Mathis comme parent').querySelector('input')!.checked).toBe(true);
     const nom = ecran().querySelector<HTMLInputElement>('#nom')!;
     expect(nom.value).toBe('Petit');
     await toucher(trouver('button.bouton-nom', 'Prendre Dubois, le nom de Léa'));
@@ -328,7 +328,11 @@ describe('ajout d’un lien', () => {
     await toucher(trouver('button', 'Créer et ajouter'));
     const jules = enregistrees().personnes.find((p) => p.prenom === 'Jules')!;
     expect(jules.nom).toBe('Dubois');
-    expect(enregistrees().filiations.filter((f) => f.enfant === jules.id).map((f) => f.parent)).toEqual([lea.personne.id, thomas.personne.id]);
+    expect(
+      enregistrees()
+        .filiations.filter((f) => f.enfant === jules.id)
+        .map((f) => f.parent),
+    ).toEqual([lea.personne.id, thomas.personne.id]);
     expect(trouver('section', 'Conjoint').textContent).toContain('1 enfant ensemble');
   });
 
@@ -346,7 +350,11 @@ describe('ajout d’un lien', () => {
     await toucher(trouver('button', 'Créer et ajouter'));
 
     const hugo = enregistrees().personnes.find((p) => p.prenom === 'Hugo')!;
-    expect(enregistrees().filiations.filter((f) => f.enfant === hugo.id).map((f) => f.parent)).toEqual([ids.Anne]);
+    expect(
+      enregistrees()
+        .filiations.filter((f) => f.enfant === hugo.id)
+        .map((f) => f.parent),
+    ).toEqual([ids.Anne]);
     expect(location.hash).toBe(`#/personne/${ids.Chloé}`);
     expect(trouver('section', 'Demi-frères').textContent).toContain('Hugo Martin');
   });
@@ -402,9 +410,12 @@ describe('ajout d’un lien', () => {
     const apres = enregistrees();
     const paula = apres.personnes.find((p) => p.prenom === 'Paula')!;
     expect(apres.personnes.filter((p) => p.inconnu)).toHaveLength(0);
-    expect(apres.filiations.filter((f) => f.parent === paula.id).map((f) => f.enfant).sort()).toEqual(
-      [ids.Denis, apres.personnes.find((p) => p.prenom === 'Hugo')!.id].sort(),
-    );
+    expect(
+      apres.filiations
+        .filter((f) => f.parent === paula.id)
+        .map((f) => f.enfant)
+        .sort(),
+    ).toEqual([ids.Denis, apres.personnes.find((p) => p.prenom === 'Hugo')!.id].sort());
   });
 
   it('homonyme : la création demande confirmation', async () => {
@@ -441,6 +452,33 @@ describe('ajout d’un lien', () => {
     expect(titre()).toBe('Denis Martin');
     expect(enregistrees().personnes).toHaveLength(4);
   });
+
+  it('le Retour du téléphone pendant une saisie ramène sur l’écran et demande confirmation', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/personne/${ids.Denis}`);
+    await toucher(trouver('button', 'Ajouter un proche'));
+    await toucher(trouver('dialog.feuille a', 'Un parent'));
+    const route = location.hash;
+    saisir('prenom', 'Élise');
+
+    history.back();
+    await pause();
+    await pause();
+    expect(location.hash).toBe(route);
+    expect(titre()).toBe('Ajouter un parent');
+    expect(ecran().querySelector<HTMLInputElement>('#prenom')!.value).toBe('Élise');
+    await toucher(trouver('dialog.confirmation button', 'Continuer la saisie'));
+    expect(titre()).toBe('Ajouter un parent');
+
+    history.back();
+    await pause();
+    await pause();
+    await toucher(trouver('dialog.confirmation button', 'Abandonner'));
+    await pause();
+    await pause();
+    expect(titre()).toBe('Denis Martin');
+    expect(enregistrees().personnes).toHaveLength(4);
+  });
 });
 
 describe('retrait sans confirmation, annulable', () => {
@@ -457,6 +495,39 @@ describe('retrait sans confirmation, annulable', () => {
     await toucher(trouver('.bandeau button', 'Annuler'));
     expect(enregistrees().filiations).toContainEqual(lien);
     expect(bandeau()!.textContent).toContain('Lien rétabli.');
+  });
+
+  it('mariage avec « Prend le nom » éteint et date d’union, montrée sur la fiche', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/conjoint/${ids.Denis}`);
+    await toucher(trouver('label', 'Nouvelle personne').querySelector('input')!);
+    saisir('prenom', 'Fanny');
+    saisir('nom', 'Roux');
+    expect(ecran().querySelector<HTMLElement>('label[for="prend-nom"]')!.hidden).toBe(true);
+    await toucher(ecran().querySelector<HTMLInputElement>('#marie')!);
+    expect(ecran().querySelector<HTMLElement>('label[for="prend-nom"]')!.hidden).toBe(false);
+    await toucher(ecran().querySelector<HTMLInputElement>('#prend-nom')!);
+    saisir('annee-union', '2012');
+    await toucher(trouver('button', 'Créer et ajouter'));
+
+    const fanny = enregistrees().personnes.find((p) => p.prenom === 'Fanny')!;
+    expect(fanny.nom).toBe('Roux');
+    expect(fanny.nomNaissance).toBeUndefined();
+    expect(enregistrees().unions).toContainEqual(expect.objectContaining({ personneB: fanny.id, marie: true, date: '2012' }));
+    expect(trouver('section', 'Conjoint').textContent).toContain('Union en 2012');
+  });
+
+  it('modifier l’union : date ajoutée puis effacée', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/union/${donnees.unions[0].id}/${ids.Anne}`);
+    saisir('annee-union', '1999');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(enregistrees().unions[0].date).toBe('1999');
+
+    await demarrer(enregistrees(), `#/union/${donnees.unions[0].id}/${ids.Anne}`);
+    saisir('annee-union', '');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(enregistrees().unions[0]).not.toHaveProperty('date');
   });
 
   it('suppression d’une union saisie par erreur, puis rétablie par le bandeau', async () => {
@@ -531,7 +602,7 @@ describe('import', () => {
     // Refus : rien ne change.
     await choisirFichier('sauvegarde.json', fichier());
     expect(dialogue()!.textContent).toContain('contient 2 personnes');
-    expect(dialogue()!.textContent).toContain('Vos 4 personnes actuelles seront perdues');
+    expect(dialogue()!.textContent).toContain('Tes 4 personnes actuelles seront perdues');
     await toucher(trouver('dialog.confirmation button', 'Annuler'));
     expect(enregistrees()).toEqual(donnees);
 
@@ -546,13 +617,18 @@ describe('import', () => {
     expect(bandeau()!.textContent).toContain('Import annulé.');
   });
 
+  it('prévient que l’export contient les notes en clair', async () => {
+    await demarrer(famille().donnees, '#/reglages');
+    expect(ecran().textContent).toContain('L’export contient tes notes en clair : garde le fichier pour toi.');
+  });
+
   it('un fichier illisible est refusé sans toucher aux données', async () => {
     const { donnees } = famille();
     await demarrer(donnees, '#/reglages');
 
     await choisirFichier('photo.json', 'pas du JSON');
     expect(dialogue()).toBeNull();
-    expect(trouver('.erreur', 'Vos données n’ont pas été modifiées').hidden).toBe(false);
+    expect(trouver('.erreur', 'Tes données n’ont pas été modifiées').hidden).toBe(false);
     expect(enregistrees()).toEqual(donnees);
   });
 
@@ -826,6 +902,31 @@ describe('mémo : décès, âge et anniversaires', () => {
     expect(bloc.hidden).toBe(false);
   });
 
+  it('l’accueil ajoute les anniversaires de décès d’aujourd’hui et de demain, hors limite de 3', async () => {
+    const { donnees } = avec(
+      { prenom: 'A', naissance: dans(1, 30) },
+      { prenom: 'B', naissance: dans(2, 30) },
+      { prenom: 'C', naissance: dans(3, 30) },
+      { prenom: 'Partie', deces: dans(1, 11) },
+      { prenom: 'Lointaine', deces: dans(5, 11) },
+    );
+    await demarrer(donnees);
+    const lignes = [...ecran().querySelectorAll('.anniversaires .ligne')];
+    expect(lignes).toHaveLength(4);
+    expect(lignes[1].classList.contains('ligne-deces')).toBe(true);
+    expect(lignes[1].textContent).toContain('Partie Test');
+    expect(lignes[1].textContent).toContain('décédée le');
+    expect(lignes[1].textContent).toContain('Demain');
+    expect(lignes[1].textContent).toContain('il y a 11 ans');
+    expect(ecran().querySelector('.anniversaires')!.textContent).not.toContain('Lointaine');
+  });
+
+  it('l’accueil montre la section pour un seul anniversaire de décès', async () => {
+    const { donnees } = avec({ prenom: 'Partie', deces: dans(0, 3) });
+    await demarrer(donnees);
+    expect(ecran().querySelector<HTMLElement>('.anniversaires')!.hidden).toBe(false);
+  });
+
   it('l’accueil n’a pas de bloc quand personne n’a d’anniversaire proche', async () => {
     const { donnees } = avec({ prenom: 'Loin', naissance: dans(60, 40) }, { prenom: 'Sans' });
     await demarrer(donnees);
@@ -833,10 +934,7 @@ describe('mémo : décès, âge et anniversaires', () => {
   });
 
   it('la fiche affiche l’âge d’une personne vivante, et décès puis « Morte à … » pour une décédée', async () => {
-    const { donnees, ids } = avec(
-      { prenom: 'Vivante', naissance: dans(-40, 34) },
-      { prenom: 'Disparue', naissance: '1941-05-03', deces: '2024-01-14' },
-    );
+    const { donnees, ids } = avec({ prenom: 'Vivante', naissance: dans(-40, 34) }, { prenom: 'Disparue', naissance: '1941-05-03', deces: '2024-01-14' });
     await demarrer(donnees, `#/personne/${ids.Vivante}`);
     expect(ecran().querySelector('.dates .age')!.textContent).toBe('34 ans');
 
@@ -982,6 +1080,19 @@ describe('arbre global', () => {
     expect(titre()).toBe('Arbre');
   });
 
+  it('enregistre le parent « ? » touché, puis ouvre sa vraie fiche', async () => {
+    let d = donneesVides();
+    const anne = creerPersonne(d, { prenom: 'Anne', nom: 'Martin', sexe: 'F' });
+    const chloe = creerPersonne(anne.donnees, { prenom: 'Chloé', nom: 'Martin', sexe: 'F' });
+    d = ajouterFiliation(chloe.donnees, anne.personne.id, chloe.personne.id, 'biologique').donnees;
+    await demarrer(d, '#/arbre', { moi: chloe.personne.id });
+    expect(enregistrees().personnes).toHaveLength(2);
+    await toucher(ecran().querySelector<HTMLElement>('.calque a[href^="#/personne/virtuel:"]')!);
+    expect(enregistrees().personnes).toHaveLength(3);
+    expect(ecran().querySelector('.identite h1')?.textContent).toContain('Parent inconnu');
+    expect(location.hash).not.toContain('virtuel:');
+  });
+
   it('cherche une personne de l’arbre', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
@@ -993,6 +1104,46 @@ describe('arbre global', () => {
     champ.value = 'denis';
     champ.dispatchEvent(new Event('input'));
     expect(ecran().querySelectorAll('.recherche-arbre li')).toHaveLength(0);
+  });
+
+  it('« Toi » plein au départ, puis « Tout » ; « Revenir » ramène à la vue d’avant', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    const puce = (texte: string) => trouver('.commandes-arbre button', texte, ecran());
+    const revenir = ecran().querySelector<HTMLElement>('button[aria-label="Revenir à la vue d’avant"]')!;
+    expect(puce('Toi').getAttribute('aria-pressed')).toBe('true');
+    expect(revenir.hidden).toBe(true);
+    await toucher(puce('Tout'));
+    expect(puce('Toi').getAttribute('aria-pressed')).toBe('false');
+    expect(puce('Tout').getAttribute('aria-pressed')).toBe('true');
+    expect(revenir.hidden).toBe(false);
+    await toucher(revenir);
+    expect(puce('Toi').getAttribute('aria-pressed')).toBe('true');
+    expect(revenir.hidden).toBe(true);
+  });
+
+  it('la feuille Familles se replie dès qu’on fait glisser la carte, même hors du calque', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    await toucher(trouver('.commandes-arbre button', 'Familles', ecran()));
+    expect(ecran().querySelector('.feuille-arbre.ouverte')).not.toBeNull();
+    const vue = ecran().querySelector<HTMLElement>('.vue-arbre')!;
+    const pointeur = (type: string, x: number) => vue.dispatchEvent(new PointerEvent(type, { pointerId: 1, clientX: x, clientY: 10, bubbles: true }));
+    pointeur('pointerdown', 10);
+    pointeur('pointermove', 40);
+    pointeur('pointerup', 40);
+    expect(ecran().querySelector('.feuille-arbre.ouverte')).toBeNull();
+    expect(trouver('.commandes-arbre button', 'Familles', ecran()).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('un membre de la famille dans un groupe d’amis porte un petit anneau', async () => {
+    const { donnees, ids } = famille();
+    const d = creerGroupe(donnees, [ids.Bruno, ids.Denis], 'Le foot').donnees;
+    await demarrer(d, '#/arbre', { moi: ids.Chloé });
+    const anneau = (id: string) => ecran().querySelector(`.calque a[href="#/personne/${id}"] .avatar .anneau-groupe`);
+    expect(anneau(ids.Bruno)).not.toBeNull();
+    expect(anneau(ids.Anne)).toBeNull();
+    expect(anneau(ids.Chloé)).toBeNull();
   });
 
   it('sans fiche « Moi », renvoie vers les réglages', async () => {

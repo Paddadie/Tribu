@@ -61,10 +61,21 @@ function v3versV4(v: Record<string, unknown>): Record<string, unknown> {
   return { ...reste, version: 4, groupes };
 }
 
+/**
+ * v4 → v5 : le parent sans nom enregistré n'est plus reconnu à son prénom mais à `sansNom: true`.
+ * Mêmes critères qu'avant : prénom « Parent inconnu », nom vide, pas un parent inconnu caché.
+ */
+function v4versV5(v: Record<string, unknown>): Record<string, unknown> {
+  const personnes = Array.isArray(v.personnes) ? v.personnes : [];
+  const migrees = personnes.map((p) => (estObjet(p) && p.prenom === 'Parent inconnu' && !p.nom && !p.inconnu ? { ...p, sansNom: true } : p));
+  return { ...v, version: 5, personnes: migrees };
+}
+
 export function migrer(brut: unknown): unknown {
   let v = brut;
   if (estObjet(v) && v.version === 1) v = v1versV2(v);
   if (estObjet(v) && v.version === 2) v = v2versV3(v);
   if (estObjet(v) && v.version === 3) v = v3versV4(v);
+  if (estObjet(v) && v.version === 4) v = v4versV5(v);
   return v;
 }

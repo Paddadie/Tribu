@@ -1,0 +1,1013 @@
+/* ——— Fiche et formulaire ——— */
+
+.barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+  padding: 16px 12px 0;
+}
+
+.bouton-icone {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.identite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px 20px;
+  text-align: center;
+}
+
+.identite h1 {
+  margin-top: 8px;
+  font-size: var(--t5);
+  font-weight: var(--gras);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.identite .secondaire {
+  font-size: var(--t2);
+}
+
+.contenu {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 20px 40px;
+}
+
+.note {
+  padding: 16px 16px;
+  gap: 4px;
+}
+
+.titre-note {
+  padding: 0;
+  color: var(--secondaire);
+}
+
+.note p {
+  font-size: var(--t3);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bouton {
+  min-height: 52px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--bord-champ);
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  font: inherit;
+  font-size: var(--t3);
+  font-weight: var(--gras);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.bouton-pilule {
+  min-height: 44px;
+  border-radius: var(--rayon-l);
+  font-size: var(--t2);
+}
+
+.bouton-plein {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--sur-accent);
+}
+
+/* Action principale discrète : contour à la couleur d'accent, sans fond plein. */
+.bouton-contour {
+  border: 1.5px solid var(--accent);
+  background: transparent;
+}
+
+.bouton-danger {
+  margin-top: 4px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--danger);
+}
+
+.bouton-danger-plein {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--sur-danger);
+}
+
+.titre-formulaire {
+  flex-grow: 1;
+  padding-left: 8px;
+  font-size: var(--t4);
+  font-weight: var(--gras);
+  letter-spacing: -0.02em;
+}
+
+.barre + .contenu {
+  padding-top: 20px;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.champ[hidden] {
+  display: none;
+}
+
+.champ label {
+  padding: 0 4px;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  color: var(--secondaire);
+}
+
+.champ input:not([type='radio']):not([type='checkbox']),
+.champ select,
+.champ textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid var(--bord-champ);
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  font: inherit;
+  font-size: var(--t3); /* évite le zoom automatique d'iOS */
+  color: var(--encre);
+}
+
+.champ input:not([type='radio']):not([type='checkbox']):focus,
+.champ select:focus,
+.champ textarea:focus,
+.champ-filtre:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.champ textarea {
+  resize: vertical;
+}
+
+.erreur {
+  padding: 12px 16px;
+  border-radius: var(--rayon-s);
+  background: var(--erreur-fond);
+  color: var(--danger);
+  font-weight: var(--gras);
+}
+
+.erreur[hidden] {
+  display: none;
+}
+
+/* ——— Confirmation ——— */
+
+.confirmation {
+  width: min(340px, calc(100vw - 40px));
+  padding: 24px 20px 16px;
+  border: 0;
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  color: var(--encre);
+  font: inherit;
+}
+
+.confirmation::backdrop {
+  background: var(--voile);
+}
+
+.confirmation p {
+  font-size: var(--t3);
+  line-height: 1.4;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.confirmation-actions .bouton {
+  flex: 1;
+}
+
+fieldset.champ {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+fieldset.champ legend {
+  padding: 0 4px 8px;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  color: var(--secondaire);
+}
+
+.choix-groupe {
+  display: flex;
+  gap: 8px;
+}
+
+.choix-groupe .choix {
+  flex: 1;
+  position: relative;
+  padding: 0;
+}
+
+.choix input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.choix span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 8px;
+  border: 1px solid var(--bord-champ);
+  border-radius: var(--rayon-m);
+  background: var(--carte);
+  font-size: var(--t3);
+  font-weight: var(--gras);
+  color: var(--encre);
+  text-align: center;
+}
+
+.choix input:checked + span {
+  border-color: var(--accent);
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+.choix input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.date-groupe {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1.4fr;
+  gap: 8px;
+}
+
+.champ select {
+  appearance: auto;
+}
+
+/* ——— Réglages ——— */
+
+.groupe-reglages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bloc-reglages {
+  gap: 20px;
+  padding: 16px;
+}
+
+.reglage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reglage + .reglage {
+  padding-top: 20px;
+  border-top: 1px solid var(--bord);
+}
+
+.reglage h3 {
+  margin: 0;
+  font-size: var(--t3);
+  font-weight: var(--gras);
+}
+
+.succes {
+  padding: 12px 16px;
+  border-radius: var(--rayon-s);
+  background: var(--succes-fond);
+  color: var(--accent-texte);
+  font-weight: var(--gras);
+}
+
+.succes[hidden] {
+  display: none;
+}
+
+.date-export {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px;
+  border-radius: var(--rayon-s);
+  background: var(--fond);
+  font-size: var(--t2);
+}
+
+.date-export b {
+  font-weight: var(--gras);
+  font-variant-numeric: tabular-nums;
+}
+
+.bouton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ——— Bandeau temporaire (« Annuler ») ——— */
+
+.bandeau {
+  position: fixed;
+  z-index: 2;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  max-width: 568px;
+  margin: 0 auto;
+  min-height: 56px;
+  padding: 8px 8px 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--rayon-m);
+  background: var(--encre);
+  color: var(--fond);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  box-shadow: 0 6px 16px var(--ombre-bouton);
+}
+
+.bandeau-action {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--rayon-s);
+  background: transparent;
+  font: inherit;
+  color: var(--accent-clair);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* ——— Données illisibles ——— */
+
+.illisible {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 56px 24px 28px;
+}
+
+.pictogramme {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--erreur-fond);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illisible h1 {
+  font-size: var(--t4);
+  font-weight: var(--gras);
+  letter-spacing: -0.02em;
+}
+
+.illisible > p:not(.version) {
+  font-size: var(--t3);
+  line-height: 1.45;
+}
+
+.illisible-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.illisible .version {
+  padding: 0;
+}
+
+/* ——— Conjoint et union ——— */
+
+.ligne-union {
+  padding-right: 4px;
+}
+
+.ligne-lien {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Fiche : un bloc par groupe d'amis (nom qui ouvre le groupe, croix pour le quitter, puis les autres membres). */
+.groupe-amis + .groupe-amis {
+  border-top: 1px solid var(--bord);
+}
+
+.groupe-amis-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 0 16px;
+}
+
+.groupe-amis-nom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  color: var(--accent-texte);
+  text-decoration: none;
+}
+
+.etiquette {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: var(--rayon-s);
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t1);
+  font-weight: var(--gras);
+}
+
+.zone-conjoint {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.champ-filtre-forme {
+  margin: 0;
+}
+
+.ligne-choix {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ligne-choix:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ligne-choix.choisie {
+  background: var(--accent-clair);
+  color: var(--accent);
+}
+
+/* Coche de la personne choisie, avec un léger rebond à l'apparition. */
+.ligne-choix.choisie::after {
+  content: '';
+  flex-shrink: 0;
+  width: 16px;
+  height: 8px;
+  margin-left: auto;
+  border-left: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  transform: translateY(-2px) rotate(-45deg);
+  animation: coche 200ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes coche {
+  from {
+    transform: translateY(-2px) rotate(-45deg) scale(0);
+  }
+}
+
+.interrupteur {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.bascule {
+  appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 50px;
+  height: 30px;
+  margin: 0;
+  border-radius: var(--rayon-m);
+  background: var(--bord-champ);
+  cursor: pointer;
+}
+
+.bascule::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+
+.bascule:checked {
+  background: var(--accent);
+}
+
+.bascule:checked::after {
+  left: 23px;
+}
+
+.bascule:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Ligne « Décédé » du formulaire : intitulé de champ, petit interrupteur à droite. */
+.champ .ligne-deces {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.ligne-deces .bascule {
+  width: 40px;
+  height: 24px;
+  border-radius: var(--rayon-s);
+}
+
+.ligne-deces .bascule::after {
+  width: 18px;
+  height: 18px;
+}
+
+.ligne-deces .bascule:checked::after {
+  left: 19px;
+}
+
+.resume-union {
+  font-size: var(--t3);
+  font-weight: var(--gras);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* ——— Parents, enfants et feuille « Ajouter un proche » ——— */
+
+.etiquette-adoptif {
+  background: transparent;
+  border: 1px solid var(--bord-champ);
+  color: var(--secondaire);
+}
+
+.feuille {
+  position: fixed;
+  inset: auto 0 0;
+  width: min(600px, 100%);
+  max-width: none;
+  margin: 0 auto;
+  padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: var(--rayon-l) var(--rayon-l) 0 0;
+  background: var(--carte);
+  color: var(--encre);
+  font: inherit;
+}
+
+.feuille[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feuille::backdrop {
+  background: var(--voile);
+}
+
+.feuille-titre {
+  padding: 4px 4px 2px;
+  font-size: var(--t4);
+  font-weight: var(--gras);
+  letter-spacing: -0.01em;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 60px;
+  padding: 8px 16px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-m);
+}
+
+.option.inactive {
+  opacity: 0.5;
+}
+
+.pastille {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ——— Écrans d'ajout : cases, nom proposé, suggestions ——— */
+
+.champ .case,
+.case {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 16px;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.case + .case {
+  border-top: 1px solid var(--bord);
+}
+
+.boite {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  /* Case ronde dessinée à la main : la coche apparaît avec un léger rebond (ANIM-04). */
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--bord-champ);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.boite::after {
+  content: '';
+  width: 11px;
+  height: 6px;
+  border-left: 2.5px solid var(--sur-accent);
+  border-bottom: 2.5px solid var(--sur-accent);
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.boite:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.boite:checked::after {
+  transform: translateY(-1px) rotate(-45deg) scale(1);
+}
+
+.aide {
+  padding: 0 4px;
+  font-size: var(--t2);
+  color: var(--secondaire);
+}
+
+.bouton-nom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  color: var(--accent-texte);
+  cursor: pointer;
+}
+
+.bouton-nom[hidden] {
+  display: none;
+}
+
+/* Erreur + bouton de validation des écrans d'ajout : visibles sans défiler la liste. */
+.pied-collant {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 -20px -40px;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--fond) 14px);
+}
+
+.liste-choix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Lien avec « Moi » sous le nom, sur la fiche. */
+.lien-moi {
+  padding: 4px 16px;
+  border-radius: var(--rayon-m);
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+}
+
+/* Section MOI des réglages et feuille de choix de ma fiche. */
+.action-ligne {
+  flex-shrink: 0;
+  font-size: var(--t3);
+  font-weight: var(--gras);
+  color: var(--accent);
+}
+
+.avatar-vide {
+  background: transparent;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+}
+
+.aide-section {
+  margin: 8px 4px 0;
+}
+
+.feuille-liste {
+  max-height: 45dvh;
+  overflow-y: auto;
+}
+
+/* ——— Dessins de la fiche : « Lien avec toi » et « Famille proche » (FEAT-09) ——— */
+.dessin {
+  gap: 12px;
+  padding: 16px 12px 12px;
+}
+
+/* Sonde de hauteur nulle : sa largeur déclenche le dessin (arbre.ts). */
+.sonde {
+  height: 0;
+}
+
+.arbre {
+  position: relative;
+}
+
+.arbre svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trait {
+  fill: none;
+  stroke: var(--trait);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trait.pointille {
+  stroke-dasharray: 3 4;
+}
+
+.noeud {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--rayon-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.noeud .avatar {
+  width: 38px;
+  height: 38px;
+  font-size: var(--t2);
+}
+
+.noeud .avatar.decede {
+  filter: grayscale(1);
+  opacity: 0.72;
+}
+
+/* Le nom passe à la ligne (espace, tiret) sur 2 lignes au plus. La case garde sa largeur ; seul un mot plus long
+   qu'elle élargit ce nom-là (largeur « fit-content » : jamais moins que le mot le plus long), jusqu'à 104 px.
+   Au-delà : « … ». Chaque arbre réserve LIGNE_EN_PLUS (arbre.ts) pour la 2e ligne. */
+.noeud .nom {
+  max-width: 104px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-align: center;
+  text-wrap: balance;
+  font-size: var(--t1);
+  font-weight: var(--gras);
+  line-height: 16px;
+  color: var(--encre);
+}
+
+.noeud .an {
+  margin-top: -4px;
+  font-size: var(--t1);
+  line-height: 14px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--secondaire);
+}
+
+.noeud.ici .avatar {
+  width: 52px;
+  height: 52px;
+  font-size: var(--t3);
+  font-weight: var(--gras);
+}
+
+.noeud.ici .nom {
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  line-height: 18px;
+}
+
+.chemin .noeud .avatar,
+.chemin .noeud.ici .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: var(--t1);
+  font-weight: var(--gras);
+}
+
+.chemin .noeud.ici .nom {
+  font-size: var(--t1);
+}
+
+.noeud .toi {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--pastille);
+  font-weight: var(--gras);
+}
+
+.noeud.manque .avatar {
+  background: transparent;
+  border: 1.5px dashed var(--accent);
+  color: var(--accent);
+  font-size: var(--t4);
+  font-weight: 400;
+}
+
+.noeud.manque .nom {
+  color: var(--accent);
+}
+
+/* Rang d'enfants trop nombreux : il défile de côté, avec un fondu sur le bord qui cache encore quelqu'un. */
+.defile {
+  position: absolute;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.defile::-webkit-scrollbar {
+  display: none;
+}
+
+.defile > div {
+  position: relative;
+  height: 100%;
+}
+
+.defile.fondu-d {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+
+.defile.fondu-g {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px);
+  mask-image: linear-gradient(to right, transparent, #000 36px);
+}
+
+.defile.fondu-g.fondu-d {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+}
+
+.dessin .legende {
+  padding: 12px 4px 0;
+  border-top: 1px solid var(--bord);
+  text-align: center;
+  font-size: var(--t2);
+  color: var(--secondaire);
+}
+
+.dessin .legende b {
+  font-weight: var(--gras);
+  color: var(--encre);
+}
+
+a.noeud .avatar {
+  transition: transform 90ms ease-out;
+}
+
+a.noeud:active .avatar {
+  transform: scale(0.94);
+}
+
+.cles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 4px 0;
+  border-top: 1px solid var(--bord);
+  font-size: var(--t1);
+  color: var(--secondaire);
+}
+
+.cles[hidden] {
+  display: none;
+}
+
+.cles span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cle-pointille {
+  width: 18px;
+  border-top: 1.5px dashed var(--trait);
+}
+
+.cle-decede {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--trait);
+}
+

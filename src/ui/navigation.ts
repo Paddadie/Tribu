@@ -19,6 +19,12 @@ let recul = false;
 let afficher: () => void = () => {};
 // Saisie en cours sur l'écran affiché : Retour demande confirmation avant de la perdre.
 let garde: (() => boolean) | undefined;
+// Écran affiché (adresse et profondeur), pour y revenir si le téléphone recule pendant une saisie.
+let ecran = { route: '', profondeur: -1 };
+// Retour en cours vers l'écran gardé : les changements d'adresse d'ici là sont ignorés.
+let retablir: number | undefined;
+
+const ABANDON = 'Abandonner la saisie ? Ce que tu as saisi sera perdu.';
 
 function entreeCourante(): Entree | undefined {
   const etat = history.state as Partial<Entree> | null;
@@ -46,6 +52,7 @@ export function demarrerNavigation(rendu: () => void): void {
   // Chaque nouvel écran repart sans garde ; il pose la sienne en se construisant.
   afficher = () => {
     garde = undefined;
+    ecran = { route: location.hash, profondeur };
     rendu();
   };
   // Le défilement est géré par l'appli (position de la liste gardée au retour).
@@ -58,6 +65,29 @@ export function demarrerNavigation(rendu: () => void): void {
   });
   window.addEventListener('hashchange', () => {
     recul = false;
+    if (retablir !== undefined) {
+      if (location.hash !== ecran.route) return;
+      // De retour sur l'écran gardé, toujours affiché : on demande, puis on refait le pas si c'est oui.
+      const ecart = retablir;
+      retablir = undefined;
+      profondeur = ecran.profondeur;
+      void confirmer(ABANDON, 'Abandonner', 'Continuer la saisie').then((oui) => {
+        if (!oui) return;
+        garde = undefined;
+        history.go(-ecart);
+      });
+      return;
+    }
+    // Geste ou bouton Retour du téléphone pendant une saisie : l'adresse a déjà changé, on y retourne.
+    if (garde?.() && location.hash !== ecran.route) {
+      const arrivee = entreeCourante();
+      retablir = arrivee ? ecran.profondeur - arrivee.profondeur : -1;
+      if (retablir !== 0) {
+        history.go(retablir);
+        return;
+      }
+      retablir = undefined;
+    }
     noterEntree();
     afficher();
   });
@@ -71,6 +101,7 @@ export function demarrerNavigation(rendu: () => void): void {
  */
 export function remplacer(route: string, redessiner = true): void {
   history.replaceState({ route, profondeur } satisfies Entree, '', route);
+  ecran = { route, profondeur };
   // Après coup : l'appel peut venir d'un écran en cours de construction.
   if (redessiner) queueMicrotask(afficher);
 }
@@ -78,6 +109,8 @@ export function remplacer(route: string, redessiner = true): void {
 /** Écran précédent de l'appli s'il y en a un, sinon `defaut` à la place de l'écran courant. */
 export function revenir(defaut: string): void {
   if (recul) return;
+  // Départ voulu (saisie enregistrée ou abandon confirmé) : la garde ne le retient pas.
+  garde = undefined;
   if (profondeur > 0) {
     recul = true;
     history.back();
@@ -86,7 +119,7 @@ export function revenir(defaut: string): void {
 
 /**
  * L'écran en construction a une saisie à protéger : tant que `modifie()` est vrai, ses liens Retour
- * demandent confirmation. Le geste ou le bouton Retour du téléphone n'est pas retenu.
+ * demandent confirmation, et le geste ou le bouton Retour du téléphone ramène sur l'écran pour demander.
  */
 export function garderSaisie(modifie: () => boolean): void {
   garde = modifie;
@@ -96,7 +129,7 @@ export function garderSaisie(modifie: () => boolean): void {
 export function lienRetour(defaut: string, attributs: Record<string, unknown>, ...enfants: Enfant[]): HTMLAnchorElement {
   const retour = async (e: Event) => {
     e.preventDefault();
-    if (garde?.() && !(await confirmer('Abandonner la saisie ? Ce que vous avez saisi sera perdu.', 'Abandonner', 'Continuer la saisie'))) return;
+    if (garde?.() && !(await confirmer(ABANDON, 'Abandonner', 'Continuer la saisie'))) return;
     revenir(defaut);
   };
   return h('a', { ...attributs, href: defaut, onclick: retour }, ...enfants);

@@ -30,16 +30,19 @@ export function initiales(p: Pick<Personne, 'prenom' | 'nom'>): string {
   return lettres.toLocaleUpperCase('fr') || '?';
 }
 
-/** Teintes (en degrés) des avatars : assez écartées pour qu'on distingue deux familles voisines. */
-const TEINTES = [28, 205, 45, 285, 335, 170, 100, 245, 8, 190];
+/** Nombre de couleurs de famille (pastels --c0 à --c11 de style.css). */
+export const NB_COULEURS = 12;
 
-/** Teinte d'avatar d'un nom de famille : toujours la même pour un nom donné, sans tenir compte des accents ni de la casse. Aucune pour un nom vide. */
-export function teinteFamille(nom: string): number | undefined {
-  const cle = simplifier(nom).replace(/[^a-z0-9]/g, '');
+/**
+ * Couleur de famille (0 à 11), la même partout (liste, fiche, dessins, arbre) : hachée sur le nom actuel,
+ * le nom de naissance à défaut, sans tenir compte des accents, de la casse ni de la ponctuation. Aucune sans nom.
+ */
+export function couleurFamille(p: Pick<Personne, 'nom'> & { nomNaissance?: string }): number | undefined {
+  const cle = simplifier(p.nom.trim() || (p.nomNaissance ?? '')).replace(/[^a-z0-9]/g, '');
   if (!cle) return undefined;
   let somme = 0;
   for (const c of cle) somme = (somme * 31 + c.charCodeAt(0)) >>> 0;
-  return TEINTES[somme % TEINTES.length];
+  return somme % NB_COULEURS;
 }
 
 /** Minuscules, sans accents : « Éloïse » → « eloise ». */
@@ -88,9 +91,7 @@ function cleDeTri(p: Personne, tri: Tri): string {
 export function comparateur(tri: Tri): (a: Personne, b: Personne) => number {
   const [premier, second] = tri === 'prenom' ? (['prenom', 'nom'] as const) : (['nom', 'prenom'] as const);
   return (a, b) =>
-    cleDeTri(a, tri).localeCompare(cleDeTri(b, tri), 'fr') ||
-    a[premier].localeCompare(b[premier], 'fr') ||
-    a[second].localeCompare(b[second], 'fr');
+    cleDeTri(a, tri).localeCompare(cleDeTri(b, tri), 'fr') || a[premier].localeCompare(b[premier], 'fr') || a[second].localeCompare(b[second], 'fr');
 }
 
 /** Nom tel qu'écrit dans la liste : « Prénom Nom » en tri par prénom, « Nom Prénom » en tri par nom. */
@@ -152,10 +153,7 @@ export function grouperParLettre(personnes: Personne[], tri: Tri = 'nom'): Group
     .sort((a, b) => (a.lettre === '#' ? 1 : b.lettre === '#' ? -1 : a.lettre.localeCompare(b.lettre)));
 }
 
-export const MOIS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-];
+export const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 /**
  * « 1961-05-14 » → « née le 14 mai 1961 », « 1961-05 » → « née en mai 1961 »,
@@ -196,6 +194,11 @@ function formulerDate(date: string | undefined): string {
   if (!mois) return '';
   if (m[3] === undefined) return `en ${mois} ${m[1]}`;
   return `${leJour(Number(m[3]))} ${mois} ${m[1]}`;
+}
+
+/** « le 12 juin 2010 », « en 2010 »… pour la date d'une union ; chaîne vide sans date. */
+export function libelleUnion(date: string | undefined): string {
+  return formulerDate(date);
 }
 
 export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
@@ -240,15 +243,15 @@ export function assemblerDate({ jour, mois, annee }: ChampsDate, de = 'de naissa
   const [j, m, a] = [jour.trim(), mois.trim(), annee.trim()];
   if (!j && !m && !a) return '';
   if (!a && sansAnnee) {
-    if (!m) throw new Error(`Indiquez le mois ${de}`);
-    if (!j) throw new Error(`Indiquez l'année ou le jour ${de}`);
+    if (!m) throw new Error(`Indique le mois ${de}`);
+    if (!j) throw new Error(`Indique l'année ou le jour ${de}`);
     if (!/^\d{1,2}$/.test(m)) throw new Error(`Mois ${de} invalide`);
     if (!/^\d{1,2}$/.test(j)) throw new Error(`Jour ${de} invalide`);
     return `--${m.padStart(2, '0')}-${j.padStart(2, '0')}`;
   }
-  if (!a) throw new Error(`Indiquez l'année ${de}`);
+  if (!a) throw new Error(`Indique l'année ${de}`);
   if (!/^\d{1,4}$/.test(a) || Number(a) < 1) throw new Error(`Année ${de} invalide`);
-  if (j && !m) throw new Error(`Indiquez le mois ${de}`);
+  if (j && !m) throw new Error(`Indique le mois ${de}`);
   const annee4 = a.padStart(4, '0');
   if (!m) return annee4;
   if (!/^\d{1,2}$/.test(m)) throw new Error(`Mois ${de} invalide`);

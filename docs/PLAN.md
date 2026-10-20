@@ -34,7 +34,7 @@ Tout changement visible : maquette publiée et validée par Paul avant de coder.
 Fin de session : cocher ici, réécrire ETAT.md, ajouter les décisions, mettre à jour SPEC.md pour ce qui a changé, proposer un message de commit.
 Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête.
 
-- [ ] **S1. Robustesse** — Maquette d'abord : écran « Données illisibles », Réglages (date du dernier export, export par partage), accueil vide.
+- [x] **S1. Robustesse** — Maquette d'abord : écran « Données illisibles », Réglages (date du dernier export, export par partage), accueil vide.
   - [x] DATA-01 : `charger()` (stockage.ts) ne renvoie plus des données vides en silence. Contenu invalide → brut copié sous une clé de secours (`tribu:secours`), écran « Données illisibles » (exporter le brut, repartir à vide sur confirmation), jamais d'écriture automatique par-dessus.
   - [x] TEST-02 : test « chargement invalide puis modification » : l'original reste récupérable.
   - [x] DATA-02 : copie de l'état avant import ou effacement ; bandeau « Annuler » quelques secondes après. Composant de bandeau réutilisé en S2b (UX-07).
@@ -90,7 +90,7 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] FEAT-05 : prochains anniversaires en haut de l'accueil : les 3 prochains dans les 30 jours, avec l'âge atteint ; pas pour les personnes décédées.
   Terminé quand : un export v1 s'importe dans la v2 sans perte, une séparation laisse l'ex-conjoint visible sur la fiche, et l'accueil montre les anniversaires à venir.
 
-- [ ] **S4. Identité visuelle** — Maquette complète d'abord (direction A).
+- [x] **S4. Identité visuelle** — Maquette complète d'abord (direction A).
   - [x] UI-01 : direction « sobre affiné » : vert calmé, Figtree seule (UI-08).
   - [x] UI-02 : une teinte d'avatar par nom de famille.
   - [x] UI-03 : échelle de 5 tailles de texte, espacements différenciés, nom de la fiche plus affirmé.
@@ -104,13 +104,95 @@ Une session trop longue se coupe en deux : noter dans ETAT.md où l'on s'arrête
   - [x] ANIM-04 : retours tactiles : appui, coche de sélection.
   Terminé quand : toutes les animations sont coupées si le téléphone demande moins de mouvement, et Paul valide le rendu sur son téléphone.
 
+## V3 — Plan de l'audit du 20/10
+
+Rapport et questionnaire : claude.ai/artifact/Ko1ksvKRPeAicxBg3nzp3h. **Une étape = une session.** Entre deux étapes : `/bilan` puis `/clear`. Une session lit ETAT.md, puis seulement la sous-section de son étape ci-dessous (et « Décisions » si elle en a besoin).
+Règles valables partout : maquette validée par Paul avant tout changement visible ; `npm test`, `tsc` et `npm run build` verts en fin d'étape ; captures avant/après (`scripts/captures.mjs`, à partir de 1a) ; aucun nom réel de proche dans le dépôt ; Paul commite.
+
+### Décisions (à inscrire dans DECISIONS.md en 1a)
+- ROAD-03 : pas de gel. Lots « non vus » d'ETAT et liste « À valider par Paul » considérés validés (« si je n'y suis pas revenu, c'est bon »). ROAD-04 : ordre 1a → 1b → 2 → 3 → plus tard.
+- VIS-02 : A, mémo perso, léger, sur un seul téléphone (remplace la décision 53 « partage probable »).
+- SEC-03 : C, docs/ hors du dépôt public, test anonymisé, historique réécrit par `git filter-repo` (lancé par Paul).
+- ARCH-05 oui (test sur export anonymisé, puis découpage). ARCH-06 : B, bandeau « Nouvelle version » à toucher (remplace la décision 13). ARCH-07 oui.
+- CODE-06 : B, deux usages gardés, champ explicite au lieu du prénom (v5). CODE-07 oui. CODE-08 : B, case « Prend le nom de X » cochée par défaut.
+- TEST-04, TEST-06, PERF-01 : oui.
+- UX-15 : A, tutoiement partout (remplace la décision 84). UX-16 : A, vue d'ensemble en pastilles sans texte, cadrée en entier. UX-17 oui. UX-18 : A, demi-fratrie dessinée, reliée au parent commun. UX-19 (choix de Claude) : « Retour » oui, mini-carte non. UX-20 : A, centrage des enfants d'abord (le beau-père reste où il est). UX-21 : A, anneau de groupe. UX-22 oui.
+- UI-09 : A, 12 pastels hachés par nom, partout. UI-10 oui. UI-11 (choix de Claude) : A « Herbier », étiquettes de famille façon « Atlas ». UI-12 : A, bouton en contour. UI-13 oui. UI-14 : A, « † » gardé. UI-15 oui.
+- ANIM-05, 06, 07 oui ; ANIM-08 non. A11Y-02 oui (trois vérifications, pas un lot).
+- FEATURE-11 : widget impossible en PWA (iOS : app native WidgetKit ; Android : Chrome ne gère pas les widgets de PWA) → export `.ics` dans Réglages (naissances, décès, mariages) + encart « Aujourd'hui / Demain » sur l'accueil (proposé en maquette). FEATURE-12 non. FEATURE-13 oui. FEATURE-14 : export PNG depuis Réglages. FEATURE-15 : date d'union, oui (v5). FEATURE-16 : A, fusion d'abord. FEATURE-17 : plus tard.
+- DEBT-02 oui. DEBT-03 : A, `.gitattributes` + Prettier en vérification. DOC-03, 04, 05 oui. DOC-06 : context.md très court, renvois vers les fichiers.
+- Tensions tranchées par Claude :
+  - T1 : docs/ sort du dépôt public mais garde une sauvegarde : il devient un dépôt git **privé** séparé (`docs/.git`, ignoré par Tribu ; les dépôts privés sont gratuits, seul Pages exige Pro).
+  - T2 : dans Tribu, `/bilan` réécrit docs/ETAT.md ; le CLAUDE.md du projet n'a plus de section « État en cours ».
+  - T3 : docs/context.md ≤ 25 lignes stables (but, pile, commandes, carte du code, renvois) ; ETAT.md ≤ 30 lignes ; CLAUDE.md = règles + `@docs/context.md` + `@docs/ETAT.md`.
+  - T4 : la fusion à l'import reste utile sans partage (changer de téléphone) ; elle reste « Plus tard ».
+
+### Étape 1a — Documentation et hygiène (1 session, rien de visible) — faite le 20/10 ; SEC-03 réduit à l'anonymisation des tests (sortie de docs/ et réécriture de l'historique abandonnées par Paul)
+- [x] DECISIONS.md : inscrire les décisions ci-dessus ; marquer remplacées 13 (→ ARCH-06), 17 (format v1), 53 (→ VIS-02), 84 (→ UX-15).
+- [x] ROAD-03 : cocher S1 et S4 ; retirer les « reste le test sur téléphone » de « Plus tard ».
+- [x] T2/T3/DOC-04/DOC-06 : créer docs/context.md (reprendre « Repères » d'ETAT, ajouter la commande de captures) ; réécrire ETAT.md en ≤ 30 lignes (prochaine étape : 1b-1) ; CLAUDE.md du projet : supprimer « État en cours », importer `@docs/context.md`, noter « /bilan réécrit docs/ETAT.md ».
+- [x] DOC-03 : README au format v4 (unions et ex, groupes, décès, parents inconnus, consigne d'export, effacement possible par Safari si l'appli n'est pas installée), sans nom réel.
+- [x] DOC-05 : SPEC, ordre réel de la fiche (« Ajouter un proche » en tête) et « Parent sans nom » avant « Hors V1 ».
+- [x] DEBT-03 : `.gitattributes` (`* text=auto eol=lf`) ; Prettier en devDependency, config proche du style actuel, script `format:check` ; pas de reformatage global ni de CI pour l'instant (fichiers reformatés au fil des étapes).
+- [x] TEST-04 : retirer `--passWithNoTests` du script de test.
+- [x] TEST-06 : `scripts/captures.mjs`, repris de `C:\Users\pauld\AppData\Local\Temp\claude\c--devs-Tribu\7bec06e5-f584-4738-8aca-a032ae2064d7\scratchpad\capture.mjs` (s'il a disparu : CDP sur Edge headless `--remote-debugging-port`, serveur de dev sur 5199, écriture de `tribu:donnees` et `tribu:reglages` puis `Page.navigate` + `Page.reload`, 390×844 DPR 2, clair et sombre ; écrans : accueil, fiche de Moi, feuille d'ajout, arbre Toi / Tout / Familles, réglages). Export et dossier de sortie passés en argument, hors dépôt ; sortie ignorée par git. Plus de page temporaire dans `public/`.
+- [x] SEC-03 : anonymiser arbreGlobal.test.ts (noms réels → noms d'emprunt) ; `docs/` dans `.gitignore`. Écrire pour Paul, **hors dépôt** (scratchpad), le fichier de remplacements pour `--replace-text` et la suite de commandes. Paul les lance dans l'ordre : 1) copie de sécurité du dossier Tribu ; 2) `git init` dans docs/, dépôt GitHub privé, premier push ; 3) `git rm -r --cached docs` et commit dans Tribu ; 4) `git filter-repo --path docs --invert-paths --replace-text <fichier>` ; 5) remettre le remote `origin` puis `git push --force` ; 6) au besoin, demander au support GitHub de purger les anciens commits encore visibles par leur SHA.
+
+### Étape 1b — Finitions visibles (2 sessions, maquette d'abord dans chacune)
+**1b-1 Fiche, accueil, textes**
+- [x] UI-09 + UI-13 : une seule fonction de couleur (12 pastels `--c0..--c11` hachés sur le nom actuel, nom de naissance à défaut ; `cleNom` passe par `simplifier`) pour la liste, la fiche, les dessins et l'arbre ; supprimer `teinteFamille` et la numérotation par ordre de lecture ; avatars de liste plus saturés ; vérifier le sombre.
+- [x] UI-12 : « Ajouter un proche » en bouton à contour, même place. UI-15 : cœur barré pour « Un ex ».
+- [x] UX-18 : demi-frères et sœurs dans le dessin « Famille proche », à côté de la personne, reliés au parent commun.
+- [x] Encart « Aujourd'hui / Demain » : remplacé (maquette) par les anniversaires de décès d'aujourd'hui et de demain dans « Prochains anniversaires », hors limite de 3.
+- [x] ARCH-06 : `registerType: 'prompt'` et bandeau « Nouvelle version » (réutiliser le bandeau existant).
+- [x] UX-15 : tutoiement dans tous les textes (écrans, erreurs, Réglages).
+- [x] UX-22 : garde de saisie aussi sur `popstate` (geste iOS, bouton Retour Android).
+- [x] ANIM-06 : nouveau proche en fondu + légère échelle dans « Famille proche » (s'appuyer sur `signaler`).
+- [x] A11Y-02 : nom accessible des boutons + et − ; contraste du gris secondaire en sombre (≥ 4,5:1) ; recherche de l'arbre comme accès aux personnes.
+
+**1b-2 Arbre global**
+- [x] UX-16 : « Tout » = vue d'ensemble cadrée en entier ; sous un seuil d'échelle, pastilles de couleur sans texte (`ECHELLE_MIN` abaissé pour cette vue).
+- [x] UX-17 : astuce en bas au-dessus des puces ; barre de commandes à fond translucide ; « Toi » plein seulement quand c'est la vue active ; feuille Familles triée par nom, ≤ 50 % de la hauteur ; Réglages : « l'export contient tes notes en clair ».
+- [x] UX-19 : bouton « Retour » à la vue précédente (pile de vues) ; pas de mini-carte.
+- [x] UX-21 : petit anneau de groupe sur les membres de ta famille qui sont dans un groupe d'amis.
+- [x] ANIM-05 : pulsation de la cible après un saut ; ANIM-07 : la feuille glisse depuis les puces et se ferme pendant le déplacement.
+- [x] UI-11 : étiquettes de famille façon « nom de région » (petites capitales espacées, discrètes).
+- [x] Fermer dans ETAT : UI-14 (« † » gardé), UX-20 (centrage d'abord).
+
+### Étape 2 — Fondations (3 sessions, rien de visible sauf CODE-08)
+**2-1 Arbre global**
+- [x] ARCH-05 a : export anonymisé versionné (fixture : prénoms et noms remplacés, notes vidées) ; test d'invariants (aucun chevauchement, enfant unique centré à ε près, couples adjacents) et instantané des abscisses arrondies.
+- [x] ARCH-05 b : découper `disposerArbre` et `disposerPartie` en étapes nommées et testées, constantes nommées (poids ×12…) ; l'instantané ne doit pas bouger.
+
+**2-2 Nettoyages**
+- [x] ARCH-07 : enregistrer le « ? » au toucher dans ui/arbreGlobal, puis ouvrir la vraie fiche ; la route n'écrit plus rien.
+- [x] CODE-07 : déconnecter le `ResizeObserver` de `Carte` ; `nouvelId` dans parentSansNom ; `raisonGroupe` → modele ; `messageImport` → ui/import.ts ; boucle de filiation refusée par `estDonneesValides`.
+- [x] PERF-01 : test de temps sur 300 fiches générées (`familleElargie`, `disposerArbre`), seuil large.
+- [x] DEBT-02 : style.css découpé en src/styles/ (base, accueil, fiche, arbre, etats, animations), octet pour octet identique.
+- [ ] UI-10 : jetons : 3 rayons, espacements de 4 en 4, 2 ombres, 2 graisses ; captures avant/après identiques à l'œil.
+
+**2-3 Données v5**
+- [x] CODE-06 : champ explicite pour le parent sans nom (fin de la reconnaissance par le prénom `PARENT_INCONNU`) ; `inconnu: true` garde son usage.
+- [x] FEATURE-15 : date d'union facultative (avec ou sans année), sur la fiche et dans Modifier. Codé le 20/10 sans maquette (à la demande de Paul) : champ à l'ajout d'un conjoint et dans l'écran Union, « Union en 2012 » sur la ligne du conjoint.
+- [x] CODE-08 : case « Prend le nom de X », cochée par défaut au mariage (maquette courte). Codé le 20/10 sans maquette : case « Prend le nom… » visible quand « Marié(e) » est allumé (ajout d'un conjoint, et passage à marié dans l'écran Union).
+- [x] `migrer()` v4 → v5 testé ; les imports v1 à v4 restent acceptés.
+
+### Étape 3 — Fonctionnalités (1 à 2 sessions, maquette d'abord)
+- [ ] FEATURE-11 : Réglages → « Exporter les dates vers un agenda » : `.ics` avec naissances, décès et mariages, événements annuels (RRULE), UID stables (id + type), naissance sans année, 29 février ; partage ou téléchargement ; aide : importer dans un agenda dédié « Tribu », notifications la veille et le jour même, réexporter après des ajouts.
+- [ ] FEATURE-13 : Réglages → « Vérifier mes données » : doublons probables, personnes isolées, dates incohérentes, fiches « Test ».
+- [ ] FEATURE-14 : Réglages → export PNG de l'arbre global (dessin sur canvas, noms compris).
+
+### Après la V3
+- FEATURE-16 : fusion à l'import d'abord (utile aussi pour changer de téléphone), puis plusieurs groupes par personne, puis lecture seule. FEATURE-17 : photos.
+- Abandonnés : FEATURE-12 (lien entre deux personnes), ANIM-08 (vibration).
+
 ## Plus tard
 - Import en fusion (DATA-06), avec le partage
 - Partage avec des proches ; revoir alors le chiffrement de l'export (SEC-01)
-- [x] Mini-arbre sur la fiche (FEAT-09), avec le lien « ami » : maquette validée le 19/10 (claude.ai/artifact/CUp7N1VAn5HCNvLvHvJxiy, version 5), codé le 19/10 ; reste le test sur téléphone
-- [x] Arbre global (après FEAT-09) : maquette A validée le 19/10 (claude.ai/artifact/QeJzzjcSac5fzuuZ3R9Cow), personnes sans lien masquées, codé le 19/10 ; reste le test sur téléphone et la validation du bouton de l'accueil ; bouton sur l'accueil, « Moi » au centre, toutes les personnes et leurs liens (amis compris) ; zoom au pincement, défilement libre, toucher une personne ouvre sa fiche
-- [x] Arbre global lisible (19/10) : couleur par nom de famille (12 pastels, amis compris), décédés pâles avec « † », enfants centrés entre leurs parents (chaînes d'ex élargies), parents sans union côte à côte, familles d'amis resserrées, fonds de lignée supprimés ; reste le rendu à voir sur téléphone (Michel Budin à droite, croix à valider)
-- [x] Groupes d'amis (après l'arbre global) : nom de famille au-dessus des lignées, cadres de groupes dans « Tes amis », saisie par groupe, Réglages → Groupes d'amis ; maquette validée le 19/10 (claude.ai/artifact/C5fAaf2hkT89PDdtXV6E4T), codé le 19/10 ; reste le test sur téléphone
+- [x] Mini-arbre sur la fiche (FEAT-09), avec le lien « ami » : maquette validée le 19/10 (claude.ai/artifact/CUp7N1VAn5HCNvLvHvJxiy, version 5), codé le 19/10
+- [x] Arbre global (après FEAT-09) : maquette A validée le 19/10 (claude.ai/artifact/QeJzzjcSac5fzuuZ3R9Cow), personnes sans lien masquées, codé le 19/10 ; bouton sur l'accueil, « Moi » au centre, toutes les personnes et leurs liens (amis compris) ; zoom au pincement, défilement libre, toucher une personne ouvre sa fiche
+- [x] Arbre global lisible (19/10) : couleur par nom de famille (12 pastels, amis compris), décédés pâles avec « † », enfants centrés entre leurs parents (chaînes d'ex élargies), parents sans union côte à côte, familles d'amis resserrées, fonds de lignée supprimés
+- [x] Groupes d'amis (après l'arbre global) : nom de famille au-dessus des lignées, cadres de groupes dans « Tes amis », saisie par groupe, Réglages → Groupes d'amis ; maquette validée le 19/10 (claude.ai/artifact/C5fAaf2hkT89PDdtXV6E4T), codé le 19/10
 - Plusieurs groupes par personne (règle « un seul » levée dans les écrans)
 - Photos (IndexedDB nécessaire)
 - Import et export GEDCOM

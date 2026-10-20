@@ -1,12 +1,10 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
-import { defineConfig } from "vitest/config";
-import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import type { Plugin } from 'vite';
+import { defineConfig } from 'vitest/config';
+import { VitePWA } from 'vite-plugin-pwa';
 
-const pkg = JSON.parse(
-  readFileSync(fileURLToPath(new URL("package.json", import.meta.url)), "utf-8"),
-) as { version: string };
+const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('package.json', import.meta.url)), 'utf-8')) as { version: string };
 
 // Politique de sécurité du contenu : tout vient de l'appli elle-même (scripts,
 // styles, police, service worker). Ajoutée au build seulement : en dev, Vite
@@ -23,19 +21,19 @@ const CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'none'",
-].join("; ");
+].join('; ');
 
 const cspAuBuild: Plugin = {
-  name: "tribu-csp",
-  apply: "build",
-  transformIndexHtml: () => [{ tag: "meta", attrs: { "http-equiv": "Content-Security-Policy", content: CSP }, injectTo: "head-prepend" }],
+  name: 'tribu-csp',
+  apply: 'build',
+  transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP }, injectTo: 'head-prepend' }],
 };
 
 // https://vite.dev/config/
 export default defineConfig({
   // Doit correspondre exactement au nom du dépôt GitHub pour GitHub Pages
   // (https://<utilisateur>.github.io/Tribu/).
-  base: "/Tribu/",
+  base: '/Tribu/',
 
   // Exposés au code applicatif (voir src/vite-env.d.ts). La date de build
   // permet de vérifier à l'œil qu'une nouvelle version est bien arrivée.
@@ -47,33 +45,32 @@ export default defineConfig({
   plugins: [
     cspAuBuild,
     VitePWA({
-      // Mise à jour silencieuse : le nouveau service worker prend la main tout
-      // de suite et la page se recharge (contrairement à YamsApp, qui affiche
-      // un bandeau, car une partie en cours ne doit pas être interrompue).
-      registerType: "autoUpdate",
+      // Mise à jour proposée : le nouveau service worker attend, un bandeau
+      // « Mettre à jour » le laisse prendre la main (une saisie en cours ne
+      // doit pas être interrompue par un rechargement).
+      registerType: 'prompt',
       injectRegister: false, // enregistrement fait à la main dans src/pwa.ts
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        lang: "fr",
-        name: "Tribu — liens familiaux",
-        short_name: "Tribu",
-        description: "Noter les liens familiaux de mes proches.",
-        theme_color: "#2f6f5e",
-        background_color: "#f3f6f4",
-        display: "standalone",
-        start_url: "/Tribu/",
-        scope: "/Tribu/",
+        lang: 'fr',
+        name: 'Tribu — liens familiaux',
+        short_name: 'Tribu',
+        description: 'Noter les liens familiaux de mes proches.',
+        theme_color: '#2f6f5e',
+        background_color: '#f3f6f4',
+        display: 'standalone',
+        start_url: '/Tribu/',
+        scope: '/Tribu/',
         icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-          { src: "icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
-        // Explicites : sans eux, le nouveau service worker reste « en attente »
-        // et l'ancienne version continue de servir l'appli.
-        skipWaiting: true,
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Pas de skipWaiting : le nouveau service worker attend le bandeau
+        // (src/pwa.ts), puis prend la main sur la page rechargée.
         clientsClaim: true,
       },
       devOptions: {
@@ -83,7 +80,7 @@ export default defineConfig({
   ],
 
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"],
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
   },
 });

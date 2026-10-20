@@ -118,12 +118,45 @@ export function prochainsAnniversaires(personnes: Personne[], aujourdhui: Date, 
       const dans = Math.round((Date.UTC(annee, mois - 1, j) - base) / MS_PAR_JOUR);
       if (dans < 0) continue;
       const age = naissance === undefined ? undefined : annee - naissance;
-      if (dans <= horizon && (age === undefined || age >= 1)) trouves.push({ personne, dans, ...(age === undefined ? {} : { age }), date: `${j === 1 ? '1er' : j} ${MOIS[mois - 1]}` });
+      if (dans <= horizon && (age === undefined || age >= 1))
+        trouves.push({ personne, dans, ...(age === undefined ? {} : { age }), date: `${j === 1 ? '1er' : j} ${MOIS[mois - 1]}` });
       break;
     }
   }
   const nom = (p: Personne) => `${p.prenom} ${p.nom}`;
   return trouves.sort((a, b) => a.dans - b.dans || nom(a.personne).localeCompare(nom(b.personne), 'fr')).slice(0, max);
+}
+
+export interface AnniversaireDeces {
+  personne: Personne;
+  /** 0 = aujourd'hui, 1 = demain. */
+  dans: number;
+  /** Années écoulées depuis le décès ce jour-là (au moins 1). */
+  annees: number;
+}
+
+/**
+ * Anniversaires de décès d'aujourd'hui et de demain, aujourd'hui d'abord. Il faut une date de décès complète ;
+ * un 29 février tombe le 28 les années non bissextiles.
+ */
+export function anniversairesDeces(personnes: Personne[], aujourdhui: Date): AnniversaireDeces[] {
+  const base = Date.UTC(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
+  const trouves: AnniversaireDeces[] = [];
+  for (const personne of personnes) {
+    const m = personne.deces?.match(MOTIF_DATE);
+    if (!m || m[3] === undefined) continue;
+    const [an, mois, jour] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    for (const dans of [0, 1]) {
+      const cible = new Date(base + dans * MS_PAR_JOUR);
+      const annee = cible.getUTCFullYear();
+      const j = mois === 2 && jour === 29 ? joursDuMois(annee, 2) : jour;
+      if (cible.getUTCMonth() + 1 === mois && cible.getUTCDate() === j && annee - an >= 1) {
+        trouves.push({ personne, dans, annees: annee - an });
+      }
+    }
+  }
+  const nom = (p: Personne) => `${p.prenom} ${p.nom}`;
+  return trouves.sort((a, b) => a.dans - b.dans || nom(a.personne).localeCompare(nom(b.personne), 'fr'));
 }
 
 /** « Aujourd'hui », « Demain » ou « Dans 5 jours ». */

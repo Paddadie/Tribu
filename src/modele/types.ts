@@ -25,6 +25,8 @@ export interface Personne {
    * Elle compte dans les déductions mais n'apparaît jamais (listes, fiches, arbres) ; voir `estInconnu`.
    */
   inconnu?: true;
+  /** Parent sans nom enregistré (le « ? » de l'arbre) : une personne visible, dont on ne connaît pas encore le nom ; voir `estParentSansNom`. */
+  sansNom?: true;
 }
 
 /** `actuelle` : le couple de maintenant (un seul par personne) ; `separee` : un ex, gardé pour l'historique. */
@@ -37,6 +39,8 @@ export interface Union {
   personneB: string;
   marie: boolean;
   statut: StatutUnion;
+  /** Date de l'union (mariage ou début du couple) facultative : « AAAA », « AAAA-MM », « AAAA-MM-JJ » ou « --MM-JJ » (sans année). */
+  date?: string;
 }
 
 /** Lien parent → enfant. */
@@ -59,7 +63,7 @@ export interface GroupeAmis {
 }
 
 export interface Donnees {
-  version: 4;
+  version: 5;
   personnes: Personne[];
   unions: Union[];
   filiations: Filiation[];

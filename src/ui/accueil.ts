@@ -1,8 +1,8 @@
 // Écran d'accueil : liste des personnes (par lettre), index alphabétique sur le bord droit,
 // filtre par nom, bouton +. Liste vide : « Ajouter la première personne » et « Restaurer une sauvegarde ».
 
-import { libelleDelai, prochainsAnniversaires, type Anniversaire } from '../modele/age';
-import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
+import { anniversairesDeces, libelleDelai, prochainsAnniversaires, type Anniversaire, type AnniversaireDeces } from '../modele/age';
+import { filtrerParNom, grouperParLettre, groupeVise, lettresIndex, libelleDeces, nomComplet, nomListe, type Groupe, type Tri } from '../modele/liste';
 import type { Personne } from '../modele/types';
 import { personnesVisibles } from '../modele/modele';
 import { importerJson } from '../modele/stockage';
@@ -10,7 +10,7 @@ import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne, contenuLigne } from './lignePersonne';
-import { messageImport } from './reglages';
+import { messageImport } from './import';
 
 // Le filtre survit à l'aller-retour liste → fiche → liste.
 let filtre = '';
@@ -42,7 +42,7 @@ function accueilVide(): HTMLElement {
     { class: 'accueil-vide' },
     h('div', { class: 'avatar avatar-grand' }, icone('famille', 40)),
     h('h2', {}, 'Aucune personne pour l’instant'),
-    h('p', { class: 'secondaire' }, 'Commencez par une fiche, ou reprenez une sauvegarde exportée depuis Tribu.'),
+    h('p', { class: 'secondaire' }, 'Commence par une fiche, ou reprends une sauvegarde exportée depuis Tribu.'),
     h(
       'div',
       { class: 'accueil-vide-actions' },
@@ -78,11 +78,7 @@ function indexLettres(groupes: Groupe[], zoneListe: HTMLElement, entete: HTMLEle
   const presentes = new Set(groupes.map((g) => g.lettre));
   const lettres = lettresIndex(groupes);
   const bulle = h('div', { class: 'bulle', 'aria-hidden': true, hidden: true });
-  const index = h(
-    'div',
-    { class: 'index', 'aria-hidden': true },
-    ...lettres.map((l) => h('span', { class: presentes.has(l) ? '' : 'absente' }, l)),
-  );
+  const index = h('div', { class: 'index', 'aria-hidden': true }, ...lettres.map((l) => h('span', { class: presentes.has(l) ? '' : 'absente' }, l)));
 
   const aller = (e: PointerEvent) => {
     const r = index.getBoundingClientRect();
@@ -119,14 +115,45 @@ function ligneAnniversaire({ personne, dans, age, date }: Anniversaire): HTMLEle
   );
 }
 
-/** Les 3 prochains anniversaires des 30 jours à venir, au-dessus de la liste ; le bloc est vide s'il n'y en a pas. */
+function avatarDecede(p: Personne): HTMLElement {
+  const avatar = avatarPersonne(p);
+  avatar.classList.add('decede');
+  return avatar;
+}
+
+/** Anniversaire de décès : ligne grise, « décédé le 20 octobre 2015 » et « il y a 11 ans ». */
+function ligneDeces({ personne, dans, annees }: AnniversaireDeces): HTMLElement {
+  return h(
+    'a',
+    { class: 'ligne ligne-deces', href: `#/personne/${personne.id}` },
+    avatarDecede(personne),
+    h(
+      'span',
+      { class: 'ligne-texte' },
+      h('span', { class: 'ligne-nom' }, nomComplet(personne)),
+      h('span', { class: 'secondaire' }, libelleDeces(personne.deces, personne.sexe)),
+    ),
+    h('span', { class: 'quand' }, h('strong', {}, libelleDelai(dans)), h('span', { class: 'etiquette' }, `il y a ${annees} ${annees > 1 ? 'ans' : 'an'}`)),
+  );
+}
+
+/**
+ * Les 3 prochains anniversaires des 30 jours à venir, au-dessus de la liste, plus les anniversaires de décès
+ * d'aujourd'hui et de demain (hors limite) ; le bloc est caché s'il n'y a rien.
+ */
 function blocAnniversaires(): HTMLElement {
-  const proches = prochainsAnniversaires(personnesVisibles(lireDonnees()), new Date());
+  const visibles = personnesVisibles(lireDonnees());
+  const proches = prochainsAnniversaires(visibles, new Date());
+  const deces = anniversairesDeces(visibles, new Date());
+  // Chaque décès vient après les naissances du même jour.
+  const lignes = [...proches.map((a) => ({ dans: a.dans, el: ligneAnniversaire(a) })), ...deces.map((a) => ({ dans: a.dans + 0.5, el: ligneDeces(a) }))].sort(
+    (a, b) => a.dans - b.dans,
+  );
   return h(
     'section',
-    { class: 'anniversaires', hidden: proches.length === 0 },
+    { class: 'anniversaires', hidden: lignes.length === 0 },
     h('h2', { class: 'titre-section' }, 'Prochains anniversaires'),
-    h('div', { class: 'carte' }, ...proches.map(ligneAnniversaire)),
+    h('div', { class: 'carte' }, ...lignes.map((l) => l.el)),
   );
 }
 

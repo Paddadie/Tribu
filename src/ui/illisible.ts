@@ -22,7 +22,8 @@ export function ecranIllisible(brut: string, apresRepartir: () => void): HTMLEle
   };
 
   const repartir = async () => {
-    const texte = 'Repartir avec une liste vide ? Le contenu illisible reste gardé en secours sur ce téléphone. Vous pourrez ensuite restaurer une sauvegarde depuis l’accueil.';
+    const texte =
+      'Repartir avec une liste vide ? Le contenu illisible reste gardé en secours sur ce téléphone. Tu pourras ensuite restaurer une sauvegarde depuis l’accueil.';
     if (!(await confirmer(texte, 'Repartir à vide'))) return;
     try {
       repartirAVide();

@@ -1,0 +1,140 @@
+/* ——— Animations (ANIM-01 à ANIM-04), coupées si le téléphone demande moins de mouvement ——— */
+
+@keyframes surbrillance {
+  from {
+    background: var(--accent-clair);
+  }
+}
+
+.ligne.nouvelle {
+  animation: surbrillance 1.8s ease-out 150ms both;
+}
+
+/* Nouveau proche dans « Famille proche » : fondu et légère mise à l'échelle (ANIM-06). */
+@keyframes apparition-noeud {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+
+.noeud.apparait {
+  animation: apparition-noeud 450ms ease-out 150ms both;
+}
+
+@keyframes monter {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fondu {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes monter-bandeau {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.feuille[open] {
+  animation: monter 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.feuille[open]::backdrop,
+.confirmation[open]::backdrop {
+  animation: fondu 200ms ease-out;
+}
+
+.confirmation[open] {
+  animation: zoom 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bandeau {
+  animation: monter-bandeau 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Glissement latéral entre écrans (View Transitions) : l'écran quitté recule un peu, le nouveau arrive de la droite ; au retour, l'inverse. */
+@keyframes sortie-avant {
+  to {
+    transform: translateX(-24%);
+    opacity: 0.6;
+  }
+}
+
+@keyframes entree-avant {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sortie-arriere {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes entree-arriere {
+  from {
+    transform: translateX(-24%);
+    opacity: 0.6;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.3, 0.7, 0.2, 1);
+  animation-fill-mode: both;
+  mix-blend-mode: normal;
+}
+
+.nav-avant::view-transition-old(root) {
+  animation-name: sortie-avant;
+}
+
+.nav-avant::view-transition-new(root) {
+  animation-name: entree-avant;
+}
+
+.nav-arriere::view-transition-old(root) {
+  z-index: 2;
+  animation-name: sortie-arriere;
+}
+
+.nav-arriere::view-transition-new(root) {
+  animation-name: entree-arriere;
+}
+
+/* Parent sans nom : cercle gris clair avec « ? » (arbre global et dessins de la fiche). */
+.noeud .avatar.sans-nom,
+.calque .noeud .avatar.sans-nom {
+  background: color-mix(in srgb, var(--trait-ex) 22%, var(--carte));
+  border: 1.5px dashed var(--trait-ex);
+  color: var(--secondaire);
+  font-size: var(--t4);
+  font-weight: var(--gras);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+    transition: none !important;
+  }
+}

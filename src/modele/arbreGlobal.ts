@@ -1,16 +1,14 @@
 // Arbre global : place toutes les personnes reliées à « Moi », une ligne par génération (maquette A).
 // Unités : x en « places » (deux conjoints voisins sont à 1 l'un de l'autre), y en générations (Moi en 0, 0).
 // La famille de Moi forme l'arbre principal ; ses amis et leurs familles vont dans une bulle sous l'arbre.
-// Les personnes sans lien avec Moi ne sont pas placées.
+// Les personnes sans lien avec Moi ne sont pas placées. Le placement d'une partie est dans partie.ts.
 
-import { comparerParNaissance, nomGroupe } from './deductions';
+import { nomGroupe } from './deductions';
+import { couleurFamille } from './liste';
 import { avecParentsSansNom } from './parentSansNom';
+import { disposerPartie, ECART_FAMILLES, lier, type Bloc, type Voisins } from './partie';
 import type { Donnees, Personne } from './types';
 
-/** Écart minimal entre deux personnes de blocs voisins d'une même ligne (deux conjoints : 1). */
-export const ECART_BLOCS = 1.25;
-/** Écart entre deux blocs voisins de familles différentes (sans parent commun) : un peu d'air pour les distinguer. */
-export const ECART_FAMILLES = 2;
 /** Hauteurs possibles du trait commun, sous la ligne des parents (en générations), et écart entre deux niveaux. */
 const BANDE_BUS: [number, number] = [0.56, 0.8];
 const PAS_BUS = 0.1;
@@ -72,17 +70,8 @@ export interface Disposition {
   amities: { a: string; b: string }[];
   groupes: GroupeDessine[];
   etiquettes: EtiquetteFamille[];
-}
-
-type Voisins = Map<string, string[]>;
-
-function lier(m: Voisins, a: string, b: string): void {
-  const va = m.get(a) ?? [];
-  va.push(b);
-  m.set(a, va);
-  const vb = m.get(b) ?? [];
-  vb.push(a);
-  m.set(b, vb);
+  /** Personnes de l'arbre principal (famille et amis posés à côté d'elle, sans Moi) qui sont dans un groupe d'amis : un petit anneau à la couleur du groupe. */
+  anneaux: { id: string; groupe: string }[];
 }
 
 /** Parcours en largeur depuis `departs`, dans l'ordre de découverte. */
@@ -99,28 +88,21 @@ function parcourir(departs: string[], suivants: (id: string) => string[]): strin
   return file;
 }
 
-/** Une partie de l'arbre (la famille, ou la bulle) avec ses liens internes. */
-interface Partie {
-  ids: string[];
-  /** Départs du calcul des générations : la première trouvée de chaque composante est en génération 0. */
-  racines: string[];
-  /** Liens qui gardent deux personnes côte à côte sur la même ligne : unions, et l'amitié qui rattache un ami. */
-  liensBloc: [string, string][];
+/** Ce que toutes les étapes de `disposerArbre` lisent : les données (parents sans nom compris) et leurs liens. */
+interface Graphe {
+  d: Donnees;
+  moi: string;
+  personnes: Map<string, Personne>;
+  /** Voisins par la famille (parents, enfants, conjoints). */
+  parFamille: (id: string) => string[];
+  /** Voisins par l'amitié (membres d'un même groupe). */
+  parAmitie: (id: string) => string[];
+  /** Tri par « prénom nom ». */
+  parPrenom: (ids: string[]) => string[];
 }
 
-interface Bloc {
-  membres: string[];
-  g: number;
-  gauche: number;
-}
-
-export function disposerArbre(donnees: Donnees, moi: string): Disposition {
-  // Un enfant qui n'a qu'un parent reçoit un autre parent « ? », dessiné à côté (voir parentSansNom.ts).
-  const d = avecParentsSansNom(donnees);
+function graphe(d: Donnees, moi: string): Graphe {
   const personnes = new Map(d.personnes.map((p) => [p.id, p]));
-  const vide: Disposition = { places: [], couples: [], branches: [], amities: [], groupes: [], etiquettes: [] };
-  if (!personnes.has(moi)) return vide;
-
   const famille: Voisins = new Map();
   const amis: Voisins = new Map();
   for (const f of d.filiations) if (personnes.has(f.parent) && personnes.has(f.enfant)) lier(famille, f.parent, f.enfant);
@@ -130,21 +112,38 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
     const presents = g.membres.filter((m) => personnes.has(m));
     presents.forEach((a, i) => presents.slice(i + 1).forEach((b) => lier(amis, a, b)));
   }
-  const parFamille = (id: string) => famille.get(id) ?? [];
-  const parAmitie = (id: string) => amis.get(id) ?? [];
-  const parPrenom = (ids: string[]) =>
-    [...ids].sort((a, b) => {
-      const pa = personnes.get(a)!;
-      const pb = personnes.get(b)!;
-      return `${pa.prenom} ${pa.nom}`.localeCompare(`${pb.prenom} ${pb.nom}`, 'fr');
-    });
+  return {
+    d,
+    moi,
+    personnes,
+    parFamille: (id) => famille.get(id) ?? [],
+    parAmitie: (id) => amis.get(id) ?? [],
+    parPrenom: (ids) =>
+      [...ids].sort((a, b) => {
+        const pa = personnes.get(a)!;
+        const pb = personnes.get(b)!;
+        return `${pa.prenom} ${pa.nom}`.localeCompare(`${pb.prenom} ${pb.nom}`, 'fr');
+      }),
+  };
+}
 
-  // Tous les groupes d'amis sont montrés, même ceux qui ne touchent ni Moi ni sa famille.
-  const departs = [moi, ...d.groupes.flatMap((g) => g.membres.filter((m) => personnes.has(m)))];
-  const visibles = new Set(parcourir(departs, (id) => [...parFamille(id), ...parAmitie(id)]));
-  const deFamille = new Set(parcourir([moi], parFamille));
+/** Amis hors de la famille de Moi, chacun avec sa propre famille (composantes par les liens de famille), et où va chacun. */
+interface Repartition {
+  groupeDe: Map<string, number>;
+  groupes: string[][];
+  place: ('famille' | 'bulle' | undefined)[];
+  /** Ami rattaché à quelqu'un (il se place à côté de lui) : [qui, ami]. */
+  ancrages: [string, string][];
+  /** Amis posés dans la bulle sans ancrage, dans l'ordre. */
+  racinesBulle: string[];
+}
 
-  // Groupes d'amis : chaque ami avec sa propre famille (composantes par les liens de famille, hors famille de Moi).
+/**
+ * Étape 1. Où va chaque groupe : amis de Moi dans la bulle ; amis d'un autre membre de la famille à côté de lui ;
+ * puis, de proche en proche, l'ami d'un ami suit le groupe de son ami.
+ */
+function repartirAmis(gr: Graphe, visibles: Set<string>, deFamille: Set<string>): Repartition {
+  const { d, moi, personnes, parFamille, parAmitie, parPrenom } = gr;
   const groupeDe = new Map<string, number>();
   const groupes: string[][] = [];
   for (const p of d.personnes) {
@@ -154,9 +153,7 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
     groupes.push(g);
   }
 
-  // Où va chaque groupe : amis de Moi dans la bulle ; amis d'un autre membre de la famille à côté de lui ;
-  // puis, de proche en proche, l'ami d'un ami suit le groupe de son ami.
-  const place: ('famille' | 'bulle' | undefined)[] = groupes.map(() => undefined);
+  const place: Repartition['place'] = groupes.map(() => undefined);
   const ancrages: [string, string][] = [];
   const racinesBulle: string[] = [];
   const file: number[] = [];
@@ -191,99 +188,97 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
     }
     propager(debut);
   }
+  return { groupeDe, groupes, place, ancrages, racinesBulle };
+}
 
-  const dansFamille = (id: string) => deFamille.has(id) || place[groupeDe.get(id)!] === 'famille';
-  const unionsDans = (ids: Set<string>) =>
-    d.unions.filter((u) => ids.has(u.personneA) && ids.has(u.personneB)).map((u): [string, string] => [u.personneA, u.personneB]);
-
-  const idsFamille = d.personnes.map((p) => p.id).filter((id) => visibles.has(id) && dansFamille(id));
-  const idsBulle = d.personnes.map((p) => p.id).filter((id) => visibles.has(id) && !dansFamille(id));
-  const ensFamille = new Set(idsFamille);
-  const ensBulle = new Set(idsBulle);
-
-  const parents = parentsPrincipaux(d, visibles);
-  const tousParents = new Map<string, string[]>();
+/** Tous les parents de chaque enfant visible (adoptifs compris). */
+function tousLesParents(d: Donnees, visibles: Set<string>): Map<string, string[]> {
+  const res = new Map<string, string[]>();
   for (const f of d.filiations) {
-    if (visibles.has(f.parent) && visibles.has(f.enfant)) tousParents.set(f.enfant, [...(tousParents.get(f.enfant) ?? []), f.parent]);
+    if (visibles.has(f.parent) && visibles.has(f.enfant)) res.set(f.enfant, [...(res.get(f.enfant) ?? []), f.parent]);
   }
-  // Deux parents d'un même enfant sans union enregistrée (un ex) restent côte à côte, près de leurs enfants.
-  const coparents = (ids: Set<string>): [string, string][] =>
-    [...parents.values()].filter((ps) => ps.length === 2 && ps.every((x) => ids.has(x))).map((ps): [string, string] => [ps[0], ps[1]]);
-  const positions = new Map<string, Point>();
-  const blocDe = new Map<string, Bloc>();
+  return res;
+}
 
-  const principale = disposerPartie(
-    { ids: idsFamille, racines: [moi], liensBloc: [...unionsDans(ensFamille), ...coparents(ensFamille), ...ancrages.filter(([a]) => ensFamille.has(a))] },
-    personnes,
-    parents,
-    tousParents,
-  );
-  const xMoi = principale.positions.get(moi)!.x;
-  for (const [id, p] of principale.positions) positions.set(id, { x: p.x - xMoi, y: p.y });
-  principale.blocs.forEach((b, id) => blocDe.set(id, b));
+/** Ce qu'il faut pour disposer une partie : ses liens de bloc, les parents principaux et tous les parents. */
+interface Placement {
+  liensBloc: (ids: Set<string>) => [string, string][];
+  parents: Map<string, string[]>;
+  tousParents: Map<string, string[]>;
+}
 
-  if (idsBulle.length > 0) {
-    // Chaque groupe d'amis (avec les groupes qui partagent une famille) est disposé à part, puis posé à côté
-    // du précédent : leurs cadres ne peuvent pas se mêler.
-    const parent = groupes.map((_, i) => i);
-    const racine = (i: number): number => (parent[i] === i ? i : (parent[i] = racine(parent[i])));
-    for (const g of d.groupes) {
-      const comps = [...new Set(g.membres.filter((m) => ensBulle.has(m)).map((m) => groupeDe.get(m)!))];
-      for (const c of comps.slice(1)) parent[racine(c)] = racine(comps[0]);
-    }
-    const amas = new Map<number, string[]>();
-    for (const id of idsBulle) {
-      const r = racine(groupeDe.get(id)!);
-      amas.set(r, [...(amas.get(r) ?? []), id]);
-    }
-    const rangRacine = (ids: string[]) => {
-      const rangs = ids.map((id) => racinesBulle.indexOf(id)).filter((i) => i >= 0);
-      return rangs.length > 0 ? Math.min(...rangs) : Infinity;
-    };
-    const haut = Math.max(...[...positions.values()].map((p) => p.y)) + ECART_BULLE;
-    let bord: number | undefined;
-    for (const ids of [...amas.values()].sort((u, v) => rangRacine(u) - rangRacine(v))) {
-      const ens = new Set(ids);
-      const racines = racinesBulle.filter((r) => ens.has(r));
-      const partie = disposerPartie(
-        { ids, racines: racines.length > 0 ? racines : [ids[0]], liensBloc: [...unionsDans(ens), ...coparents(ens), ...ancrages.filter(([a]) => ens.has(a))] },
-        personnes,
-        parents,
-        tousParents,
-      );
-      // Familles d'amis voisines : les grands vides entre deux familles sont resserrés (sans changer leur ordre).
-      resserrer(partie.positions, groupes.map((g) => g.filter((id) => ens.has(id))).filter((g) => g.length > 0));
-      const xs = [...partie.positions.values()].map((p) => p.x);
-      const ys = [...partie.positions.values()].map((p) => p.y);
-      const decalage = bord === undefined ? 0 : bord - Math.min(...xs);
-      for (const [id, p] of partie.positions) positions.set(id, { x: p.x + decalage, y: p.y + haut - Math.min(...ys) });
-      bord = Math.max(...xs) + decalage + ECART_FAMILLES;
-      partie.blocs.forEach((b, id) => blocDe.set(id, b));
-    }
-    // La bulle entière est centrée sous Moi.
-    const xsBulle = idsBulle.map((id) => positions.get(id)!.x);
-    const milieuX = (Math.min(...xsBulle) + Math.max(...xsBulle)) / 2;
-    for (const id of idsBulle) positions.get(id)!.x -= milieuX;
+/**
+ * Étape 3. La bulle : chaque groupe d'amis (avec les groupes qui partagent une famille) est disposé à part, puis
+ * posé à côté du précédent (leurs cadres ne peuvent pas se mêler), sous l'arbre principal ; elle est centrée sous Moi.
+ */
+function disposerBulle(gr: Graphe, idsBulle: string[], rep: Repartition, pl: Placement, positions: Map<string, Point>, blocDe: Map<string, Bloc>): void {
+  const ensBulle = new Set(idsBulle);
+  const { groupeDe, groupes, racinesBulle } = rep;
+  const parent = groupes.map((_, i) => i);
+  const racine = (i: number): number => (parent[i] === i ? i : (parent[i] = racine(parent[i])));
+  for (const g of gr.d.groupes) {
+    const comps = [...new Set(g.membres.filter((m) => ensBulle.has(m)).map((m) => groupeDe.get(m)!))];
+    for (const c of comps.slice(1)) parent[racine(c)] = racine(comps[0]);
   }
+  const amas = new Map<number, string[]>();
+  for (const id of idsBulle) {
+    const r = racine(groupeDe.get(id)!);
+    amas.set(r, [...(amas.get(r) ?? []), id]);
+  }
+  const rangRacine = (ids: string[]) => {
+    const rangs = ids.map((id) => racinesBulle.indexOf(id)).filter((i) => i >= 0);
+    return rangs.length > 0 ? Math.min(...rangs) : Infinity;
+  };
+  const haut = Math.max(...[...positions.values()].map((p) => p.y)) + ECART_BULLE;
+  let bord: number | undefined;
+  for (const ids of [...amas.values()].sort((u, v) => rangRacine(u) - rangRacine(v))) {
+    const ens = new Set(ids);
+    const racines = racinesBulle.filter((r) => ens.has(r));
+    const partie = disposerPartie(
+      { ids, racines: racines.length > 0 ? racines : [ids[0]], liensBloc: pl.liensBloc(ens) },
+      gr.personnes,
+      pl.parents,
+      pl.tousParents,
+    );
+    // Familles d'amis voisines : les grands vides entre deux familles sont resserrés (sans changer leur ordre).
+    resserrer(
+      partie.positions,
+      groupes.map((g) => g.filter((id) => ens.has(id))).filter((g) => g.length > 0),
+    );
+    const xs = [...partie.positions.values()].map((p) => p.x);
+    const ys = [...partie.positions.values()].map((p) => p.y);
+    const decalage = bord === undefined ? 0 : bord - Math.min(...xs);
+    for (const [id, p] of partie.positions) positions.set(id, { x: p.x + decalage, y: p.y + haut - Math.min(...ys) });
+    bord = Math.max(...xs) + decalage + ECART_FAMILLES;
+    partie.blocs.forEach((b, id) => blocDe.set(id, b));
+  }
+  const xsBulle = idsBulle.map((id) => positions.get(id)!.x);
+  const milieuX = (Math.min(...xsBulle) + Math.max(...xsBulle)) / 2;
+  for (const id of idsBulle) positions.get(id)!.x -= milieuX;
+}
 
-  const deLignee = couleursParNom(personnes, positions);
-  // Un parent inconnu occupe une place pour le calcul, mais n'est pas dessiné.
-  const places = d.personnes.flatMap((p) => {
-    const pos = positions.get(p.id);
-    return pos && !p.inconnu ? [{ personne: p, x: pos.x, y: pos.y, bulle: ensBulle.has(p.id), lignee: deLignee.get(p.id) }] : [];
-  });
+/**
+ * Étape 4. Couples à relier : les unions, et deux parents d'un même enfant sans union enregistrée (un ex, en
+ * pointillés). Un couple prend la couleur de celui des deux qui est le plus proche de Moi (parenté, unions comprises).
+ */
+function couplesDessines(
+  gr: Graphe,
+  positions: Map<string, Point>,
+  coparents: [string, string][],
+  visibles: Set<string>,
+  deLignee: Map<string, number>,
+): Disposition['couples'] {
+  const { d, moi } = gr;
   const couples: Disposition['couples'] = d.unions
     .filter((u) => positions.has(u.personneA) && positions.has(u.personneB))
     .map((u) => ({ a: u.personneA, b: u.personneB, separe: u.statut === 'separee', marie: u.marie }));
-  // Deux parents d'un même enfant sans union enregistrée : un ex, relié lui aussi (en pointillés).
   const cle = (a: string, b: string) => [a, b].sort().join('|');
   const vus = new Set(couples.map((c) => cle(c.a, c.b)));
-  for (const [x, y] of [...coparents(new Set(positions.keys()))]) {
+  for (const [x, y] of coparents) {
     if (vus.has(cle(x, y)) || !visibles.has(x) || !visibles.has(y)) continue;
     vus.add(cle(x, y));
     couples.push({ a: x, b: y, separe: true, marie: false });
   }
-  // Un couple prend la couleur de celui des deux qui est le plus proche de Moi (parenté, unions comprises).
   const voisinsMoi = new Map<string, string[]>();
   const relier = (a: string, b: string) => {
     voisinsMoi.set(a, [...(voisinsMoi.get(a) ?? []), b]);
@@ -292,7 +287,7 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
   for (const u of d.unions) relier(u.personneA, u.personneB);
   for (const f of d.filiations) relier(f.parent, f.enfant);
   const distance = new Map<string, number>([[moi, 0]]);
-  for (const file = [moi]; file.length > 0; ) {
+  for (const file = [moi]; file.length > 0;) {
     const c = file.shift()!;
     for (const v of voisinsMoi.get(c) ?? []) if (!distance.has(v)) (distance.set(v, distance.get(c)! + 1), file.push(v));
   }
@@ -302,28 +297,105 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
     // À égalité (deux parents), la couleur de ma famille si l'un en est.
     c.lignee = da === db ? (lb !== undefined && lb === deLignee.get(moi) ? lb : la) : da < db ? la : lb;
   }
-  const dansBulle = (id: string) => ensBulle.has(id) && positions.has(id);
-  const cadres: GroupeDessine[] = d.groupes.flatMap((g) => {
+  return couples;
+}
+
+/** Étape 5. Cadres des groupes d'amis de la bulle : les membres placés et leurs familles. */
+function cadresDeGroupes(gr: Graphe, dansBulle: (id: string) => boolean, positions: Map<string, Point>): GroupeDessine[] {
+  return gr.d.groupes.flatMap((g) => {
     const membres = g.membres.filter(dansBulle);
     if (membres.length === 0) return [];
-    const ids = [...new Set(membres.flatMap((m) => parcourir([m], parFamille).filter(dansBulle)))];
-    return [{ id: g.id, nom: nomGroupe(d, g), membres, ids, amis: g.membres.filter((m) => m !== moi && positions.has(m)).length }];
+    const ids = [...new Set(membres.flatMap((m) => parcourir([m], gr.parFamille).filter(dansBulle)))];
+    return [{ id: g.id, nom: nomGroupe(gr.d, g), membres, ids, amis: g.membres.filter((m) => m !== gr.moi && positions.has(m)).length }];
   });
-  // Tracé des amitiés hors des cadres : pas entre deux membres de la bulle, ni de Moi vers la bulle.
-  const vusAmities = new Set<string>();
-  const amities: { a: string; b: string }[] = [];
-  for (const g of d.groupes) {
+}
+
+/** Étape 6. Amitiés tracées hors des cadres : pas entre deux membres de la bulle, ni de Moi vers la bulle. */
+function amitiesHorsCadres(gr: Graphe, dansBulle: (id: string) => boolean, positions: Map<string, Point>): Disposition['amities'] {
+  const vus = new Set<string>();
+  const amities: Disposition['amities'] = [];
+  for (const g of gr.d.groupes) {
     const presents = g.membres.filter((m) => positions.has(m));
     presents.forEach((a, i) =>
       presents.slice(i + 1).forEach((b) => {
         const cle = [a, b].sort().join('|');
-        if (vusAmities.has(cle) || (dansBulle(a) && dansBulle(b)) || (a === moi && dansBulle(b)) || (b === moi && dansBulle(a))) return;
-        vusAmities.add(cle);
+        if (vus.has(cle) || (dansBulle(a) && dansBulle(b)) || (a === gr.moi && dansBulle(b)) || (b === gr.moi && dansBulle(a))) return;
+        vus.add(cle);
         amities.push({ a, b });
       }),
     );
   }
-  return { places, couples, branches: branches(d, visibles, positions, blocDe, deLignee), amities, groupes: cadres, etiquettes: etiquettes(personnes, positions, blocDe, tousParents, deLignee) };
+  return amities;
+}
+
+/**
+ * Étape 7. Personnes de l'arbre principal (hors Moi) qui sont dans un groupe d'amis : le premier groupe trouvé,
+ * une personne n'étant que dans un seul groupe à la saisie.
+ */
+function anneauxDeGroupe(gr: Graphe, places: PlaceArbre[]): Disposition['anneaux'] {
+  return places.flatMap((pl) => {
+    const g = !pl.bulle && pl.personne.id !== gr.moi ? gr.d.groupes.find((x) => x.membres.includes(pl.personne.id)) : undefined;
+    return g ? [{ id: pl.personne.id, groupe: g.id }] : [];
+  });
+}
+
+export function disposerArbre(donnees: Donnees, moi: string): Disposition {
+  // Un enfant qui n'a qu'un parent reçoit un autre parent « ? », dessiné à côté (voir parentSansNom.ts).
+  const d = avecParentsSansNom(donnees);
+  const gr = graphe(d, moi);
+  const { personnes } = gr;
+  if (!personnes.has(moi)) return { places: [], couples: [], branches: [], amities: [], groupes: [], etiquettes: [], anneaux: [] };
+
+  // Tous les groupes d'amis sont montrés, même ceux qui ne touchent ni Moi ni sa famille.
+  const departs = [moi, ...d.groupes.flatMap((g) => g.membres.filter((m) => personnes.has(m)))];
+  const visibles = new Set(parcourir(departs, (id) => [...gr.parFamille(id), ...gr.parAmitie(id)]));
+  const deFamille = new Set(parcourir([moi], gr.parFamille));
+  const rep = repartirAmis(gr, visibles, deFamille);
+
+  const dansFamille = (id: string) => deFamille.has(id) || rep.place[rep.groupeDe.get(id)!] === 'famille';
+  const idsFamille = d.personnes.map((p) => p.id).filter((id) => visibles.has(id) && dansFamille(id));
+  const idsBulle = d.personnes.map((p) => p.id).filter((id) => visibles.has(id) && !dansFamille(id));
+  const ensBulle = new Set(idsBulle);
+
+  const parents = parentsPrincipaux(d, visibles);
+  // Deux parents d'un même enfant sans union enregistrée (un ex) restent côte à côte, près de leurs enfants.
+  const coparents = (ids: Set<string>): [string, string][] =>
+    [...parents.values()].filter((ps) => ps.length === 2 && ps.every((x) => ids.has(x))).map((ps): [string, string] => [ps[0], ps[1]]);
+  const pl: Placement = {
+    liensBloc: (ids) => [
+      ...d.unions.filter((u) => ids.has(u.personneA) && ids.has(u.personneB)).map((u): [string, string] => [u.personneA, u.personneB]),
+      ...coparents(ids),
+      ...rep.ancrages.filter(([a]) => ids.has(a)),
+    ],
+    parents,
+    tousParents: tousLesParents(d, visibles),
+  };
+
+  // Étape 2. L'arbre principal, Moi en x = 0.
+  const positions = new Map<string, Point>();
+  const blocDe = new Map<string, Bloc>();
+  const principale = disposerPartie({ ids: idsFamille, racines: [moi], liensBloc: pl.liensBloc(new Set(idsFamille)) }, personnes, pl.parents, pl.tousParents);
+  const xMoi = principale.positions.get(moi)!.x;
+  for (const [id, p] of principale.positions) positions.set(id, { x: p.x - xMoi, y: p.y });
+  principale.blocs.forEach((b, id) => blocDe.set(id, b));
+  if (idsBulle.length > 0) disposerBulle(gr, idsBulle, rep, pl, positions, blocDe);
+
+  const deLignee = couleursParNom(personnes, positions);
+  // Un parent inconnu occupe une place pour le calcul, mais n'est pas dessiné.
+  const places = d.personnes.flatMap((p) => {
+    const pos = positions.get(p.id);
+    return pos && !p.inconnu ? [{ personne: p, x: pos.x, y: pos.y, bulle: ensBulle.has(p.id), lignee: deLignee.get(p.id) }] : [];
+  });
+  const dansBulle = (id: string) => ensBulle.has(id) && positions.has(id);
+  return {
+    places,
+    couples: couplesDessines(gr, positions, coparents(new Set(positions.keys())), visibles, deLignee),
+    branches: branches(d, visibles, positions, blocDe, deLignee),
+    amities: amitiesHorsCadres(gr, dansBulle, positions),
+    groupes: cadresDeGroupes(gr, dansBulle, positions),
+    etiquettes: etiquettes(personnes, positions, blocDe, pl.tousParents, deLignee),
+    anneaux: anneauxDeGroupe(gr, places),
+  };
 }
 
 /**
@@ -372,20 +444,29 @@ function etiquettes(
   // Une lignée n'est nommée que si elle a une suite : un enfant, ou un frère ou une sœur (parent en commun).
   const parentsAvecEnfants = new Map<string, number>();
   for (const ps of tousParents.values()) for (const x of ps) parentsAvecEnfants.set(x, (parentsAvecEnfants.get(x) ?? 0) + 1);
-  const aUneSuite = (id: string) =>
-    parentsAvecEnfants.has(id) || (tousParents.get(id) ?? []).some((x) => (parentsAvecEnfants.get(x) ?? 0) > 1);
+  const aUneSuite = (id: string) => parentsAvecEnfants.has(id) || (tousParents.get(id) ?? []).some((x) => (parentsAvecEnfants.get(x) ?? 0) > 1);
   for (const bloc of new Set(blocDe.values())) {
     const membres = bloc.membres.map((id) => personnes.get(id)!).filter((p) => !p.inconnu && positions.has(p.id));
     if (membres.length === 0) continue;
     // Un conjoint qui porte déjà le nom de l'autre (nom d'usage) n'a pas d'étiquette : celle de la lignée suffit.
-    const nomsDeLaLignee = new Set(membres.filter((p) => !sansParent(p.id)).map((p) => p.nom.trim()).filter(Boolean));
+    const nomsDeLaLignee = new Set(
+      membres
+        .filter((p) => !sansParent(p.id))
+        .map((p) => p.nom.trim())
+        .filter(Boolean),
+    );
     const libres = membres.filter((p) => sansParent(p.id) && !nomsDeLaLignee.has(p.nom.trim()) && aUneSuite(p.id));
     if (libres.length === 0) continue;
     const nomme = libres.filter((p) => p.nom.trim());
     if (nomme.length === 0) {
       if (membres.some((p) => !sansParent(p.id))) continue;
       const xs = libres.map((p) => positions.get(p.id)!.x);
-      res.push({ x: (Math.min(...xs) + Math.max(...xs)) / 2, y: positions.get(libres[0].id)!.y, lignee: couleur.get(libres[0].id), texte: `Famille de ${libres[0].prenom || libres[0].nom}` });
+      res.push({
+        x: (Math.min(...xs) + Math.max(...xs)) / 2,
+        y: positions.get(libres[0].id)!.y,
+        lignee: couleur.get(libres[0].id),
+        texte: `Famille de ${libres[0].prenom || libres[0].nom}`,
+      });
       continue;
     }
     // Une étiquette par nom distinct ; les hommes d'abord, comme avant, pour la couleur.
@@ -415,7 +496,13 @@ function etiquettes(
   for (const fr of fratries.values()) {
     if (fr.length < 2) continue;
     const xs = fr.map((e) => positions.get(e.id)!.x);
-    res.push({ x: (Math.min(...xs) + Math.max(...xs)) / 2, y: positions.get(fr[0].id)!.y, lignee: couleur.get(fr[0].id), texte: `Famille ${fr[0].nom.trim()}`, fratrie: true });
+    res.push({
+      x: (Math.min(...xs) + Math.max(...xs)) / 2,
+      y: positions.get(fr[0].id)!.y,
+      lignee: couleur.get(fr[0].id),
+      texte: `Famille ${fr[0].nom.trim()}`,
+      fratrie: true,
+    });
   }
   return res;
 }
@@ -449,7 +536,10 @@ function branches(d: Donnees, visibles: Set<string>, positions: Map<string, Poin
     parType.set(f.enfant, t);
   }
   for (const [enfant, t] of parType) {
-    for (const [type, ps] of [['biologique', t.biologique], ['adoptif', t.adoptif]] as const) {
+    for (const [type, ps] of [
+      ['biologique', t.biologique],
+      ['adoptif', t.adoptif],
+    ] as const) {
       if (ps.length === 0) continue;
       const parents = [...ps].sort((a, b) => positions.get(a)!.x - positions.get(b)!.x);
       const cle = parents.join('|');
@@ -462,9 +552,7 @@ function branches(d: Donnees, visibles: Set<string>, positions: Map<string, Poin
     const pts = parents.map((id) => positions.get(id)!);
     const [a, b] = parents;
     const voisins =
-      parents.length === 2 &&
-      blocDe.get(a) === blocDe.get(b) &&
-      Math.abs(blocDe.get(a)!.membres.indexOf(a) - blocDe.get(a)!.membres.indexOf(b)) === 1;
+      parents.length === 2 && blocDe.get(a) === blocDe.get(b) && Math.abs(blocDe.get(a)!.membres.indexOf(a) - blocDe.get(a)!.membres.indexOf(b)) === 1;
     const origines = voisins
       ? [{ x: (pts[0].x + pts[1].x) / 2, y: pts[0].y }]
       : parents.map((id, i) => ({ ...pts[i], parent: id, ...(inconnus.has(id) ? { inconnu: true as const } : {}) }));
@@ -473,9 +561,7 @@ function branches(d: Donnees, visibles: Set<string>, positions: Map<string, Poin
       // La couleur de la lignée des parents (celui qui n'a pas de parents dans l'arbre en premier), pas celle d'un enfant qui porte un autre nom.
       lignee: deLignee.get(parents.find((id) => !parType.has(id)) ?? parents[0]) ?? deLignee.get(enfants[0].id),
       bus: Math.max(...pts.map((p) => p.y)) + 0.5,
-      enfants: enfants
-        .map((e) => ({ ...e, ...positions.get(e.id)! }))
-        .sort((x, y) => x.x - y.x),
+      enfants: enfants.map((e) => ({ ...e, ...positions.get(e.id)! })).sort((x, y) => x.x - y.x),
     };
   });
   etagerBus(res);
@@ -511,317 +597,13 @@ function etagerBus(brs: Branche[]): void {
   }
 }
 
-/** Place une partie : générations, blocs côte à côte, ordre dans chaque ligne, puis abscisses. */
-function disposerPartie(
-  partie: Partie,
-  personnes: Map<string, Personne>,
-  parentsDe: Map<string, string[]>,
-  tousParents: Map<string, string[]>,
-): { positions: Map<string, Point>; blocs: Map<string, Bloc> } {
-  const dans = new Set(partie.ids);
-  const p = (id: string) => personnes.get(id)!;
-
-  // Blocs : personnes reliées par les liens de bloc (union-find).
-  const chef = new Map(partie.ids.map((id) => [id, id]));
-  const trouver = (id: string): string => {
-    let r = id;
-    while (chef.get(r) !== r) r = chef.get(r)!;
-    chef.set(id, r);
-    return r;
-  };
-  for (const [a, b] of partie.liensBloc) chef.set(trouver(a), trouver(b));
-  const membresDe = new Map<string, string[]>();
-  for (const id of partie.ids) membresDe.set(trouver(id), [...(membresDe.get(trouver(id)) ?? []), id]);
-
-  // Parents et enfants dans la partie (les parents principaux seulement, pour le placement).
-  const parents = (id: string) => (parentsDe.get(id) ?? []).filter((x) => dans.has(x));
-  const enfantsDe = new Map<string, string[]>();
-  for (const id of partie.ids) for (const x of parents(id)) enfantsDe.set(x, [...(enfantsDe.get(x) ?? []), id]);
-  const enfants = (id: string) => enfantsDe.get(id) ?? [];
-  // Pour les générations, tous les parents comptent (adoptifs compris).
-  const tousParentsDe = new Map<string, string[]>();
-  const tousEnfantsDe = new Map<string, string[]>();
-  for (const id of partie.ids) {
-    for (const x of tousParents.get(id) ?? []) {
-      if (!dans.has(x)) continue;
-      tousParentsDe.set(id, [...(tousParentsDe.get(id) ?? []), x]);
-      tousEnfantsDe.set(x, [...(tousEnfantsDe.get(x) ?? []), id]);
-    }
-  }
-
-  // Générations, bloc par bloc : un parent est une ligne au-dessus. En cas de contradiction, la première trouvée reste.
-  const gen = new Map<string, number>();
-  const ordreDecouverte: string[] = [];
-  for (const depart of [...partie.racines, ...partie.ids]) {
-    const c0 = trouver(depart);
-    if (gen.has(c0)) continue;
-    gen.set(c0, 0);
-    const file = [c0];
-    for (let i = 0; i < file.length; i++) {
-      const c = file[i];
-      ordreDecouverte.push(c);
-      const g = gen.get(c)!;
-      for (const m of membresDe.get(c)!) {
-        for (const [voisins, dg] of [[tousParentsDe.get(m) ?? [], -1], [tousEnfantsDe.get(m) ?? [], 1]] as const) {
-          for (const v of voisins) {
-            const cv = trouver(v);
-            if (gen.has(cv)) continue;
-            gen.set(cv, g + dg);
-            file.push(cv);
-          }
-        }
-      }
-    }
-  }
-
-  // Lignes de blocs, dans l'ordre de découverte au départ.
-  const blocDe = new Map<string, Bloc>();
-  const lignes = new Map<number, Bloc[]>();
-  for (const c of ordreDecouverte) {
-    const bloc: Bloc = { membres: chaine(membresDe.get(c)!, partie.liensBloc, p), g: gen.get(c)!, gauche: 0 };
-    bloc.membres.forEach((m) => blocDe.set(m, bloc));
-    lignes.set(bloc.g, [...(lignes.get(bloc.g) ?? []), bloc]);
-  }
-  const gens = [...lignes.keys()].sort((a, b) => a - b);
-  // Écart entre deux voisins d'un bloc : 1, sauf dans une chaîne (ex – personne – conjoint) où il s'élargit
-  // pour que les enfants de chaque couple se centrent sous leurs parents.
-  const ecartPaire = new Map<string, number>();
-  const clePaire = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
-  const decalages = (b: Bloc) => {
-    const r = [0];
-    for (let i = 1; i < b.membres.length; i++) r.push(r[i - 1] + (ecartPaire.get(clePaire(b.membres[i - 1], b.membres[i])) ?? 1));
-    return r;
-  };
-  const largeur = (b: Bloc) => decalages(b)[b.membres.length - 1];
-  const x = (id: string) => blocDe.get(id)!.gauche + decalages(blocDe.get(id)!)[blocDe.get(id)!.membres.indexOf(id)];
-  /** Deux blocs voisins sont de la même famille s'ils ont un parent en commun (ou aucun parent ni l'un ni l'autre). */
-  const parentsDuBloc = (b: Bloc) => new Set(b.membres.flatMap(parents));
-  const ecartApres = (ligne: Bloc[], i: number) => {
-    const [a, b] = [parentsDuBloc(ligne[i]), parentsDuBloc(ligne[i + 1])];
-    if (a.size === 0 && b.size === 0) return ECART_BLOCS;
-    return [...a].some((x) => b.has(x)) ? ECART_BLOCS : ECART_FAMILLES;
-  };
-  const pasDe = (ligne: Bloc[]) => ligne.map((b, i) => largeur(b) + (i < ligne.length - 1 ? ecartApres(ligne, i) : ECART_BLOCS));
-  const tasser = (ligne: Bloc[]) => {
-    const pas = pasDe(ligne);
-    let g = 0;
-    ligne.forEach((b, i) => {
-      b.gauche = g;
-      g += pas[i];
-    });
-  };
-  const moyenne = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : undefined);
-  /** Position de référence d'un membre : milieu de ses parents (vers le haut) ou de ses enfants (vers le bas). */
-  const repere = (id: string, versHaut: boolean) => moyenne((versHaut ? parents(id) : enfants(id)).map(x));
-
-  // Sens de chaque bloc : un membre se met du côté de ses parents (ou de ses enfants). Sans indice, un couple
-  // met l'homme à gauche (côté paternel à gauche), sinon l'aîné.
-  const orienter = (b: Bloc, versHaut: boolean) => {
-    if (b.membres.length < 2) return;
-    const n = b.membres.length;
-    const centre = b.gauche + largeur(b) / 2;
-    const dec = decalages(b);
-    let score = 0;
-    b.membres.forEach((m, i) => {
-      // Une chaîne (ex – personne – conjoint) tient compte des parents et des enfants à la fois.
-      for (const haut of n >= 3 ? [true, false] : [versHaut]) {
-        const r = repere(m, haut);
-        if (r !== undefined) score += (r - centre) * (dec[i] - largeur(b) / 2);
-      }
-    });
-    if (score < -1e-9) b.membres.reverse();
-    else if (Math.abs(score) <= 1e-9 && n === 2 && !b.membres.some((m) => repere(m, true) !== undefined || repere(m, false) !== undefined)) {
-      const [a, c] = b.membres.map(p);
-      const inverser = a.sexe === 'F' && c.sexe === 'M' ? true : a.sexe === c.sexe || !a.sexe || !c.sexe ? comparerParNaissance(a, c) > 0 : false;
-      if (inverser) b.membres.reverse();
-    }
-  };
-
-  // Ordre dans chaque ligne : barycentres des parents en descendant, des enfants en remontant.
-  const trier = (g: number, versHaut: boolean) => {
-    const ligne = lignes.get(g)!;
-    const cle = new Map<Bloc, number>();
-    for (const b of ligne) {
-      // Clé : où les membres reliés veulent être, sans tenir compte de leur rang dans le bloc
-      // (sinon un frère suivi de son conjoint passerait après son cadet).
-      const reps = b.membres.flatMap((m) => {
-        const r = repere(m, versHaut);
-        return r === undefined ? [] : [r];
-      });
-      cle.set(b, moyenne(reps) ?? b.gauche + largeur(b) / 2);
-    }
-    // À égalité (frères et sœurs sous les mêmes parents), l'aîné à gauche.
-    const aine = (b: Bloc) => b.membres.find((m) => parents(m).length > 0) ?? b.membres[0];
-    ligne.sort((a, b) => cle.get(a)! - cle.get(b)! || (versHaut ? comparerParNaissance(p(aine(a)), p(aine(b))) : 0));
-    // Les frères et sœurs (un parent en commun) restent côte à côte : un bloc sans lien ne s'intercale pas entre eux.
-    const groupes: Bloc[] = [];
-    for (const b of ligne) {
-      if (groupes.includes(b)) continue;
-      groupes.push(b);
-      const mien = parentsDuBloc(b);
-      if (mien.size === 0) continue;
-      for (const autre of ligne) if (!groupes.includes(autre) && [...parentsDuBloc(autre)].some((x) => mien.has(x))) groupes.push(autre);
-    }
-    ligne.splice(0, ligne.length, ...groupes);
-    tasser(ligne);
-    for (const b of ligne) orienter(b, versHaut);
-  };
-  gens.forEach((g) => tasser(lignes.get(g)!));
-  for (const g of gens) lignes.get(g)!.forEach((b) => orienter(b, true));
-  for (let tour = 0; tour < 8; tour++) {
-    for (const g of gens.slice(1)) trier(g, true);
-    for (const g of [...gens].reverse().slice(1)) trier(g, false);
-  }
-  for (const g of gens.slice(1)) trier(g, true);
-
-  // Abscisses : les enfants se centrent sous leurs parents, les parents au-dessus de leurs enfants ;
-  // l'ordre et l'écart minimal de chaque ligne sont gardés (régression isotone).
-  const placer = (g: number, versHaut: boolean) => {
-    const ligne = lignes.get(g)!;
-    const voeux = ligne.map((b) => {
-      const dec = decalages(b);
-      // Chaque lien compte : vers les parents (une fois) et vers les enfants (une fois par enfant).
-      const reps = b.membres.flatMap((m, i) =>
-        [true, false].flatMap((haut) => {
-          const r = repere(m, haut);
-          return r === undefined ? [] : Array<number>(haut ? 1 : 12 * enfants(m).length).fill(r - dec[i]);
-        }),
-      );
-      const v = moyenne(reps);
-      return v === undefined ? { cible: b.gauche, poids: 0.5 } : { cible: v, poids: reps.length };
-    });
-    const gauches = isotone(voeux, pasDe(ligne));
-    ligne.forEach((b, i) => (b.gauche = gauches[i]));
-    // Le sens se règle sur les vraies positions : le conjoint ou l'ami se met du côté opposé à la fratrie.
-    if (versHaut) ligne.forEach((b) => orienter(b, true));
-  };
-  const placerTout = () => {
-    for (let tour = 0; tour < 12; tour++) {
-      for (const g of gens.slice(1)) placer(g, true);
-      for (const g of [...gens].reverse().slice(1)) placer(g, false);
-    }
-  };
-  placerTout();
-  // Chaîne de plus de deux personnes : chaque couple s'écarte de la largeur de ses enfants, puis on replace.
-  for (let essai = 0; essai < 3; essai++) {
-    let change = false;
-    for (const b of new Set(blocDe.values())) {
-      if (b.membres.length < 3) continue;
-      for (let i = 1; i < b.membres.length; i++) {
-        const [u, v] = [b.membres[i - 1], b.membres[i]];
-        const enfs = [...new Set([...enfants(u), ...enfants(v)])].filter((e) => parents(e).includes(u) && parents(e).includes(v));
-        if (enfs.length === 0) continue;
-        const gauches = enfs.map((e) => blocDe.get(e)!.gauche);
-        const droites = enfs.map((e) => blocDe.get(e)!.gauche + largeur(blocDe.get(e)!));
-        // Largeur des enfants, plus la place entre ce groupe et celui du couple voisin.
-        const voisins = (i > 1 ? 1 : 0) + (i < b.membres.length - 1 ? 1 : 0);
-        const voulu = Math.max(1, Math.max(...droites) - Math.min(...gauches) + voisins * ECART_BLOCS);
-        const cle = clePaire(u, v);
-        if (Math.abs((ecartPaire.get(cle) ?? 1) - voulu) > 0.01) {
-          ecartPaire.set(cle, voulu);
-          change = true;
-        }
-      }
-    }
-    if (!change) break;
-    placerTout();
-  }
-  for (const g of gens) lignes.get(g)!.forEach((b) => orienter(b, true));
-
-  // Enfant unique de deux parents côte à côte : exactement au milieu d'eux. Le déplacer pousse ses voisins
-  // de la ligne seulement si leur marge est épuisée.
-  const glisser = (b: Bloc, voulu: number) => {
-    const ligne = lignes.get(b.g)!;
-    const pas = pasDe(ligne);
-    const i = ligne.indexOf(b);
-    b.gauche = voulu;
-    for (let k = i + 1; k < ligne.length && ligne[k].gauche < ligne[k - 1].gauche + pas[k - 1]; k++) ligne[k].gauche = ligne[k - 1].gauche + pas[k - 1];
-    for (let k = i - 1; k >= 0 && ligne[k].gauche > ligne[k + 1].gauche - pas[k]; k--) ligne[k].gauche = ligne[k + 1].gauche - pas[k];
-  };
-  for (const g of gens) {
-    for (const b of lignes.get(g)!) {
-      if (b.membres.length !== 1) continue;
-      const m = b.membres[0];
-      const [u, v] = parents(m);
-      if (u === undefined || v === undefined || parents(m).length !== 2) continue;
-      const bp = blocDe.get(u)!;
-      if (bp !== blocDe.get(v) || bp.membres.length !== 2) continue;
-      if (new Set([...enfants(u), ...enfants(v)]).size !== 1) continue;
-      glisser(b, (x(u) + x(v)) / 2);
-    }
-  }
-
-  const positions = new Map<string, Point>();
-  for (const id of partie.ids) positions.set(id, { x: x(id), y: blocDe.get(id)!.g });
-  return { positions, blocs: blocDe };
-}
-
-/**
- * Ordre des membres d'un bloc : une chaîne (ex – personne – conjoint actuel), parcourue en profondeur depuis
- * un bout (le moins relié, l'aîné à égalité).
- */
-function chaine(membres: string[], liens: [string, string][], p: (id: string) => Personne): string[] {
-  if (membres.length === 1) return membres;
-  const ens = new Set(membres);
-  const v: Voisins = new Map();
-  for (const [a, b] of liens) if (ens.has(a) && ens.has(b)) lier(v, a, b);
-  const degre = (id: string) => new Set(v.get(id) ?? []).size;
-  const ordre = (a: string, b: string) => degre(a) - degre(b) || comparerParNaissance(p(a), p(b));
-  const res: string[] = [];
-  const vus = new Set<string>();
-  const visiter = (id: string) => {
-    if (vus.has(id)) return;
-    vus.add(id);
-    res.push(id);
-    [...new Set(v.get(id) ?? [])].sort(ordre).forEach(visiter);
-  };
-  [...membres].sort(ordre).forEach(visiter);
-  return res;
-}
-
-/**
- * Positions gauches les plus proches des voeux (moindres carrés pondérés), en gardant l'ordre et
- * `pas[i]` d'écart entre le bloc i et le suivant : régression isotone (regroupement des voisins en désaccord).
- */
-export function isotone(voeux: { cible: number; poids: number }[], pas: number[]): number[] {
-  const decalage: number[] = [];
-  let s = 0;
-  for (let i = 0; i < voeux.length; i++) {
-    decalage.push(s);
-    s += pas[i];
-  }
-  const piles: { somme: number; poids: number; n: number }[] = [];
-  voeux.forEach((v, i) => {
-    piles.push({ somme: (v.cible - decalage[i]) * v.poids, poids: v.poids, n: 1 });
-    while (piles.length > 1) {
-      const b = piles[piles.length - 1];
-      const a = piles[piles.length - 2];
-      if (a.somme / a.poids <= b.somme / b.poids) break;
-      piles.splice(-2, 2, { somme: a.somme + b.somme, poids: a.poids + b.poids, n: a.n + b.n });
-    }
-  });
-  const res: number[] = [];
-  for (const pile of piles) for (let k = 0; k < pile.n; k++) res.push(pile.somme / pile.poids + decalage[res.length]);
-  return res;
-}
-
-/** Clé d'un nom de famille : sans casse ni accents ; le nom actuel prime, le nom de naissance sert à défaut. Vide : pas de couleur. */
-function cleNom(p: Personne): string {
-  return (p.nom || p.nomNaissance || '').trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
-}
-
-/** Une couleur par nom de famille, numérotée dans l'ordre de lecture (de haut en bas, de gauche à droite). */
+/** Couleur de famille de chaque personne placée (la même que dans la liste et la fiche). */
 function couleursParNom(personnes: Map<string, Personne>, positions: Map<string, Point>): Map<string, number> {
-  const numero = new Map<string, number>();
   const res = new Map<string, number>();
-  const ordre = [...positions].sort(([, a], [, b]) => a.y - b.y || a.x - b.x);
-  for (const [id] of ordre) {
+  for (const id of positions.keys()) {
     const p = personnes.get(id);
-    const cle = p && !p.inconnu ? cleNom(p) : '';
-    if (!cle) continue;
-    if (!numero.has(cle)) numero.set(cle, numero.size);
-    res.set(id, numero.get(cle)!);
+    const k = p && !p.inconnu ? couleurFamille(p) : undefined;
+    if (k !== undefined) res.set(id, k);
   }
   return res;
 }
-

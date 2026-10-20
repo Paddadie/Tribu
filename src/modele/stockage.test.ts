@@ -105,7 +105,7 @@ describe('validation des données', () => {
 
   it('refuse une mauvaise version', () => {
     expect(estDonneesValides({ ...donneesVides(), version: 2 })).toBe(false);
-    expect(estDonneesValides({ ...donneesVides(), version: 5 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 6 })).toBe(false);
   });
 
   it('refuse un lien vers une personne inexistante', () => {
@@ -124,6 +124,15 @@ describe('validation des données', () => {
     expect(estDonneesValides({ ...d, personnes: [{ ...d.personnes[0], prenom: 3 }] })).toBe(false);
     expect(estDonneesValides({ ...d, filiations: [{ ...d.filiations[0], type: 'légal' }] })).toBe(false);
     expect(estDonneesValides({ ...d, unions: [{ ...d.unions[0], marie: 'oui' }] })).toBe(false);
+  });
+
+  it('refuse une boucle de filiation (quelqu’un ancêtre de lui-même)', () => {
+    const d = exemple();
+    const [a, b, c] = d.personnes.map((p) => p.id);
+    const fil = (n: number, parent: string, enfant: string) => ({ id: `b${n}`, parent, enfant, type: 'biologique' as const });
+    expect(estDonneesValides({ ...d, filiations: [fil(1, a, b), fil(2, b, c)] })).toBe(true);
+    expect(estDonneesValides({ ...d, filiations: [fil(1, a, b), fil(2, b, c), fil(3, c, a)] })).toBe(false);
+    expect(estDonneesValides({ ...d, filiations: [fil(1, a, b), fil(2, b, a)] })).toBe(false);
   });
 
   it('refuse plus de deux parents d’un même type pour un enfant', () => {

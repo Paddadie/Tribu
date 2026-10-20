@@ -6,6 +6,7 @@ import { avecDe } from '../modele/liste';
 import { ajouterUnion, enCouple } from '../modele/modele';
 import { suggestions } from '../modele/saisie';
 import type { Personne } from '../modele/types';
+import { champDate } from './champsPersonne';
 import { h, icone } from './dom';
 import { garderSaisie, lienRetour, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
@@ -17,9 +18,32 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
   const interrupteur = h(
     'label',
     { class: 'carte interrupteur', for: 'marie' },
-    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Marié(e)'), h('span', { class: 'secondaire' }, 'À laisser éteint pour un couple non marié')),
+    h(
+      'span',
+      { class: 'ligne-texte' },
+      h('span', { class: 'ligne-nom' }, 'Marié(e)'),
+      h('span', { class: 'secondaire' }, 'À laisser éteint pour un couple non marié'),
+    ),
     marie,
   );
+
+  const prendLeNom = h('input', { id: 'prend-nom', type: 'checkbox', class: 'bascule', checked: true });
+  const lignePrendLeNom = h(
+    'label',
+    { class: 'carte interrupteur', for: 'prend-nom', hidden: true },
+    h(
+      'span',
+      { class: 'ligne-texte' },
+      h('span', { class: 'ligne-nom' }, 'Prend le nom du conjoint'),
+      h('span', { class: 'secondaire' }, 'La femme du couple garde son nom de jeune fille'),
+    ),
+    prendLeNom,
+  );
+  const majPrendLeNom = () => (lignePrendLeNom.hidden = ex || !marie.checked);
+  marie.addEventListener('change', majPrendLeNom);
+
+  const date = champDate('-union', 'de l’union', undefined, true);
+  const champDateUnion = h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union (facultative)'), date.groupe);
 
   const selecteur = selecteurPersonne({
     personne: p,
@@ -37,7 +61,7 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
         : enCouple(d, c.id)
           ? 'Déjà en couple'
           : undefined,
-    lier: (d, autre) => ajouterUnion(d, p.id, autre, marie.checked, ex ? 'separee' : 'actuelle').donnees,
+    lier: (d, autre) => ajouterUnion(d, p.id, autre, marie.checked, ex ? 'separee' : 'actuelle', date.lire(), prendLeNom.checked).donnees,
     apres: () => revenir(retour),
   });
   garderSaisie(selecteur.modifie);
@@ -51,6 +75,6 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
       lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
       h('h1', { class: 'titre-formulaire' }, `${ex ? 'Ex' : 'Conjoint'} ${avecDe(p.prenom || p.nom)}`),
     ),
-    h('div', { class: 'contenu' }, selecteur.onglets, selecteur.zone, interrupteur, selecteur.pied),
+    h('div', { class: 'contenu' }, selecteur.onglets, selecteur.zone, interrupteur, lignePrendLeNom, champDateUnion, selecteur.pied),
   );
 }

@@ -11,7 +11,7 @@ export type IssueExport = 'partage' | 'annule' | 'telecharge';
 export const MESSAGES_EXPORT: Record<IssueExport, string> = {
   partage: 'Fichier partagé.',
   annule: 'Partage annulé : rien n’a été exporté.',
-  telecharge: 'Téléchargement lancé : vérifiez le dossier Téléchargements.',
+  telecharge: 'Téléchargement lancé : regarde dans le dossier Téléchargements.',
 };
 
 export const MESSAGE_EXPORT_IMPOSSIBLE = 'Export impossible sur cet appareil.';

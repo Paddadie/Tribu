@@ -34,16 +34,16 @@ const prenoms = (l: { personne: Personne }[]) => l.map((s) => s.personne.prenom)
 describe('ajouterFiliations', () => {
   it('relie un enfant aux deux parents d’un couple en une fois', () => {
     const m = monde();
-    ['Léa', 'Thomas', 'Jules'].forEach((p) => m.pers(p));
-    const d = ajouterFiliations(m.d, [m.id.Léa, m.id.Thomas], m.id.Jules, 'biologique');
-    expect(d.filiations.filter((f) => f.enfant === m.id.Jules).map((f) => f.parent)).toEqual([m.id.Léa, m.id.Thomas]);
+    ['Léa', 'Mathis', 'Jules'].forEach((p) => m.pers(p));
+    const d = ajouterFiliations(m.d, [m.id.Léa, m.id.Mathis], m.id.Jules, 'biologique');
+    expect(d.filiations.filter((f) => f.enfant === m.id.Jules).map((f) => f.parent)).toEqual([m.id.Léa, m.id.Mathis]);
   });
 
   it('passe un parent déjà relié et garde le type demandé pour les autres', () => {
     const m = monde();
-    ['Léa', 'Thomas', 'Jules'].forEach((p) => m.pers(p));
-    m.filiation('Thomas', 'Jules');
-    const d = ajouterFiliations(m.d, [m.id.Léa, m.id.Thomas], m.id.Jules, 'adoptif');
+    ['Léa', 'Mathis', 'Jules'].forEach((p) => m.pers(p));
+    m.filiation('Mathis', 'Jules');
+    const d = ajouterFiliations(m.d, [m.id.Léa, m.id.Mathis], m.id.Jules, 'adoptif');
     expect(d.filiations).toHaveLength(2);
     expect(d.filiations.find((f) => f.parent === m.id.Léa)?.type).toBe('adoptif');
   });
@@ -51,7 +51,7 @@ describe('ajouterFiliations', () => {
   it('demande au moins un parent', () => {
     const m = monde();
     m.pers('Jules');
-    expect(() => ajouterFiliations(m.d, [], m.id.Jules, 'biologique')).toThrow('Cochez au moins un parent');
+    expect(() => ajouterFiliations(m.d, [], m.id.Jules, 'biologique')).toThrow('Coche au moins un parent');
   });
 
   it('fait d’un frère ajouté un frère, ou un demi avec un seul parent coché', () => {
@@ -68,15 +68,15 @@ describe('ajouterFiliations', () => {
 
   it('refuse toute la saisie si un des liens est refusé', () => {
     const m = monde();
-    ['Léa', 'Thomas', 'Jules'].forEach((p) => m.pers(p));
-    m.filiation('Jules', 'Thomas');
-    expect(() => ajouterFiliations(m.d, [m.id.Léa, m.id.Thomas], m.id.Jules, 'biologique')).toThrow('boucle');
+    ['Léa', 'Mathis', 'Jules'].forEach((p) => m.pers(p));
+    m.filiation('Jules', 'Mathis');
+    expect(() => ajouterFiliations(m.d, [m.id.Léa, m.id.Mathis], m.id.Jules, 'biologique')).toThrow('boucle');
   });
 });
 
 describe('nomsEnfant', () => {
   const lea = personne('Léa', 'Dubois', 'F');
-  const thomas = personne('Thomas', 'Petit', 'M');
+  const thomas = personne('Mathis', 'Petit', 'M');
 
   it('propose le nom du père, puis celui de la mère, quel que soit le parent de départ', () => {
     expect(nomsEnfant([lea, thomas]).map((n) => n.nom)).toEqual(['Petit', 'Dubois']);
@@ -103,8 +103,8 @@ describe('nomsEnfant', () => {
 describe('suggestions', () => {
   function famille() {
     const m = monde();
-    ['Léa', 'Thomas', 'Jules', 'Rose', 'Hugo'].forEach((p) => m.pers(p));
-    m.union('Léa', 'Thomas');
+    ['Léa', 'Mathis', 'Jules', 'Rose', 'Hugo'].forEach((p) => m.pers(p));
+    m.union('Léa', 'Mathis');
     return m;
   }
 
@@ -112,25 +112,25 @@ describe('suggestions', () => {
     const m = famille();
     m.filiation('Léa', 'Jules');
     const s = suggestions(m.d, m.id.Jules, 'parent');
-    expect(prenoms(s)).toEqual(['Thomas']);
+    expect(prenoms(s)).toEqual(['Mathis']);
     expect(s[0].detail).toBe('Conjoint de Léa');
   });
 
   it('parent : rien quand les deux parents du couple sont déjà saisis', () => {
     const m = famille();
     m.filiation('Léa', 'Jules');
-    m.filiation('Thomas', 'Jules');
+    m.filiation('Mathis', 'Jules');
     expect(suggestions(m.d, m.id.Jules, 'parent')).toEqual([]);
   });
 
   it('enfant : les enfants du conjoint qui ne sont pas encore les siens', () => {
     const m = famille();
-    m.filiation('Thomas', 'Jules');
-    m.filiation('Thomas', 'Rose');
+    m.filiation('Mathis', 'Jules');
+    m.filiation('Mathis', 'Rose');
     m.filiation('Léa', 'Rose');
     const s = suggestions(m.d, m.id.Léa, 'enfant');
     expect(prenoms(s)).toEqual(['Jules']);
-    expect(s[0].detail).toBe('Enfant de Thomas');
+    expect(s[0].detail).toBe('Enfant de Mathis');
   });
 
   it('conjoint : l’autre parent de ses enfants, s’il n’est pas en couple', () => {
@@ -150,23 +150,23 @@ describe('suggestions', () => {
     const m = monde();
     m.pers('Jules', 'Dupont');
     m.pers('Léa', 'Dupont');
-    m.pers('Thomas', 'dupont');
+    m.pers('Mathis', 'dupont');
     m.pers('Éric', 'Durand');
-    m.union('Léa', 'Thomas');
+    m.union('Léa', 'Mathis');
     m.filiation('Léa', 'Jules');
     const s = suggestions(m.d, m.id.Jules, 'parent');
-    expect(prenoms(s)).toEqual(['Thomas']);
+    expect(prenoms(s)).toEqual(['Mathis']);
     expect(s[0].detail).toBe('Conjoint de Léa');
     const frere = suggestions(m.d, m.id.Jules, 'frere');
-    expect(prenoms(frere)).toEqual(['Thomas']);
+    expect(prenoms(frere)).toEqual(['Mathis']);
     expect(frere[0].detail).toBe('Même nom : dupont');
   });
 
   it('le nom de jeune fille permet aussi de proposer un lien de famille', () => {
     const m = monde();
     m.pers('Jules', 'Dupont');
-    const d = creerPersonne(m.d, { prenom: 'Cécile', nom: 'Prévot', sexe: 'F', nomNaissance: 'Dupont' }).donnees;
-    expect(prenoms(suggestions(d, m.id.Jules, 'frere'))).toEqual(['Cécile']);
+    const d = creerPersonne(m.d, { prenom: 'Nathalie', nom: 'Prévot', sexe: 'F', nomNaissance: 'Dupont' }).donnees;
+    expect(prenoms(suggestions(d, m.id.Jules, 'frere'))).toEqual(['Nathalie']);
   });
 
   it('même nom de famille : jamais un ascendant ni un descendant, ni un nom vide', () => {
