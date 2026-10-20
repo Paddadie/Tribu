@@ -600,26 +600,33 @@ describe('import', () => {
     return exporterJson(d);
   };
 
-  it('demande confirmation avant de remplacer, puis peut être annulé', async () => {
+  it('fusionne avec les données actuelles, puis peut être annulé', async () => {
     const { donnees } = famille();
     await demarrer(donnees, '#/reglages');
 
-    // Refus : rien ne change.
     await choisirFichier('sauvegarde.json', fichier());
-    expect(dialogue()!.textContent).toContain('contient 2 personnes');
-    expect(dialogue()!.textContent).toContain('Tes 4 personnes actuelles seront perdues');
-    await toucher(trouver('dialog.confirmation button', 'Annuler'));
-    expect(enregistrees()).toEqual(donnees);
-
-    // Confirmation : remplacé, avec bandeau « Annuler ».
-    await choisirFichier('sauvegarde.json', fichier());
-    await toucher(trouver('dialog.confirmation button', 'Remplacer'));
-    expect(enregistrees().personnes.map((p) => p.prenom)).toEqual(['Xavier', 'Yvonne']);
-    expect(bandeau()!.textContent).toContain('2 personnes importées.');
+    expect(enregistrees().personnes.map((p) => p.prenom)).toEqual([...donnees.personnes.map((p) => p.prenom), 'Xavier', 'Yvonne']);
+    expect(bandeau()!.textContent).toContain('2 personnes ajoutées');
 
     await toucher(trouver('.bandeau button', 'Annuler'));
     expect(enregistrees()).toEqual(donnees);
     expect(bandeau()!.textContent).toContain('Import annulé.');
+  });
+
+  it('pose la question en cas de conflit, et « Annuler l’import » ne change rien', async () => {
+    const { donnees } = famille();
+    const doublon = { ...donnees, personnes: donnees.personnes.map((p, i) => (i === 0 ? { ...p, id: 'autre-id' } : p)).slice(0, 1), unions: [], filiations: [], groupes: [] };
+    await demarrer(donnees, '#/reglages');
+
+    await choisirFichier('sauvegarde.json', exporterJson(doublon));
+    expect(dialogue()!.textContent).toContain('même personne');
+    await toucher(trouver('dialog.confirmation button', 'Annuler l’import'));
+    expect(enregistrees()).toEqual(donnees);
+
+    await choisirFichier('sauvegarde.json', exporterJson(doublon));
+    await toucher(trouver('dialog.confirmation button', 'Oui, c’est la même personne'));
+    expect(enregistrees().personnes).toHaveLength(donnees.personnes.length);
+    expect(bandeau()!.textContent).toContain('1 déjà présente');
   });
 
   it('prévient que l’export contient les notes en clair', async () => {
@@ -880,15 +887,13 @@ describe('« Moi » et parenté', () => {
     expect(ecran().querySelectorAll('h2.titre-section')).toHaveLength(0);
   });
 
-  it('retrouve « Moi » quand on annule un import qui l’avait fait disparaître', async () => {
+  it('garde « Moi » quand on importe un fichier d’une autre famille', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, '#/reglages', { moi: ids.Chloé });
     const autre = creerPersonne(donneesVides(), { prenom: 'Zoé', nom: 'Autre' }).donnees;
     await choisirFichier('autre.json', exporterJson(autre));
-    await toucher(trouver('button', 'Remplacer', document.body));
-    expect(ecran().textContent).toContain('Choisir ma fiche');
-    await toucher(trouver('button', 'Annuler', bandeau()!));
     expect(ecran().textContent).toContain('Chloé Martin');
+    expect(ecran().textContent).not.toContain('Choisir ma fiche');
   });
 });
 

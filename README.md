@@ -80,7 +80,7 @@ Export depuis Réglages, dans un fichier `tribu-AAAA-MM-JJ.json` :
 - Groupes d'amis : au moins deux membres, tous amis entre eux ; une personne dans un
   seul groupe ; `nom` peut être vide.
 
-L'import remplace toutes les données, après validation complète du fichier. Un export
+L'import est fusionné avec les données existantes (questions en cas de conflit ou de doute), après validation complète du fichier. Un export
 plus ancien (version 1 à 3) est converti à l'import, sans perte.
 Les réglages (tri, thème, « Moi », date du dernier export) ne font pas partie de la sauvegarde.
 

@@ -208,6 +208,11 @@
   flex: 1;
 }
 
+/* Boîte de choix : réponses l'une sous l'autre, les libellés sont longs. */
+.confirmation-pile {
+  flex-direction: column;
+}
+
 fieldset.champ {
   margin: 0;
   padding: 0;

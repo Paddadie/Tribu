@@ -1,5 +1,5 @@
 // Écran Réglages : affichage (tri de la liste, thème), exports (agenda .ics, arbre en PNG), sauvegarde (export par
-// partage ou téléchargement, import JSON avec confirmation avant écrasement),
+// partage ou téléchargement, import JSON fusionné avec les données, questions en cas de conflit),
 // effacement des données, version. Import et effacement sont annulables.
 
 import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from '../modele/agenda';
@@ -7,13 +7,15 @@ import { disposerArbre } from '../modele/arbreGlobal';
 import type { Tri } from '../modele/liste';
 import { donneesVides, personnesVisibles } from '../modele/modele';
 import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
+import { FusionAnnulee, fusionner } from '../modele/fusion';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
 import { changerAvecAnnulation } from './annulation';
+import { choisir } from './choisir';
 import { ouvrirChoixMoi } from './choixMoi';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
-import { messageImport, pluriel } from './import';
+import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { lienRetour } from './navigation';
 import { arbrePng, dimensionsArbre, NOM_FICHIER_ARBRE } from './arbreImage';
@@ -32,14 +34,6 @@ function choix<T extends string>(nom: string, legende: string, options: [T, stri
   return h('fieldset', { class: 'champ' }, h('legend', {}, legende), h('div', { class: 'choix-groupe' }, ...boutons));
 }
 
-/** Avertissement avant un import qui remplace `n` personnes (n ≥ 1). */
-function avertissementRemplacement(fichier: string, importees: number, actuelles: number): string {
-  const perte =
-    actuelles > 1
-      ? `Tes ${actuelles} personnes actuelles seront perdues, sauf si tu les as exportées.`
-      : 'Ta personne actuelle sera perdue, sauf si tu l’as exportée.';
-  return `Le fichier ${fichier} contient ${pluriel(importees)}. ${perte}`;
-}
 
 export function ecranReglages(): HTMLElement {
   const retour = '#/';
@@ -154,11 +148,15 @@ export function ecranReglages(): HTMLElement {
     if (!choisi) return;
     try {
       const importees = importerJson(await choisi.text());
-      const actuelles = personnesVisibles(lireDonnees()).length;
-      if (actuelles > 0 && !(await confirmer(avertissementRemplacement(choisi.name, personnesVisibles(importees).length, actuelles), 'Remplacer'))) return;
-      changerAvecAnnulation(() => importees, messageImport(personnesVisibles(importees).length), 'Import annulé.');
+      if (lireDonnees().personnes.length === 0) {
+        changerAvecAnnulation(() => importees, messageImport(personnesVisibles(importees).length), 'Import annulé.');
+      } else {
+        const bilan = await fusionner(lireDonnees(), importees, (q) => choisir(q.texte, q.options));
+        changerAvecAnnulation(() => bilan.donnees, messageFusion(bilan), 'Import annulé.');
+      }
       maj();
     } catch (e) {
+      if (e instanceof FusionAnnulee) return;
       erreurImport.textContent =
         e instanceof Error ? `${e.message}. Tes données n’ont pas été modifiées.` : 'Import impossible. Tes données n’ont pas été modifiées.';
       erreurImport.hidden = false;
@@ -329,7 +327,7 @@ export function ecranReglages(): HTMLElement {
             'div',
             { class: 'reglage' },
             h('h3', {}, 'Importer'),
-            h('p', { class: 'secondaire' }, 'Remplace les données de cet appareil par celles d’un fichier exporté.'),
+            h('p', { class: 'secondaire' }, 'Fusionne un fichier exporté avec les données de cet appareil. Rien n’est effacé ; en cas de conflit ou de doute, je te demande.'),
             h('button', { type: 'button', class: 'bouton', onclick: () => fichier.click() }, 'Choisir un fichier…'),
             fichier,
             erreurImport,
