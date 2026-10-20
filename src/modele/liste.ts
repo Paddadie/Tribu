@@ -170,6 +170,11 @@ export function libelleMarie(sexe?: Sexe): string {
   return accorder(sexe, 'Marié', 'Mariée', 'Marié(e)');
 }
 
+/** Étiquette d'un conjoint dont le mariage est annoncé (union à date future), accordée à la personne affichée. */
+export function libelleFiance(sexe?: Sexe): string {
+  return accorder(sexe, 'Fiancé', 'Fiancée', 'Fiancé(e)');
+}
+
 /** Étiquette d'un parent ou enfant adoptif, accordée à la personne affichée. */
 export function libelleAdoptif(sexe?: Sexe): string {
   return accorder(sexe, 'Adoptif', 'Adoptive', 'Adoptif(ve)');

@@ -4,6 +4,7 @@
 import { nomGroupe, raisonGroupe } from '../modele/deductions';
 import { comparateur, filtrerParNom, nomListe } from '../modele/liste';
 import { ajouterAuGroupe, creerGroupe, groupesDe, personnesListees, renommerGroupe, retirerDuGroupe, supprimerGroupe } from '../modele/modele';
+import { ficheMoi } from '../modele/reglages';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { confirmer } from './confirmer';
@@ -111,7 +112,7 @@ export function ecranNouveauGroupe(): HTMLElement {
     try {
       let id = '';
       modifierDonnees((d) => {
-        const r = creerGroupe(d, [...choisies], nom.value.trim());
+        const r = creerGroupe(d, [...choisies], nom.value.trim(), ficheMoi(lireReglages(), d)?.id);
         id = r.groupe.id;
         return r.donnees;
       });
@@ -236,7 +237,7 @@ export function ecranAjoutMembre(g: GroupeAmis): HTMLElement {
     libelleOrigine: 'Origine du membre',
     libelleValider: 'Ajouter au groupe',
     libelleValiderPlusieurs: (n) => `Ajouter ${n} personnes`,
-    indisponible: (x, c) => raisonGroupe(x, c, g),
+    indisponible: (x, c) => raisonGroupe(x, c, g, ficheMoi(lireReglages(), x)?.id),
     lier: (x, autre) => ajouterAuGroupe(x, g.id, autre),
     apres: () => revenir(retour),
   });

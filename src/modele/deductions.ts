@@ -1,6 +1,7 @@
 // Liens déduits à partir des unions et filiations. Rien n'est stocké : tout se
 // recalcule depuis les données.
 
+import { estDansLeFutur } from './age';
 import { comparateur } from './liste';
 import { anneeDe, estInconnu, groupesDe, groupesDeLaFamille } from './modele';
 import { estParentSansNom } from './parentSansNom';
@@ -144,8 +145,19 @@ export interface Sang {
  * - sang : biologique et adoptif comptent pareil ;
  * - alliance « conjoint » : `vers` est de la famille de sang de mon conjoint (`base` = lien conjoint → vers) ;
  * - alliance « sien » : `vers` est le conjoint de quelqu'un de ma famille de sang (`base` = lien de → conjoint de vers).
+ * `marie` : l'union qui fait l'alliance est un mariage (faux = « copine de », pas « belle-sœur »).
  */
-export type Relation = { type: 'soi' } | { type: 'conjoint'; marie: boolean } | Sang | { type: 'alliance'; cote: 'conjoint' | 'sien'; base: Sang };
+export type Relation =
+  | { type: 'soi' }
+  | { type: 'conjoint'; marie: boolean; fiance?: boolean }
+  | Sang
+  | { type: 'alliance'; cote: 'conjoint' | 'sien'; base: Sang; marie?: boolean; fiance?: boolean };
+
+/** `{ fiance: true }` pour des fiancés, sinon rien (le champ n'est présent que s'il est vrai). */
+const fiances = (u: Union) => (sontFiances(u) ? { fiance: true } : {});
+
+/** Union actuelle dont la date est à venir : un mariage annoncé, les deux sont « fiancés » (et non copain, compagne ou époux). */
+export const sontFiances = (u: Union, aujourdhui = new Date()) => u.statut === 'actuelle' && estDansLeFutur(u.date, aujourdhui);
 
 type Parents = Map<string, Set<string>>;
 
@@ -199,15 +211,19 @@ const distance = (s: Sang) => s.montee + s.descente;
 function calculer(d: Donnees, parents: Parents, de: string, vers: string): Relation | undefined {
   if (de === vers) return { type: 'soi' };
   const monConjoint = conjoint(d, de);
-  if (monConjoint?.personne.id === vers) return { type: 'conjoint', marie: monConjoint.union.marie };
+  if (monConjoint?.personne.id === vers) return { type: 'conjoint', marie: monConjoint.union.marie, ...fiances(monConjoint.union) };
   const direct = sang(d, parents, de, vers);
   if (direct) return direct;
   // Alliance : uniquement par le conjoint actuel (`conjoint`), jamais en parcourant les unions.
   const parConjoint = monConjoint && sang(d, parents, monConjoint.personne.id, vers);
   const sonConjoint = conjoint(d, vers);
   const parSien = sonConjoint && sonConjoint.personne.id !== de ? sang(d, parents, de, sonConjoint.personne.id) : undefined;
-  if (parConjoint && (!parSien || distance(parConjoint) <= distance(parSien))) return { type: 'alliance', cote: 'conjoint', base: parConjoint };
-  if (parSien) return { type: 'alliance', cote: 'sien', base: parSien };
+  if (parConjoint && (!parSien || distance(parConjoint) <= distance(parSien))) return { type: 'alliance', cote: 'conjoint', base: parConjoint, marie: monConjoint!.union.marie };
+  if (parSien) {
+    // Le futur(e) marié(e) d'un proche se dit « fiancée de … », pas « belle-sœur » : comme un partenaire non marié.
+    const fiance = sontFiances(sonConjoint!.union);
+    return { type: 'alliance', cote: 'sien', base: parSien, marie: sonConjoint!.union.marie && !fiance, ...(fiance && { fiance }) };
+  }
   return undefined;
 }
 
@@ -219,7 +235,7 @@ export function relation(d: Donnees, de: string, vers: string): Relation | undef
 /** Le même lien vu depuis l'autre personne. */
 export function inverser(r: Relation): Relation {
   if (r.type === 'sang') return { ...r, montee: r.descente, descente: r.montee };
-  if (r.type === 'alliance') return { type: 'alliance', cote: r.cote === 'conjoint' ? 'sien' : 'conjoint', base: inverser(r.base) as Sang };
+  if (r.type === 'alliance') return { type: 'alliance', cote: r.cote === 'conjoint' ? 'sien' : 'conjoint', base: inverser(r.base) as Sang, marie: r.marie, ...(r.fiance && { fiance: true }) };
   return r;
 }
 
@@ -290,10 +306,12 @@ export function nomGroupe(d: Donnees, g: GroupeAmis): string {
  * Pourquoi une personne ne peut pas entrer dans un groupe : elle est déjà groupée, ou un membre de sa famille
  * appartient à un autre groupe (toute la famille d'un membre compte dans son groupe). `cible` : le groupe visé, s'il existe.
  */
-export function raisonGroupe(d: Donnees, c: Personne, cible?: GroupeAmis): string | undefined {
+export function raisonGroupe(d: Donnees, c: Personne, cible?: GroupeAmis, moi?: string): string | undefined {
+  // « Moi » peut être dans tous les groupes, et sa famille n'est pas « famille d'un membre ».
+  if (c.id === moi) return cible?.membres.includes(c.id) ? 'Déjà dans le groupe' : undefined;
   const propre = groupesDe(d, c.id)[0];
   if (propre) return propre.id === cible?.id ? 'Déjà dans le groupe' : `Déjà dans « ${nomGroupe(d, propre)} »`;
-  const autre = groupesDeLaFamille(d, c.id).find((g) => g.id !== cible?.id);
+  const autre = groupesDeLaFamille(d, c.id, moi).find((g) => g.id !== cible?.id);
   return autre ? `Famille d’un membre de « ${nomGroupe(d, autre)} »` : undefined;
 }
 
@@ -309,10 +327,25 @@ export interface Etape {
   par?: Pas;
   /** Union mariée, pour une étape `conjoint`. */
   marie?: boolean;
+  /** Union actuelle à date future (`sontFiances`), pour une étape `conjoint`. */
+  fiance?: boolean;
+}
+
+/** Les personnes classées de la plus proche en âge de `annee` à la plus éloignée ; naissance inconnue en dernier, ordre conservé à égalité. */
+function parProximiteAge(personnes: Personne[], annee: number | undefined): Personne[] {
+  if (annee === undefined) return personnes;
+  const ecart = (p: Personne) => {
+    const n = anneeDe(p.naissance);
+    return n === undefined ? Infinity : Math.abs(Number(n) - annee);
+  };
+  return [...personnes].sort((x, y) => ecart(x) - ecart(y));
 }
 
 /** Plus court chemin de `de` à `vers` (parcours en largeur), par les parents, enfants, conjoint actuel et, au besoin, les amis. */
 function parcours(d: Donnees, de: string, vers: string, avecAmis: boolean): Etape[] | undefined {
+  // Entre deux amis à égale distance, celui dont l'âge est le plus proche du mien sert de détour (« beau-frère de Léa »).
+  const naissanceDe = anneeDe(d.personnes.find((p) => p.id === de)?.naissance);
+  const anneeNaissance = naissanceDe === undefined ? undefined : Number(naissanceDe);
   const precedent = new Map<string, { de: string; etape: Etape } | null>([[de, null]]);
   const file = [de];
   for (let i = 0; i < file.length && !precedent.has(vers); i++) {
@@ -322,8 +355,8 @@ function parcours(d: Donnees, de: string, vers: string, avecAmis: boolean): Etap
       ...liensEnfants(d, courant).map(({ personne }) => ({ personne, par: 'enfant' as const })),
     ];
     const c = conjoint(d, courant);
-    if (c) voisins.push({ personne: c.personne, par: 'conjoint', marie: c.union.marie });
-    if (avecAmis) voisins.push(...amis(d, courant).map((personne) => ({ personne, par: 'ami' as const })));
+    if (c) voisins.push({ personne: c.personne, par: 'conjoint', marie: c.union.marie, fiance: sontFiances(c.union) });
+    if (avecAmis) voisins.push(...parProximiteAge(amis(d, courant), anneeNaissance).map((personne) => ({ personne, par: 'ami' as const })));
     for (const v of voisins) {
       if (precedent.has(v.personne.id)) continue;
       precedent.set(v.personne.id, { de: courant, etape: v });

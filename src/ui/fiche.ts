@@ -14,12 +14,13 @@ import {
   liensEnfants,
   liensParents,
   parentsCommuns,
+  sontFiances,
   type Lien,
   type Parent,
 } from '../modele/deductions';
-import { avecDe, comparateur, enumerer, libelleAdoptif, libelleDeces, libelleMarie, libelleNaissance, libelleUnion, nomComplet } from '../modele/liste';
+import { avecDe, comparateur, enumerer, libelleAdoptif, libelleDeces, libelleFiance, libelleMarie, libelleNaissance, libelleUnion, nomComplet } from '../modele/liste';
 import { aDesLiens, enCouple, estDecede, groupesDe, retirerDuGroupe, supprimerPersonne } from '../modele/modele';
-import { etiquette as etiquetteMoi, libelleRelation } from '../modele/parente';
+import { etiquette as etiquetteMoi, libelleRelation, optionsLien } from '../modele/parente';
 import { estParentSansNom } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { GroupeAmis, Personne, Union } from '../modele/types';
@@ -131,7 +132,7 @@ function ligneElargie({ personne, relation }: Parent, belleFamille: boolean): HT
   let etiquette: HTMLElement | false = false;
   if (personne.id === moi) etiquette = h('span', { class: 'etiquette' }, 'Toi');
   else if (belleFamille) {
-    const libelle = libelleRelation(relation, personne.sexe);
+    const libelle = libelleRelation(relation, personne.sexe, optionsLien(lireDonnees(), relation, personne));
     etiquette = !!libelle && h('span', { class: 'etiquette' }, majuscule(libelle));
   } else if (relation.type === 'alliance') etiquette = h('span', { class: 'etiquette etiquette-adoptif' }, 'Par alliance');
   return h('div', { class: 'ligne' }, h('a', { class: 'ligne-lien', href: `#/personne/${personne.id}` }, ...contenuLigne(personne), etiquette));
@@ -174,7 +175,8 @@ function ligneUnion(p: Personne, { union, personne: c }: { union: Union; personn
   const detail = [detailPersonne(c, new Date()), union.date && `Union ${libelleUnion(union.date)}`, n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`]
     .filter(Boolean)
     .join(' · ');
-  return ligneProche(c, union.marie && h('span', { class: 'etiquette' }, libelleMarie(c.sexe)), `#/union/${union.id}/${p.id}`, 'Modifier l’union', detail);
+  const statut = sontFiances(union) ? libelleFiance(c.sexe) : union.marie && libelleMarie(c.sexe);
+  return ligneProche(c, statut && h('span', { class: 'etiquette' }, statut), `#/union/${union.id}/${p.id}`, 'Modifier l’union', detail);
 }
 
 /** Conjoint actuel (un seul) touchable, puis les ex-conjoints sous leur propre titre ; rien s'il n'y en a pas. */

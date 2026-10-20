@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { familleElargie, inverser, relation } from './deductions';
-import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
-import { libelleRelation, lienAvecMoi } from './parente';
+import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele';
+import { etiquette, libelleRelation, lienAvecMoi } from './parente';
 import type { Donnees, Sexe, TypeFiliation } from './types';
 
 /**
@@ -106,9 +106,9 @@ describe('lien avec moi', () => {
     expect(f.lien('Claude', 'Sarah')).toBe('ta belle-fille');
     expect(f.lien('Moi', 'Victor')).toBe('ton beau-fils');
     expect(f.lien('Victor', 'Moi')).toBe('ton beau-père');
-    expect(f.lien('Moi', 'Karim')).toBe('ton beau-frère');
+    expect(f.lien('Moi', 'Karim')).toBe('le compagnon de Zoé');
     expect(f.lien('Moi', 'Yasmine')).toBe('ta belle-sœur');
-    expect(f.lien('Moi', 'Fred')).toBe('ton oncle par alliance');
+    expect(f.lien('Moi', 'Fred')).toBe('le compagnon de Denise');
     expect(f.lien('Sarah', 'Denise')).toBe('ta tante par alliance');
     expect(f.lien('Moi', 'Hugo')).toBe('ton neveu par alliance');
   });
@@ -116,9 +116,9 @@ describe('lien avec moi', () => {
   it('donne une forme neutre, ou les deux formes, quand le sexe n’est pas précisé', () => {
     expect(f.lien('Arthur', 'Sam')).toBe('ton arrière-petit-enfant');
     expect(f.lien('Moi', 'Sam')).toBe('ton neveu ou ta nièce');
-    expect(f.lien('Moi', 'Dominique')).toBe('ton oncle ou ta tante par alliance');
+    expect(f.lien('Moi', 'Dominique')).toBe('le compagnon ou la compagne de Gaston');
     expect(f.lien('Rémi', 'Dominique')).toBe('ton beau-parent');
-    expect(f.lien('Claude', 'Dominique')).toBe('ton beau-frère ou ta belle-sœur');
+    expect(f.lien('Claude', 'Dominique')).toBe('le compagnon ou la compagne de Gaston');
   });
 
   it('n’affiche rien sans lien, ou pour un lien sans nom usuel', () => {
@@ -211,5 +211,99 @@ describe('famille élargie', () => {
 
   it('est vide pour une personne sans lien', () => {
     expect(Object.values(sections('Étranger')).flat()).toEqual([]);
+  });
+});
+
+describe('ami et sa copine dans le même groupe', () => {
+  const aujourdhui = new Date(2026, 9, 21);
+  function groupe(avecUnion: boolean) {
+    let d: Donnees = donneesVides();
+    const id: Record<string, string> = {};
+    for (const [prenom, sexe, n] of [['Moi', 'M', '1995'], ['Karim', 'M', '1995'], ['Inès', 'F', '1996']] as const) {
+      const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: n });
+      d = r.donnees;
+      id[prenom] = r.personne.id;
+    }
+    if (avecUnion) d = ajouterUnion(d, id.Karim, id.Inès, false).donnees;
+    d = creerGroupe(d, [id.Moi, id.Karim, id.Inès]).donnees;
+    return etiquette(d, id.Moi, id.Inès, aujourdhui);
+  }
+
+  it('la copine d’un ami est « Copine de … », pas « Amie »', () => expect(groupe(true)).toBe('Copine de Karim'));
+  it('sans union : amie', () => expect(groupe(false)).toBe('Amie'));
+});
+
+describe('fiancés : union à date future', () => {
+  const aujourdhui = new Date(2026, 9, 21);
+  function cas(date: string | undefined, marie = true) {
+    let d: Donnees = donneesVides();
+    const id: Record<string, string> = {};
+    for (const [prenom, sexe] of [['Papa', 'M'], ['Oncle', 'M'], ['Moi', 'M'], ['Rémi', 'M'], ['Ondine', 'F'], ['Léa', 'F'], ['Grand-père', 'M']] as const) {
+      const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: '1995' });
+      d = r.donnees;
+      id[prenom] = r.personne.id;
+    }
+    for (const [e, p] of [['Papa', 'Grand-père'], ['Oncle', 'Grand-père'], ['Moi', 'Papa'], ['Rémi', 'Oncle']]) d = ajouterFiliation(d, id[p], id[e], 'biologique').donnees;
+    d = ajouterUnion(d, id.Rémi, id.Léa, marie, 'actuelle', date).donnees;
+    d = ajouterUnion(d, id.Moi, id.Ondine, marie, 'actuelle', date).donnees;
+    return (vers: string) => ({ lien: lienAvecMoi(d, id.Moi, id[vers], aujourdhui), etiq: etiquette(d, id.Moi, id[vers], aujourdhui) });
+  }
+
+  it('ma fiancée, la fiancée d’un cousin', () => {
+    expect(cas('2027-06-12')('Ondine')).toEqual({ lien: 'ta fiancée', etiq: 'Fiancée' });
+    expect(cas('2027-06-12')('Léa')).toEqual({ lien: 'la fiancée de Rémi', etiq: 'Fiancée de Rémi' });
+    expect(cas('2027-06-12', false)('Ondine').lien).toBe('ta fiancée');
+  });
+
+  it('date passée ou absente : époux ou copine comme avant', () => {
+    expect(cas('2020-06-12')('Ondine').lien).toBe('ton épouse');
+    expect(cas(undefined)('Léa').lien).toBe('ta cousine par alliance');
+    expect(cas('2027-06-12')('Ondine').lien).not.toBe('ton épouse');
+  });
+});
+
+describe('copine ou compagne, belle-sœur ou non', () => {
+  const aujourdhui = new Date(2026, 9, 21);
+  /** Moi a une sœur Zoé et un cousin Rémi ; chacun a une partenaire née en `naissance`, mariée ou non. */
+  function couples(naissance: string | undefined, marie: boolean) {
+    let d: Donnees = donneesVides();
+    const id: Record<string, string> = {};
+    const pers = (prenom: string, sexe: Sexe, n?: string) => {
+      const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: n });
+      d = r.donnees;
+      id[prenom] = r.personne.id;
+    };
+    for (const [p, s] of [['Papa', 'M'], ['Oncle', 'M'], ['Moi', 'M'], ['Rémi', 'M']] as const) pers(p, s);
+    pers('Zoé', 'F');
+    pers('Léa', 'F', naissance);
+    pers('Ondine', 'F', naissance);
+    pers('Grand-père', 'M');
+    const enfant = (e: string, p: string) => (d = ajouterFiliation(d, id[p], id[e], 'biologique').donnees);
+    for (const e of ['Papa', 'Oncle']) enfant(e, 'Grand-père');
+    for (const e of ['Moi', 'Zoé']) enfant(e, 'Papa');
+    enfant('Rémi', 'Oncle');
+    d = ajouterUnion(d, id.Rémi, id.Léa, marie).donnees;
+    d = ajouterUnion(d, id.Moi, id.Ondine, marie).donnees;
+    return { lien: (vers: string) => lienAvecMoi(d, id.Moi, id[vers], aujourdhui), etiq: (vers: string) => etiquette(d, id.Moi, id[vers], aujourdhui) };
+  }
+
+  it('partenaire non marié d’un cousin : copine avant 40 ans, compagne ensuite', () => {
+    expect(couples('1995', false).lien('Léa')).toBe('la copine de Rémi');
+    expect(couples('1995', false).etiq('Léa')).toBe('Copine de Rémi');
+    expect(couples('1980', false).lien('Léa')).toBe('la compagne de Rémi');
+  });
+
+  it('naissance inconnue : compagne', () => {
+    expect(couples(undefined, false).lien('Léa')).toBe('la compagne de Rémi');
+  });
+
+  it('mariée : le lien par alliance habituel', () => {
+    expect(couples('1995', true).lien('Léa')).toBe('ta cousine par alliance');
+  });
+
+  it('conjoint de Moi non marié : copine ou compagne selon l’âge', () => {
+    expect(couples('1995', false).lien('Ondine')).toBe('ta copine');
+    expect(couples('1980', false).lien('Ondine')).toBe('ta compagne');
+    expect(couples('1995', true).lien('Ondine')).toBe('ton épouse');
   });
 });

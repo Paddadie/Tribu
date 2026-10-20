@@ -180,7 +180,7 @@ describe('chemin depuis « Moi »', () => {
   });
 
   it('passe par un ami pour qui n’est pas de la famille', () => {
-    expect(phrase(d, 'Léa')).toBe('Toi → ton ami → sa compagne');
+    expect(phrase(d, 'Léa')).toBe('Toi → ton ami → sa copine');
     expect(phrase(d, 'Julie')).toBe('Toi → ton épouse → son amie');
     expect(phrase(d, 'Naël')).toBe('Toi → ton ami → son fils');
   });
@@ -223,7 +223,7 @@ describe('étiquettes courtes', () => {
   it('hors famille : nommée depuis l’ami le plus proche', () => {
     expect(lib(d, 'Karim')).toBe('Ami');
     expect(lib(d, 'Julie')).toBe('Amie d’Inès');
-    expect(lib(d, 'Léa')).toBe('Compagne de Karim');
+    expect(lib(d, 'Léa')).toBe('Copine de Karim');
     expect(lib(d, 'Naël')).toBe('Fils de Karim');
     expect(lib(d, 'Samia')).toBe('Mère de Karim');
     const sansCouple = separerUnion(d, d.unions.find((u) => u.personneA === id.Karim)!.id);
@@ -326,5 +326,26 @@ describe('famille proche (dessin de la fiche)', () => {
     const f = foyer(y, id.Mathis, id.Mathis);
     expect(noms(f.parents)).toEqual(['Marc', 'Sophie']);
     expect(f.manque).toBe(0);
+  });
+});
+
+describe('ami le plus proche en âge', () => {
+  it('départage deux amis à égale distance : le beau-frère est celui de l’ami au plus près de mon âge', () => {
+    let x: Donnees = d;
+    const nouveau = (prenom: string, sexe: Sexe, naissance?: string) => {
+      const r = creerPersonne(x, { prenom, nom: 'X', sexe, naissance });
+      x = r.donnees;
+      return r.personne.id;
+    };
+    // Adrien (1975) passe avant Yann (1989) par ordre alphabétique, mais Mathis est né en 1990.
+    const adrien = nouveau('Adrien', 'M', '1975');
+    const yann = nouveau('Yann', 'M', '1989');
+    const zora = nouveau('Zora', 'F', '1982');
+    const cedric = nouveau('Cédric', 'M', '1980');
+    const pere = nouveau('Pierre', 'M', '1950');
+    [adrien, yann, zora].forEach((e) => (x = ajouterFiliation(x, pere, e, 'biologique').donnees));
+    x = ajouterUnion(x, zora, cedric, true).donnees;
+    x = creerGroupe(x, [id.Mathis, adrien, yann]).donnees;
+    expect(etiquette(x, id.Mathis, cedric)).toBe('Beau-frère d’Yann');
   });
 });

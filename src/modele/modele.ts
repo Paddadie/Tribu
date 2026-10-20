@@ -425,8 +425,11 @@ export function groupesDe(d: Donnees, id: string): GroupeAmis[] {
   return d.groupes.filter((g) => g.membres.includes(id));
 }
 
-/** Groupes dont `id` ou un membre de sa famille fait partie (liens de filiation et d'union, de proche en proche). */
-export function groupesDeLaFamille(d: Donnees, id: string): GroupeAmis[] {
+/**
+ * Groupes dont `id` ou un membre de sa famille fait partie (liens de filiation et d'union, de proche en proche).
+ * `moi` est dans tous les groupes : ses groupes ne comptent pas, sinon toute sa famille serait « famille d'un membre » partout.
+ */
+export function groupesDeLaFamille(d: Donnees, id: string, moi?: string): GroupeAmis[] {
   const voisins = new Map<string, string[]>();
   const lier = (a: string, b: string) => {
     voisins.set(a, [...(voisins.get(a) ?? []), b]);
@@ -438,7 +441,7 @@ export function groupesDeLaFamille(d: Donnees, id: string): GroupeAmis[] {
   const file = [id];
   const trouves = new Set<GroupeAmis>();
   for (let i = 0; i < file.length; i++) {
-    groupesDe(d, file[i]).forEach((g) => trouves.add(g));
+    if (file[i] !== moi) groupesDe(d, file[i]).forEach((g) => trouves.add(g));
     for (const v of voisins.get(file[i]) ?? []) {
       if (vus.has(v)) continue;
       vus.add(v);
@@ -459,9 +462,9 @@ function avecGroupe(d: Donnees, g: GroupeAmis): Donnees {
   return { ...d, groupes: d.groupes.flatMap((x) => (x.id !== g.id ? [x] : g.membres.length >= 2 ? [g] : [])) };
 }
 
-/** Groupe d'amis de deux personnes au moins, qui deviennent toutes amies entre elles. */
-export function creerGroupe(d: Donnees, membres: string[], nom = ''): { donnees: Donnees; groupe: GroupeAmis } {
-  const distincts = [...new Set(membres)];
+/** Groupe d'amis de deux personnes au moins, qui deviennent toutes amies entre elles. `moi`, s'il est donné, en est membre d'office. */
+export function creerGroupe(d: Donnees, membres: string[], nom = '', moi?: string): { donnees: Donnees; groupe: GroupeAmis } {
+  const distincts = [...new Set(moi ? [...membres, moi] : membres)];
   distincts.forEach((id) => exigerPersonne(d, id));
   if (distincts.length < 2) throw new Error('Un groupe d’amis compte au moins deux personnes');
   const groupe: GroupeAmis = { id: nouvelId(), nom: nom.trim(), membres: distincts };

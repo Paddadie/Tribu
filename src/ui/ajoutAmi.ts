@@ -2,7 +2,7 @@
 // - La personne est déjà dans un groupe : on y ajoute les amis choisis (une personne n'est que dans un groupe).
 // - Sinon : en haut les groupes à rejoindre, en dessous les personnes pour former un nouveau groupe.
 
-import { nomGroupe, raisonGroupe, relation } from '../modele/deductions';
+import { nomGroupe, raisonGroupe } from '../modele/deductions';
 import { avecDe } from '../modele/liste';
 import { ajouterAuGroupe, creerGroupe, groupesDe } from '../modele/modele';
 import { ficheMoi } from '../modele/reglages';
@@ -21,17 +21,18 @@ function resume(d: Donnees, g: GroupeAmis, sauf?: string): string {
   return noms.length > 3 ? `${noms.slice(0, 3).join(', ')}… (${noms.length})` : noms.join(', ');
 }
 
-/** Moi à ajouter d'office au groupe créé : quand la fiche est hors de ta famille, le groupe resterait sinon absent de ton arbre. */
+/** Moi est d'office dans chaque groupe créé, pour que tous apparaissent dans ton arbre (sa fiche : le groupe se forme avec l'ami). */
 function moiAjoute(d: Donnees, p: Personne): Personne | undefined {
   const moi = ficheMoi(lireReglages(), d);
-  if (!moi || moi.id === p.id || groupesDe(d, moi.id).length > 0) return undefined;
-  return relation(d, moi.id, p.id) === undefined ? moi : undefined;
+  return moi && moi.id !== p.id ? moi : undefined;
 }
 
 export function ajoutAmi(p: Personne): HTMLElement {
   const retour = `#/personne/${p.id}`;
   const depart = lireDonnees();
-  const groupe = groupesDe(depart, p.id)[0];
+  // Moi est dans plusieurs groupes : ses amis ne rejoignent pas « son » groupe, ils en forment un nouveau avec lui.
+  const estMoi = ficheMoi(lireReglages(), depart)?.id === p.id;
+  const groupe = estMoi ? undefined : groupesDe(depart, p.id)[0];
 
   const nomChamp = h('input', { id: 'nom-groupe', type: 'text', autocomplete: 'off', autocapitalize: 'words', placeholder: 'Ex. Les voisins' });
   const moi = groupe ? undefined : moiAjoute(depart, p);
@@ -41,14 +42,12 @@ export function ajoutAmi(p: Personne): HTMLElement {
     libelleOrigine: 'Origine de l’ami',
     libelleValider: groupe ? 'Ajouter au groupe' : 'Former un groupe',
     libelleValiderPlusieurs: (n) => (groupe ? `Ajouter ${n} amis au groupe` : `Former un groupe de ${n + 1}`),
-    indisponible: (d, c) => raisonGroupe(d, c, groupesDe(d, p.id)[0]),
-    // Le premier ami forme le groupe (avec la fiche, et Moi si besoin) ; les suivants le rejoignent.
+    indisponible: (d, c) => raisonGroupe(d, c, groupe, ficheMoi(lireReglages(), d)?.id),
+    // Le premier ami forme le groupe (avec la fiche et Moi) ; les suivants le rejoignent.
     lier: (d, autre) => {
-      const existant = groupesDe(d, p.id)[0];
+      const existant = estMoi ? undefined : groupesDe(d, p.id)[0];
       if (existant) return ajouterAuGroupe(d, existant.id, autre);
-      const membres = [p.id, autre];
-      if (moi && autre !== moi.id) membres.push(moi.id);
-      return creerGroupe(d, membres, nomChamp.value.trim()).donnees;
+      return creerGroupe(d, [p.id, autre], nomChamp.value.trim(), moi?.id).donnees;
     },
     apres: () => revenir(retour),
   });
@@ -98,7 +97,7 @@ export function ajoutAmi(p: Personne): HTMLElement {
         { class: 'champ' },
         h('label', { for: 'nom-groupe' }, 'Nom du nouveau groupe (facultatif)'),
         nomChamp,
-        moi ? h('p', { class: 'secondaire' }, `${appel(moi)} fera aussi partie du groupe, pour qu’il apparaisse dans l’arbre.`) : null,
+        moi ? h('p', { class: 'secondaire' }, `${appel(moi)} fera aussi partie du groupe, comme de tous tes groupes.`) : null,
       );
 
   return h(
