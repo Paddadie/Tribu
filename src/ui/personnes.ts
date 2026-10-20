@@ -24,7 +24,7 @@ const PUCES: { filtre: Filtre; libelle: string }[] = [
   { filtre: 'tous', libelle: 'Toutes' },
   { filtre: 'famille', libelle: 'Famille' },
   { filtre: 'amis', libelle: 'Amis proches' },
-  { filtre: 'groupe', libelle: 'Un groupe' },
+  { filtre: 'groupe', libelle: 'Groupe d’amis' },
 
   { filtre: 'acompleter', libelle: 'À compléter' },
 ];

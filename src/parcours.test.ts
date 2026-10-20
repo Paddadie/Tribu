@@ -1298,7 +1298,7 @@ describe('filtres de la liste', () => {
     const { donnees } = famille();
     await demarrer(donnees, '#/personnes');
     const puces = () => [...ecran().querySelectorAll('.puces-liste button')].map((b) => b.textContent);
-    // Ni « Moi » ni groupe : pas de Famille, Amis proches ni Un groupe.
+    // Ni « Moi » ni groupe : pas de Famille, Amis proches ni Groupe d’amis.
     expect(puces()).toEqual(['Toutes', 'À compléter']);
 
     await toucher(trouver('button', 'À compléter'));
