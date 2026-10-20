@@ -209,7 +209,7 @@ interface Placement {
 
 /**
  * Étape 3. La bulle : chaque groupe d'amis (avec les groupes qui partagent une famille) est disposé à part, puis
- * posé à côté du précédent (leurs cadres ne peuvent pas se mêler), sous l'arbre principal ; elle est centrée sous Moi.
+ * posé sous le précédent (leurs cadres ne peuvent pas se mêler), sous l'arbre principal ; chacun est centré sous Moi.
  */
 function disposerBulle(gr: Graphe, idsBulle: string[], rep: Repartition, pl: Placement, positions: Map<string, Point>, blocDe: Map<string, Bloc>): void {
   const ensBulle = new Set(idsBulle);
@@ -230,7 +230,7 @@ function disposerBulle(gr: Graphe, idsBulle: string[], rep: Repartition, pl: Pla
     return rangs.length > 0 ? Math.min(...rangs) : Infinity;
   };
   const haut = Math.max(...[...positions.values()].map((p) => p.y)) + ECART_BULLE;
-  let bord: number | undefined;
+  let bas: number | undefined;
   for (const ids of [...amas.values()].sort((u, v) => rangRacine(u) - rangRacine(v))) {
     const ens = new Set(ids);
     const racines = racinesBulle.filter((r) => ens.has(r));
@@ -247,14 +247,13 @@ function disposerBulle(gr: Graphe, idsBulle: string[], rep: Repartition, pl: Pla
     );
     const xs = [...partie.positions.values()].map((p) => p.x);
     const ys = [...partie.positions.values()].map((p) => p.y);
-    const decalage = bord === undefined ? 0 : bord - Math.min(...xs);
-    for (const [id, p] of partie.positions) positions.set(id, { x: p.x + decalage, y: p.y + haut - Math.min(...ys) });
-    bord = Math.max(...xs) + decalage + ECART_FAMILLES;
+    // Chaque amas est centré sous Moi (x = 0) et posé sous le précédent.
+    const milieuX = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const decalageY = (bas ?? haut) - Math.min(...ys);
+    for (const [id, p] of partie.positions) positions.set(id, { x: p.x - milieuX, y: p.y + decalageY });
+    bas = Math.max(...ys) + decalageY + ECART_BULLE;
     partie.blocs.forEach((b, id) => blocDe.set(id, b));
   }
-  const xsBulle = idsBulle.map((id) => positions.get(id)!.x);
-  const milieuX = (Math.min(...xsBulle) + Math.max(...xsBulle)) / 2;
-  for (const id of idsBulle) positions.get(id)!.x -= milieuX;
 }
 
 /**

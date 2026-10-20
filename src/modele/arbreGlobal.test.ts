@@ -433,10 +433,10 @@ describe('disposerArbre : groupes d’amis et étiquettes', () => {
     for (const f of ['A', 'B']) for (const p of ['Pere', 'Mere', 'Enfant']) expect(fac.ids).toContain(a.id[p + f]);
     expect(fac.ids).not.toContain(a.id.PereC);
 
-    // Largeur d'un cadre en pixels (80 px par place, nœud de 76 px, marge de 8 px) : les intervalles restent disjoints.
-    const x = new Map(disp.places.map((pl) => [pl.personne.id, pl.x]));
+    // Les groupes sont superposés : les intervalles de lignes des cadres restent disjoints (avec la marge du cadre).
+    const y = new Map(disp.places.map((pl) => [pl.personne.id, pl.y]));
     const bornes = disp.groupes
-      .map((g) => [Math.min(...g.ids.map((i) => x.get(i)! * 80)) - 46, Math.max(...g.ids.map((i) => x.get(i)! * 80)) + 46])
+      .map((g) => [Math.min(...g.ids.map((i) => y.get(i)!)) - 0.4, Math.max(...g.ids.map((i) => y.get(i)!)) + 0.4])
       .sort((p, q) => p[0] - q[0]);
     for (let i = 1; i < bornes.length; i++) expect(bornes[i][0]).toBeGreaterThan(bornes[i - 1][1]);
   });
