@@ -107,6 +107,8 @@ button.bouton-icone {
 }
 
 .cadre-titre {
+  width: calc(var(--l) * 1px);
+  transform-origin: 0 0;
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -224,6 +226,16 @@ button.bouton-icone {
 
 .vue-arbre.loin .etiquette-famille {
   scale: calc(1 / var(--s));
+}
+
+/* Nom d'un groupe d'amis : gardé à taille d'écran (comme les noms de famille), sur la largeur du cadre à l'écran. */
+.vue-arbre.loin .cadre-titre {
+  width: calc(var(--l) * var(--s) * 1px);
+  scale: calc(1 / var(--s));
+}
+
+.vue-arbre.loin .cadre-n {
+  display: none;
 }
 
 /* Une étiquette qui en chevaucherait une autre, vue de loin (arbreGlobal.ts). */

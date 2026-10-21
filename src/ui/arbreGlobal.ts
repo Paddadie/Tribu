@@ -428,7 +428,7 @@ class Carte {
         h('span', { class: 'cadre-nom' }, nom),
         c.l > 150 && h('span', { class: 'cadre-n' }, `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`),
       );
-      el.style.width = `${c.l - 24}px`;
+      el.style.setProperty('--l', `${c.l - 24}`);
       el.style.setProperty('--cc', couleurGroupe(this.cadres.indexOf(c)));
       return placer(el, c.x + 12, c.y + 8);
     });
