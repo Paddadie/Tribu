@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageEntre, anniversairesDeces, detailPersonne, libelleAge, libelleAgeDeces, libelleDelai, prochainsAnniversaires } from './age';
+import { ageEntre, anniversairesDeces, detailPersonne, detailProche, libelleAge, libelleAgeDeces, libelleDelai, prochainsAnniversaires } from './age';
 import { conjoint, exConjoints, relation } from './deductions';
 import { libelleDeces } from './liste';
 import { migrer } from './migration';
@@ -327,6 +327,15 @@ describe('âge', () => {
     expect(detailPersonne({ ...base, naissance: '1963-06-02', decede: true }, auj)).toBe('1963 – ?');
     expect(detailPersonne({ ...base, naissance: '1963', deces: '--01-14' }, auj)).toBe('1963 – ?');
     expect(detailPersonne({ ...base, sexe: 'F', decede: true }, auj)).toBe('décédée');
+  });
+
+  it('ligne d’un proche sur une fiche : lien et âge sans la date, années pour un décédé', () => {
+    const base: Personne = { id: 'a', prenom: 'A', nom: 'X', note: '', sexe: 'F' };
+    expect(detailProche({ ...base, naissance: '1963-06-02' }, auj, 'sœur')).toBe('sœur · 63 ans');
+    expect(detailProche({ ...base, naissance: '1963-06-02' }, auj)).toBe('63 ans');
+    expect(detailProche({ ...base, naissance: '1963-06-02', deces: '2024-01-14' }, auj, 'mère')).toBe('mère · 1963 – 2024');
+    expect(detailProche(base, auj, 'sœur')).toBe('sœur');
+    expect(detailProche(base, auj)).toBe('');
   });
 });
 

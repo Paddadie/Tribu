@@ -164,7 +164,7 @@ describe('ajout d’un lien', () => {
     await toucher(trouver('button', 'Ajouter un proche'));
     await toucher(trouver('dialog.feuille a', 'Un enfant'));
     expect(titre()).toBe('Ajouter un enfant');
-    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    await toucher(trouver('label', 'Déjà dans Tribu').querySelector('input')!);
     // Chloé est déjà sa fille : pas choisissable une seconde fois.
     expect(trouver('button.ligne-choix', 'Chloé').hasAttribute('disabled')).toBe(true);
 
@@ -186,7 +186,7 @@ describe('ajout d’un lien', () => {
   it('conjoint marié créé depuis l’écran d’ajout, de sexe opposé par défaut', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/conjoint/${ids.Denis}`);
-    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    await toucher(trouver('label', 'Déjà dans Tribu').querySelector('input')!);
     expect(trouver('button.ligne-choix', 'Anne').textContent).toContain('Déjà en couple');
     expect(trouver('button.ligne-choix', 'Anne').hasAttribute('disabled')).toBe(true);
 
@@ -210,7 +210,7 @@ describe('ajout d’un lien', () => {
     expect(trouver('dialog.feuille a', 'Un ami').getAttribute('href')).toBe(`#/ami/${ids.Denis}`);
 
     await demarrer(donnees, `#/ami/${ids.Denis}`);
-    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    await toucher(trouver('label', 'Déjà dans Tribu').querySelector('input')!);
     await toucher(trouver('button.ligne-choix', 'Chloé'));
     await toucher(trouver('button', 'Former un groupe'));
     expect(enregistrees().groupes).toHaveLength(1);
@@ -233,7 +233,7 @@ describe('ajout d’un lien', () => {
   it('plusieurs amis cochés d’un coup forment un seul groupe nommé, une seule coche par ligne, décochable', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/ami/${ids.Denis}`);
-    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    await toucher(trouver('label', 'Déjà dans Tribu').querySelector('input')!);
     expect(trouver('button', 'Former un groupe').hasAttribute('disabled')).toBe(true);
 
     await toucher(trouver('button.ligne-choix', 'Chloé'));
@@ -263,7 +263,7 @@ describe('ajout d’un lien', () => {
     await demarrer(enregistrees(), `#/ami/${ids.Denis}`);
     expect(ecran().textContent).not.toContain('Rejoindre un groupe');
     expect(ecran().textContent).toContain('Les amis ajoutés rejoignent ce groupe');
-    await toucher(trouver('label', 'Personne existante').querySelector('input')!);
+    await toucher(trouver('label', 'Déjà dans Tribu').querySelector('input')!);
     expect(trouver('button.ligne-choix', 'Anne').hasAttribute('disabled')).toBe(true);
     await toucher(trouver('button.ligne-choix', 'Chloé'));
     await toucher(trouver('button', 'Ajouter au groupe'));
@@ -361,7 +361,7 @@ describe('ajout d’un lien', () => {
         .map((f) => f.parent),
     ).toEqual([ids.Anne]);
     expect(location.hash).toBe(`#/personne/${ids.Chloé}`);
-    expect(trouver('section', 'Demi-frères').textContent).toContain('Hugo Martin');
+    expect(trouver('section', 'Parents et fratrie').textContent).toContain('Hugo Martin');
   });
 
   it('frère ou sœur : décocher un parent avec une date incomplète met à jour le bouton', async () => {
@@ -803,6 +803,13 @@ describe('navigation', () => {
     expect(location.hash).toBe('#/');
     expect(titre()).toMatch(ACCUEIL);
     expect(history.length).toBe(entrees);
+  });
+
+  it('l’écran Modifier a un retour et nomme la personne', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/modifier/${ids.Anne}`);
+    expect(titre()).toBe('Modifier Anne');
+    expect(ecran().querySelector(`.barre a[href="#/personne/${ids.Anne}"]`)).not.toBeNull();
   });
 
   it('une modification enregistrée revient sur la fiche ; Retour mène ensuite à la liste', async () => {

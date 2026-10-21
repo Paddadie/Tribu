@@ -51,6 +51,7 @@ const TRACES = {
   croix: '<path d="M6 6l12 12M18 6L6 18"/>',
   moins: '<path d="M5 12h14"/>',
   arbre: '<circle cx="12" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M12 7.5V12M6 16.5V12h12v4.5"/>',
+  fiches: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/>',
   echange: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   gateau: '<path d="M4 20h16v-7H4z"/><path d="M4 16c2 1.5 4 1.5 5.3 0 1.4 1.5 4 1.5 5.4 0 1.3 1.5 3.3 1.5 5.3 0"/><path d="M12 13V9M12 6.5v-.5"/>',
   fete: '<path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.5L12 16.2 7 18.9l1.2-5.5L4 9.6l5.6-.6z"/>',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conjoint, enfantsDuCouple, fratrie, liensEnfants, liensParents, parentsCommuns } from './deductions';
+import { conjoint, enfantsDuCouple, foyer, fratrie, liensEnfants, liensParents, parentsCommuns } from './deductions';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, TypeFiliation } from './types';
 
@@ -107,6 +107,31 @@ describe('frères et sœurs', () => {
     expect(prenoms(f.demis)).toEqual(['Demi-frère']);
   });
 
+  it('donne l’autre parent des demis, et si leur union est terminée', () => {
+    const m = monde();
+    ['Mère', 'Père', 'Beau-père', 'Moi', 'Demi-frère'].forEach((p) => m.pers(p));
+    m.filiation('Mère', 'Moi');
+    m.filiation('Père', 'Moi');
+    m.filiation('Mère', 'Demi-frère');
+    m.filiation('Beau-père', 'Demi-frère');
+    expect(foyer(m.d, m.id.Moi).demis.map((x) => [x.autre?.prenom, x.autreSepare])).toEqual([['Beau-père', false]]);
+    m.d.unions.push(...ajouterUnion(m.d, m.id.Mère, m.id['Beau-père'], false, 'separee').donnees.unions);
+    expect(foyer(m.d, m.id.Moi).demis[0].autreSepare).toBe(true);
+  });
+
+  it('dessine l’ex avec qui il a des enfants, seulement sans conjoint actuel', () => {
+    const m = monde();
+    ['Michel', 'Catherine', 'Alice', 'Enfant', 'Autre'].forEach((p) => m.pers(p));
+    m.filiation('Michel', 'Enfant');
+    m.filiation('Catherine', 'Enfant');
+    m.d.unions.push(...ajouterUnion(m.d, m.id.Michel, m.id.Catherine, false, 'separee').donnees.unions);
+    const f = foyer(m.d, m.id.Michel);
+    expect(f.conjoint).toMatchObject({ separe: true, personne: { prenom: 'Catherine' } });
+    expect(f.enfants.map((e) => e.duCouple)).toEqual([true]);
+    m.d.unions.push(...ajouterUnion(m.d, m.id.Michel, m.id.Alice).donnees.unions);
+    expect(foyer(m.d, m.id.Michel).conjoint?.personne.prenom).toBe('Alice');
+  });
+
   it('est symétrique et exclut la personne elle-même', () => {
     const m = monde();
     ['Mère', 'Père', 'Moi', 'Frère'].forEach((p) => m.pers(p));
@@ -207,24 +232,24 @@ describe('tri avec dates partielles', () => {
   });
 });
 
-describe("liens avec type de filiation", () => {
-  it("liste les parents (biologiques puis adoptifs) et les enfants (du plus âgé au plus jeune) avec leur lien", () => {
+describe('liens avec type de filiation', () => {
+  it('liste les parents (biologiques puis adoptifs) et les enfants (du plus âgé au plus jeune) avec leur lien', () => {
     const w = monde();
-    w.pers("Zoé", "1960");
-    w.pers("Adam", "1958");
-    w.pers("Bea", "2010");
-    w.pers("Cid", "2005");
-    w.pers("Moi", "1985");
-    w.filiation("Adam", "Moi", "adoptif");
-    w.filiation("Zoé", "Moi", "biologique");
-    w.filiation("Moi", "Bea", "biologique");
-    w.filiation("Moi", "Cid", "adoptif");
+    w.pers('Zoé', '1960');
+    w.pers('Adam', '1958');
+    w.pers('Bea', '2010');
+    w.pers('Cid', '2005');
+    w.pers('Moi', '1985');
+    w.filiation('Adam', 'Moi', 'adoptif');
+    w.filiation('Zoé', 'Moi', 'biologique');
+    w.filiation('Moi', 'Bea', 'biologique');
+    w.filiation('Moi', 'Cid', 'adoptif');
     const p = liensParents(w.d, w.id.Moi);
-    expect(prenoms(p.map((l) => l.personne))).toEqual(["Zoé", "Adam"]);
-    expect(p.map((l) => l.filiation.type)).toEqual(["biologique", "adoptif"]);
+    expect(prenoms(p.map((l) => l.personne))).toEqual(['Zoé', 'Adam']);
+    expect(p.map((l) => l.filiation.type)).toEqual(['biologique', 'adoptif']);
     const e = liensEnfants(w.d, w.id.Moi);
-    expect(prenoms(e.map((l) => l.personne))).toEqual(["Cid", "Bea"]);
-    expect(e.map((l) => l.filiation.type)).toEqual(["adoptif", "biologique"]);
+    expect(prenoms(e.map((l) => l.personne))).toEqual(['Cid', 'Bea']);
+    expect(e.map((l) => l.filiation.type)).toEqual(['adoptif', 'biologique']);
     expect(liensParents(w.d, w.id.Zoé)).toEqual([]);
   });
 });

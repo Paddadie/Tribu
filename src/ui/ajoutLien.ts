@@ -11,6 +11,7 @@ import { ajouterFiliation, ajouterFiliations, ajouterFrereSansParent, ajouterUni
 import { nomsEnfant, suggestions } from '../modele/saisie';
 import type { Donnees, Personne, TypeFiliation } from '../modele/types';
 import { h, icone } from './dom';
+import { avatarPersonne } from './lignePersonne';
 import { garderSaisie, lienRetour, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
 
@@ -139,10 +140,14 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
     h(
       'div',
       { class: 'contenu' },
-      h('p', { class: 'secondaire' }, `Pour ${nomComplet(p)}`),
+      h('p', { class: 'contexte' }, avatarPersonne(p), 'pour ', h('b', {}, nomComplet(p))),
       champsParents,
       caseConjoint && h('div', { class: 'carte' }, caseConjoint.noeud),
       caseCouple && h('div', { class: 'carte' }, caseCouple.noeud),
+      sansParentConnu &&
+        h('p', { class: 'aide' }, 'Parents inconnus : les deux seront frères ou sœurs. Ajoute un parent à l’un d’eux, il le deviendra pour tous.'),
+      selecteur.onglets,
+      selecteur.zone,
       !sansParentConnu &&
         h(
           'fieldset',
@@ -150,10 +155,6 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
           h('legend', {}, 'Type de lien'),
           h('div', { class: 'choix-groupe' }, optionType('biologique', 'Biologique'), optionType('adoptif', 'Adoptif')),
         ),
-      sansParentConnu &&
-        h('p', { class: 'aide' }, 'Parents inconnus : les deux seront frères ou sœurs. Ajoute un parent à l’un d’eux, il le deviendra pour tous.'),
-      selecteur.onglets,
-      selecteur.zone,
       selecteur.pied,
     ),
   );

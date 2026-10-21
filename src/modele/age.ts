@@ -95,6 +95,15 @@ export function detailPersonne(p: Personne, aujourdhui: Date): string {
   return [libelleNaissance(p.naissance, p.sexe), libelleAge(p, aujourdhui)].filter(Boolean).join(' · ');
 }
 
+/**
+ * Seconde ligne d'un proche sur une fiche : le lien (« sœur ») puis l'âge « 65 ans » à la place de la date de naissance.
+ * Décédée : les années comme dans `detailPersonne`. La date complète reste sur la fiche de la personne.
+ */
+export function detailProche(p: Personne, aujourdhui: Date, lien?: string): string {
+  const detail = estDecede(p) ? detailPersonne(p, aujourdhui) : libelleAge(p, aujourdhui);
+  return [lien, detail].filter(Boolean).join(' · ');
+}
+
 export interface Anniversaire {
   personne: Personne;
   /** Jours restants : 0 = aujourd'hui. */

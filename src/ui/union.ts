@@ -2,7 +2,7 @@
 // rétablissement d'un couple séparé, suppression d'une union saisie par erreur.
 // Séparation et suppression sont annulables depuis le bandeau.
 
-import { nomComplet } from '../modele/liste';
+import { avecDe, nomComplet } from '../modele/liste';
 import { dureeUnion } from '../modele/noces';
 import { modifierDateUnion, modifierUnion, retablirUnion, separerUnion, supprimerUnion } from '../modele/modele';
 import type { Personne } from '../modele/types';
@@ -44,7 +44,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
     h(
       'span',
       { class: 'ligne-texte' },
-      h('span', { class: 'ligne-nom' }, `Prend le nom de ${prenomAutre}`),
+      h('span', { class: 'ligne-nom' }, `Prend le nom ${avecDe(prenomAutre)}`),
       h('span', { class: 'secondaire' }, 'La femme du couple garde son nom de jeune fille'),
     ),
     prendLeNom,

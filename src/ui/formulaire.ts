@@ -8,7 +8,7 @@ import { creerPersonne, definirMariageParents, modifierPersonne, personnesVisibl
 import type { Personne } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
 import { accepterHomonyme, champsIdentite } from './champsPersonne';
-import { h } from './dom';
+import { h, icone } from './dom';
 import { lireDonnees, modifierDonnees } from './etat';
 import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
 
@@ -24,9 +24,16 @@ export function formulaire(existante: Personne | undefined, saisie = ''): HTMLEl
 
   // Parent sans nom (ou son autre parent) : case « Marié avec … », sans union actuelle à gérer ailleurs.
   const autre = existante && autreParent(lireDonnees(), existante.id);
-  const unionExistante = autre && lireDonnees().unions.find((u) => [u.personneA, u.personneB].includes(autre.id) && [u.personneA, u.personneB].includes(existante!.id));
+  const unionExistante =
+    autre && lireDonnees().unions.find((u) => [u.personneA, u.personneB].includes(autre.id) && [u.personneA, u.personneB].includes(existante!.id));
   const marie = h('input', { id: 'marie-parents', type: 'checkbox', class: 'bascule', checked: !!unionExistante?.marie });
-  const caseMarie = autre ? h('div', { class: 'champ' }, h('label', { class: 'ligne-deces', for: 'marie-parents' }, h('span', {}, `Marié${existante!.sexe === 'F' ? 'e' : ''} avec ${autre.prenom}`), marie)) : null;
+  const caseMarie = autre
+    ? h(
+        'div',
+        { class: 'champ' },
+        h('label', { class: 'ligne-deces', for: 'marie-parents' }, h('span', {}, `Marié${existante!.sexe === 'F' ? 'e' : ''} avec ${autre.prenom}`), marie),
+      )
+    : null;
   const retour = existante ? `#/personne/${existante.id}` : '#/';
   garderSaisie(identite.modifie);
 
@@ -69,7 +76,12 @@ export function formulaire(existante: Personne | undefined, saisie = ''): HTMLEl
   return h(
     'div',
     { class: 'ecran' },
-    h('div', { class: 'barre' }, h('h1', { class: 'titre-formulaire' }, existante ? 'Modifier' : 'Nouvelle personne')),
+    h(
+      'div',
+      { class: 'barre' },
+      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
+      h('h1', { class: 'titre-formulaire' }, existante ? `Modifier ${existante.prenom || existante.nom}`.trim() : 'Nouvelle personne'),
+    ),
     h(
       'form',
       { class: 'contenu', onsubmit: enregistrer, novalidate: true },

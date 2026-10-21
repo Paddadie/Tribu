@@ -45,7 +45,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Lien parent → enfant, de type biologique ou adoptif.
 - Un enfant peut avoir jusqu'à deux parents par type.
 - Ajouter un parent ou un enfant : personne existante ou nouvelle.
-- Choix multiple : pour un ami, un enfant ou un frère ou une sœur, « Personne existante » permet de cocher plusieurs lignes (un toucher coche, un second décoche) ; le bouton devient « Ajouter 3 amis » / « Ajouter 3 enfants » / « Ajouter 3 à la fratrie ». Un seul enregistrement : si un lien est refusé, aucun n'est ajouté. Pas pour un parent ni un conjoint. Une ligne cochée porte une seule coche, dessinée par le CSS.
+- Choix multiple : pour un ami, un enfant ou un frère ou une sœur, « Déjà dans Tribu » permet de cocher plusieurs lignes (un toucher coche, un second décoche) ; le bouton devient « Ajouter 3 amis » / « Ajouter 3 enfants » / « Ajouter 3 à la fratrie ». Un seul enregistrement : si un lien est refusé, aucun n'est ajouté. Pas pour un parent ni un conjoint. Une ligne cochée porte une seule coche, dessinée par le CSS.
 - Ajouter un enfant depuis une personne en couple : case « Ajouter aussi <conjoint> comme parent », cochée d'office ; l'enfant (créé ou existant) est alors relié aux deux, avec le même type de lien.
 - Retirer un lien (crayon à côté du proche) : sans confirmation, annulable par le bandeau. Les deux fiches restent.
 - Enfants triés par date de naissance (sans date : en fin de liste).
@@ -100,7 +100,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Loupe : recherche par prénom ou nom parmi les personnes de l'arbre ; le choix centre la personne et la fait pulser.
 
 ## Écrans d'ajout (conjoint, parent, enfant, frère ou sœur, ami)
-- Deux onglets : « Nouvelle personne » (ouvert d'abord, curseur dans le prénom) et « Personne existante ».
+- Deux onglets : « Nouvelle personne » (ouvert d'abord, curseur dans le prénom) et « Déjà dans Tribu ».
 - Nom prérempli, toujours modifiable. Enfant d'un couple homme-femme : nom du père, avec un bouton pour prendre celui de la mère ; sinon nom de la fiche ouverte, avec un bouton pour celui de l'autre parent coché. Parent, frère ou sœur : nom de la fiche ouverte.
 - Liste des personnes existantes : suggestions en tête avec leur raison (le conjoint d'un parent déjà saisi, les enfants du conjoint, l'autre parent de ses enfants), puis, pour un parent, un enfant ou un frère ou une sœur, les personnes de même nom de famille (« Même nom : Dupont »), hors ascendants et descendants et hors écart d'âge invraisemblable (parent ou enfant à moins de 12 ans d'écart, fratrie à plus de 30 ans), puis les autres, puis les personnes indisponibles grisées avec la raison (« Déjà en couple », « Déjà enfant »…).
 - Homonymes : créer une personne de même prénom et même nom qu'une fiche existante (casse, accents et espaces ignorés) demande confirmation. Vaut pour toute création, pas pour une modification.
@@ -110,9 +110,9 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - « Bonjour <prénom de Moi> » (« Bonsoir » à partir de 18 h ; sans prénom si Moi n'est pas choisi ou est décédé), la date du jour dessous ; l'écrou à droite ouvre les Réglages. L'en-tête n'est pas collant.
 - Champ « Chercher quelqu'un » : les résultats remplacent le reste de l'accueil, avec le lien de chacun avec Moi ; une croix vide le champ ; en pied, « N fiches · Créer « … » » ouvre le formulaire prérempli (premier mot = prénom, la suite = nom).
 - « Aujourd'hui » (carte verte, absente s'il n'y a rien) : anniversaires et unions du jour sur des lignes blanches avec pastille (âge, « 10 ans »…), un couple avec deux avatars, un conjoint décédé en gris ; puis les fêtes du jour, « Bonne fête X » et « Sainte X · lien ». Au-delà de 4 lignes, « + N autres » ouvre l'agenda.
-- « Bientôt » : vignettes des 30 prochains jours, triées, avec le genre en tête (icône) ; les fêtes seulement à 7 jours ; « Tout voir » ouvre l'agenda. Rien dans les 30 jours : « Rien dans les 30 prochains jours. Prochaine date : … ».
+- « Bientôt » : vignettes des 30 prochains jours, triées : avatar(s), pastille de date (jour de la semaine ou mois, puis quantième), nom, puis icône du genre et années (ou libellé) ; les fêtes seulement à 7 jours ; « Tout voir » ouvre l'agenda. Rien dans les 30 jours : « Rien dans les 30 prochains jours. Prochaine date : … ».
 - Souvenir (cadre en pointillés), seulement la veille et le jour d'un anniversaire de décès (date complète, au moins un an) : avatar gris, nom, « décédée le … », « demain » ou « aujourd'hui » et « N ans ». Aucune phrase toute faite.
-- Quatre raccourcis dessinés en 2 × 2, chacun avec son compteur : Groupes d'amis et Familles (chacun ouvre une fenêtre-liste, `fenetreListe.ts` : un groupe ou une famille ouvre l'arbre zoomé dessus, `#/arbre/groupe/<id>` ou `#/arbre/famille/<lignée>` ; « Gérer les groupes » mène à `#/groupes` ; sans « Moi », Familles invite à le choisir), Arbre global (`#/arbre`), Toutes les fiches (`#/personnes`). Bouton « + » pour créer une personne.
+- Quatre raccourcis en 2 × 2, chacun avec son compteur (« 5 familles », « 39 familles d’amis ») : pile d’avatars aux couleurs des familles (initiale du nom) pour Familles et Amis, icônes pour l’arbre et les fiches : Groupes d'amis et Familles (chacun ouvre une fenêtre-liste, `fenetreListe.ts` : un groupe ou une famille ouvre l'arbre zoomé dessus, `#/arbre/groupe/<id>` ou `#/arbre/famille/<lignée>` ; « Gérer les groupes » mène à `#/groupes` ; sans « Moi », Familles invite à le choisir), Arbre global (`#/arbre`), Toutes les fiches (`#/personnes`). Bouton « + » pour créer une personne.
 - Aucune personne : ni recherche ni « + », mais deux boutons : « Ajouter la première personne » et « Restaurer une sauvegarde » (import direct, sans confirmation puisqu'il n'y a rien à écraser, annulable par le bandeau).
 
 ## Toutes les fiches (#/personnes)

@@ -322,7 +322,53 @@ button.bouton-icone {
 }
 
 .puce-arbre[aria-expanded='true'] {
-  outline: 2px solid var(--accent);
+  background: var(--accent-clair);
+  border-color: var(--accent);
+  color: var(--accent-texte);
+}
+
+/* Les vues (Toi, Tout) forment un segment ; les listes (Familles, Amis) sont des outils, séparés par un filet. */
+.segment-arbre {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--pastille);
+}
+
+.segment-arbre .puce-arbre {
+  flex: 1;
+  height: 38px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.segment-arbre .puce-arbre.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.filet-arbre {
+  align-self: stretch;
+  width: 1px;
+  margin: 4px 2px;
+  background: var(--bord);
+}
+
+.commandes-arbre.gauche .outil-arbre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 58px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: var(--rayon-s);
+  background: transparent;
+  color: var(--accent-texte);
+  font-size: var(--t1);
 }
 
 /* La feuille glisse depuis les puces et s'y replie, aussi dès qu'on se déplace (ANIM-07). */

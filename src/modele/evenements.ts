@@ -166,6 +166,13 @@ export function jourCourt(e: Pick<Evenement, 'annee' | 'mois' | 'jour'>): string
   return JOURS_COURTS[new Date(e.annee, e.mois - 1, e.jour).getDay()];
 }
 
+/** Pastille de date d'une vignette : « ven » et 24 dans le mois en cours, « nov » et 1er au-delà. */
+export function pastilleJour(e: Pick<Evenement, 'annee' | 'mois' | 'jour'>, aujourdhui: Date): { haut: string; jour: string } {
+  const memeMois = e.mois === aujourdhui.getMonth() + 1 && e.annee === aujourdhui.getFullYear();
+  const haut = memeMois ? jourCourt(e) : MOIS_COURTS[e.mois - 1];
+  return { haut: haut.replace('.', ''), jour: e.jour === 1 ? '1er' : String(e.jour) };
+}
+
 /** Vignette : « ven. 24 » dans le mois en cours, « sam. 1er nov. » au-delà. */
 export function quandCourt(e: Pick<Evenement, 'annee' | 'mois' | 'jour'>, aujourdhui: Date): string {
   const jour = `${jourCourt(e)} ${e.jour === 1 ? '1er' : e.jour}`;

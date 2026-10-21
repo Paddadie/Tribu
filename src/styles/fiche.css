@@ -18,16 +18,31 @@
 }
 
 .identite {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 16px;
+  row-gap: 4px;
   align-items: center;
-  gap: 8px;
-  padding: 8px 20px 20px;
-  text-align: center;
+  padding: 4px 20px 20px;
+  text-align: left;
+}
+
+.identite > .avatar {
+  grid-row: 1 / span 3;
+}
+
+.identite > :not(.avatar) {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.identite .pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .identite h1 {
-  margin-top: 8px;
   font-size: var(--t5);
   font-weight: var(--gras);
   letter-spacing: -0.02em;
@@ -62,6 +77,9 @@
   overflow-wrap: anywhere;
 }
 
+/* Règles des boutons : un seul « plein » par écran (l'action principale) ; « .bouton » seul pour les actions
+   secondaires ; « -contour » pour une principale discrète ; « -danger » (sans fond) pour supprimer, « -danger-plein »
+   seulement dans la confirmation. Les icônes seules sont des « .bouton-icone ». */
 .bouton {
   min-height: 52px;
   padding: 0 16px;
@@ -225,6 +243,23 @@ fieldset.champ legend {
   font-size: var(--t2);
   font-weight: var(--gras);
   color: var(--secondaire);
+}
+
+/* « pour <personne> » en tête des écrans d'ajout : on voit pour qui on ajoute. */
+.contexte {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t2);
+}
+
+.contexte b {
+  color: var(--encre);
 }
 
 .choix-groupe {
@@ -493,6 +528,40 @@ fieldset.champ legend {
   padding-right: 4px;
 }
 
+/* Crayon d'un lien : action secondaire, en gris ; la couleur va au contenu. */
+.ligne-union > .bouton-icone {
+  color: var(--secondaire);
+}
+
+/* Section repliable (famille élargie nombreuse) : le titre ouvre et ferme. */
+.repli > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.repli > summary::-webkit-details-marker {
+  display: none;
+}
+
+.repli > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-right: 2px solid var(--secondaire);
+  border-bottom: 2px solid var(--secondaire);
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+}
+
+.repli[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
 .ligne-lien {
   flex: 1;
   min-width: 0;
@@ -559,9 +628,10 @@ fieldset.champ legend {
   cursor: default;
 }
 
+/* Deux styles de sélection : « clair » (choix et lignes de liste, comme .choix) et « plein » (onglets, puces de filtre). */
 .ligne-choix.choisie {
   background: var(--accent-clair);
-  color: var(--accent);
+  color: var(--accent-texte);
 }
 
 /* Coche de la personne choisie, avec un léger rebond à l'apparition. */
@@ -922,11 +992,6 @@ fieldset.champ legend {
   font-size: var(--t2);
 }
 
-.noeud .avatar.decede {
-  filter: grayscale(1);
-  opacity: 0.72;
-}
-
 /* Le nom passe à la ligne (espace, tiret) sur 2 lignes au plus. La case garde sa largeur ; seul un mot plus long
    qu'elle élargit ce nom-là (largeur « fit-content » : jamais moins que le mot le plus long), jusqu'à 104 px.
    Au-delà : « … ». Chaque arbre réserve LIGNE_EN_PLUS (arbre.ts) pour la 2e ligne. */
@@ -1041,6 +1106,21 @@ fieldset.champ legend {
 
 .dessin .legende b {
   font-weight: var(--gras);
+  color: var(--encre);
+}
+
+/* Dessins de la fiche : une personne décédée porte une petite croix, comme dans l'arbre global. */
+.arbre .noeud .avatar.decede {
+  position: relative;
+}
+
+.arbre .noeud .avatar.decede::after {
+  content: '†';
+  position: absolute;
+  top: -9px;
+  right: -6px;
+  font-size: 15px;
+  line-height: 1;
   color: var(--encre);
 }
 

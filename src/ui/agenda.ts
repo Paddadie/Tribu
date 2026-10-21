@@ -23,7 +23,9 @@ let filtre: Filtre = 'tout';
 const majuscule = (t: string) => t.charAt(0).toLocaleUpperCase('fr') + t.slice(1);
 
 function ligne(e: Evenement): HTMLElement {
-  const pastille = e.genre === 'union' ? (e.annees === 0 ? '' : libelleAnnees(e.annees)) : e.genre === 'fete' ? '' : libelleAnnees(e.annees);
+  const ans = e.annees ? libelleAnnees(e.annees) : '';
+  // Un décès se dit « il y a 11 ans » : sans cela, la pastille se lit comme un âge.
+  const pastille = e.genre === 'fete' ? '' : e.genre === 'deces' && ans ? `il y a ${ans}` : e.genre === 'anniversaire' ? libelleAnnees(e.annees) : ans;
   return h(
     'a',
     { class: e.genre === 'deces' ? 'ligne gris' : 'ligne', href: `#/personne/${e.personnes[0].id}` },

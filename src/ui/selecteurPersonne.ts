@@ -1,5 +1,5 @@
 // Sélecteur de la personne à relier (conjoint, parent, enfant, frère ou sœur), commun aux
-// écrans d'ajout : onglets « Nouvelle personne » (ouvert d'abord) / « Personne existante »,
+// écrans d'ajout : onglets « Nouvelle personne » (ouvert d'abord) / « Déjà dans Tribu »,
 // recherche, lignes choisissables (suggestions en tête, personnes indisponibles en fin),
 // bouton de validation et erreur. La création éventuelle et le lien sont enregistrés
 // ensemble, en une seule modification.
@@ -210,7 +210,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
         const champs = identite.lire();
         // Saisie vérifiée avant de parler d'homonyme.
         creerPersonne(lireDonnees(), champs);
-        if (!(await accepterHomonyme(personnesVisibles(lireDonnees()), champs, 'Pour relier celle qui existe, choisis-la dans « Personne existante ».')))
+        if (!(await accepterHomonyme(personnesVisibles(lireDonnees()), champs, 'Pour relier celle qui existe, choisis-la dans « Déjà dans Tribu ».')))
           return;
         let idNouvelle = '';
         modifierDonnees((d) => {
@@ -235,7 +235,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
       'div',
       { class: 'choix-groupe', role: 'radiogroup', 'aria-label': o.libelleOrigine },
       onglet('nouvelle', 'Nouvelle personne'),
-      onglet('existante', 'Personne existante'),
+      onglet('existante', 'Déjà dans Tribu'),
     ),
     zone,
     erreur,

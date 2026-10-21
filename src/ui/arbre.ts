@@ -106,6 +106,88 @@ function bloc(classe: string, hauteur: number, dessiner: (arbre: HTMLElement, la
 
 /** Largeur d'une place de frère ou sœur sur la rangée de la personne. */
 const SL = 64;
+/** Place d'un frère ou d'une sœur quand les demis ne tiennent pas à 64. */
+const SL_SERRE = 52;
+/** Place d'un demi dans le dessin en familles (le dessin entier est ensuite réduit à l'écran). */
+const SL_DEMIS = 60;
+
+interface FamilleDemis {
+  /** L'autre parent des demis, s'il est connu : dessiné sur la rangée des parents, à côté du parent commun. */
+  autre?: Personne;
+  /** Union terminée avec le parent commun : trait pointillé entre eux. */
+  separe?: boolean;
+  enfants: Personne[];
+  /** Abscisse de l'autre parent, relative au centre de la personne. */
+  xAutre?: number;
+  /** Où le groupe se rattache au trait des parents (milieu du trait vers l'autre parent). */
+  h: number;
+  xs: number[];
+  gauche: boolean;
+}
+
+/** Écart entre le parent commun et l'autre parent des demis, sur la rangée des parents. */
+const ECART_AUTRE = 80;
+
+/**
+ * Place les demis en familles de chaque côté de la rangée de la personne (abscisses relatives au centre de la personne).
+ * L'autre parent se tient tout près du parent commun ; le groupe pend au milieu de ce trait, puis s'étale sur son rang.
+ * Retourne aussi l'étendue de chaque côté.
+ */
+function planDemis(
+  f: Foyer,
+  nB: number,
+  bw: number,
+  decal: number,
+  sl: number,
+  gap: number,
+  deuxHauts: boolean,
+): { familles: FamilleDemis[]; gauche: number; droite: number } {
+  const dernier = nB > 0 ? -decal + bw + (nB - 0.5) * sl : 0;
+  const cible = nB > 0 ? dernier / 2 : 0;
+  const xParents = deuxHauts ? [cible - 42, cible + 42] : [cible];
+  const brutes: { parent: string; autre?: Personne; separe?: boolean; enfants: Personne[] }[] = [];
+  for (const x of f.demis) {
+    let fam = brutes.find((b) => b.parent === x.parent && b.autre?.id === x.autre?.id);
+    if (!fam) brutes.push((fam = { parent: x.parent, autre: x.autre, separe: x.autreSepare, enfants: [] }));
+    fam.enfants.push(x.personne);
+  }
+  for (const b of brutes) b.enfants.sort(parNaissance);
+  const familles: FamilleDemis[] = [];
+  let gauche = Math.max(decal, 34 - xParents[0]);
+  let droite = Math.max(-decal + bw + nB * sl, xParents[xParents.length - 1] + 34);
+  for (const versGauche of [true, false]) {
+    const dir = versGauche ? -1 : 1;
+    const xPar = versGauche ? xParents[0] : xParents[xParents.length - 1];
+    let curseur = (versGauche ? -decal : -decal + bw + nB * sl) + dir * gap;
+    let k = 0;
+    for (const b of brutes.filter((x) => (f.parents[1]?.personne.id !== x.parent) === versGauche)) {
+      const m = b.enfants.length;
+      const c = curseur + (dir * m * sl) / 2;
+      const bord = c + (dir * m * sl) / 2;
+      let xAutre: number | undefined;
+      let h = c;
+      if (b.autre) {
+        k++;
+        xAutre = xPar + dir * ECART_AUTRE * k;
+        h = xPar + dir * (ECART_AUTRE * (k - 1) + ECART_AUTRE / 2);
+      }
+      const dehors = dir * Math.max(dir * bord, xAutre === undefined ? 0 : dir * xAutre + 34);
+      if (versGauche) gauche = Math.max(gauche, -dehors);
+      else droite = Math.max(droite, dehors);
+      curseur = bord + dir * gap;
+      familles.push({
+        autre: b.autre,
+        separe: b.separe,
+        enfants: b.enfants,
+        xAutre,
+        h,
+        xs: b.enfants.map((_, i) => c + (i - (m - 1) / 2) * sl),
+        gauche: versGauche,
+      });
+    }
+  }
+  return { familles, gauche, droite };
+}
 
 /** « Famille proche » : parents (ou « + Parent »), la rangée de la fratrie par âge avec la personne et son conjoint, enfants rangés par union. */
 export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTMLElement {
@@ -124,7 +206,8 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
   return bloc(
     'foyer',
     H,
-    (el, W) => {
+    (el, largeurReelle) => {
+      let W = largeurReelle;
       const cj = f.conjoint?.personne;
       const fr = f.fratrie;
       const traits: Trait[] = [];
@@ -132,19 +215,15 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
       let deces = estDecede(p);
       let adoption = false;
       const bandes: HTMLElement[] = [];
-      // Sur grand écran, le foyer garde ses proportions de téléphone, centré ; seuls les enfants s'étalent.
-      const o = (W - Math.min(W, 400)) / 2;
 
-      // Fratrie sur la rangée de la personne, à sa place d'âge : aînés à gauche, cadets à droite (conjoint contre elle).
-      const aines = fr.filter((s) => datee(s) < datee(p)).sort(parNaissance);
-      const cadets = fr.filter((s) => datee(s) >= datee(p)).sort(parNaissance);
-      const nA = aines.length;
-      const nB = cadets.length;
-      const bw = cj ? 166 : 84;
-      const totalFr = (nA + nB) * SL + bw;
-      // Trop large : la personne reste au centre, ses aînés et ses cadets défilent de chaque côté.
-      const defilant = fr.length > 0 && totalFr > W - 8;
-      // Demi-frères et sœurs aux bouts de la rangée, du côté de leur parent commun ; seulement si tout tient.
+      // Rangée de la personne : le conjoint à sa gauche, toute la fratrie à sa droite (du plus âgé au plus jeune), sans trait croisé.
+      const nB = fr.length;
+      const cadets = [...fr].sort(parNaissance);
+      // Largeur de la personne avec son conjoint à gauche et, le cas échéant, son ex (enfants en commun) à droite.
+      const bw = (cj ? 166 : 84) + (f.ex ? 92 : 0);
+      /** Distance du bord gauche de la rangée au centre de la personne. */
+      const decal = cj ? 124 : 42;
+      // Demi-frères et sœurs aux bouts de la rangée, du côté de leur parent commun.
       const GAP = 16;
       const deDroite = (x: { parent: string }) => f.parents[1]?.personne.id === x.parent;
       const demisG = f.demis
@@ -155,30 +234,53 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         .filter(deDroite)
         .map((x) => x.personne)
         .sort(parNaissance);
-      const extraG = demisG.length ? demisG.length * SL + GAP : 0;
-      const extraD = demisD.length ? demisD.length * SL + GAP : 0;
-      const avecDemis = f.demis.length > 0 && !defilant && totalFr + extraG + extraD <= W - 8;
+      // Demis en familles (avec l'autre parent) : tout le dessin est réduit s'il ne tient pas ; trop large même réduit : retour à la rangée simple.
+      const plan = f.demis.length > 0 ? planDemis(f, nB, bw, decal, SL_DEMIS, GAP, f.parents.length + f.manque === 2) : undefined;
+      const besoin = plan ? plan.gauche + plan.droite + 16 : 0;
+      const etendu = !!plan && besoin * 0.5 <= largeurReelle;
+      el.style.zoom = etendu && besoin > largeurReelle ? String(largeurReelle / besoin) : '';
+      if (etendu) W = Math.max(besoin, largeurReelle);
+      // Sur grand écran, le foyer garde ses proportions de téléphone, centré ; seuls les enfants s'étalent.
+      const o = (W - Math.min(W, 400)) / 2;
+      const largeurRang = (s: number) => nB * s + bw + (demisG.length ? demisG.length * s + GAP : 0) + (demisD.length ? demisD.length * s + GAP : 0);
+      // Trop large avec des demis : les places rétrécissent ; encore trop large : la rangée défile.
+      const sl = etendu ? SL_DEMIS : f.demis.length > 0 && largeurRang(SL) > W - 8 ? SL_SERRE : SL;
+      const totalFr = nB * sl + bw;
+      const extraG = demisG.length ? demisG.length * sl + GAP : 0;
+      const extraD = demisD.length ? demisD.length * sl + GAP : 0;
+      // Trop large : la personne reste au centre, ses aînés, ses cadets et ses demis défilent de chaque côté.
+      const defilant = !etendu && (fr.length > 0 || f.demis.length > 0) && largeurRang(sl) > W - 8;
+      const avecDemis = !etendu && f.demis.length > 0 && !defilant;
       let xM: number;
       let xC: number;
-      if (avecDemis) {
-        xM = (W - totalFr - extraG - extraD) / 2 + extraG + nA * SL + 42;
-        xC = xM + 92;
+      if (etendu && plan) {
+        xM = (W - plan.gauche - plan.droite) / 2 + plan.gauche;
+        xC = xM - 92;
+      } else if (avecDemis) {
+        xM = (W - totalFr - extraG - extraD) / 2 + extraG + decal;
+        xC = xM - 92;
       } else if (fr.length === 0) {
-        xM = W / 2 - (cj ? 50 : 0);
-        xC = W / 2 + 50;
+        xM = W / 2 + (cj && !f.ex ? 50 : 0);
+        xC = xM - 100;
       } else if (defilant) {
-        xM = W / 2 - (cj ? 46 : 0);
-        xC = xM + 92;
+        xM = W / 2 + (cj ? 46 : 0);
+        xC = xM - 92;
       } else {
-        xM = (W - totalFr) / 2 + nA * SL + 42;
-        xC = xM + 92;
+        xM = (W - totalFr) / 2 + decal;
+        xC = xM - 92;
       }
 
       noeuds.push(noeud(p, moi, xM, yM, RG, { ici: true, larg: 84, annee: true }));
+      const xX = xM + (xM - xC);
+      if (f.ex) {
+        noeuds.push(noeud(f.ex.personne, moi, xX, yM, R, { annee: true }));
+        deces ||= estDecede(f.ex.personne);
+        traits.push({ d: `M${xM + RG + 5} ${yM}H${xX - R - 5}`, pointille: true });
+      }
       if (cj) {
         noeuds.push(noeud(cj, moi, xC, yM, R, { annee: true }));
         deces ||= estDecede(cj);
-        traits.push({ d: `M${xM + RG + 5} ${yM}H${xC - R - 5}`, pointille: f.conjoint?.separe });
+        traits.push({ d: `M${xC + R + 5} ${yM}H${xM - RG - 5}`, pointille: f.conjoint?.separe });
       }
 
       // Trait de fratrie (au-dessus de la rangée) : du premier au dernier frère ou sœur, en passant par la personne.
@@ -187,30 +289,32 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
       let busD = xM;
       for (const s of fr) deces ||= estDecede(s);
       if (fr.length > 0 && !defilant) {
-        const x0 = xM - 42 - nA * SL;
+        const x0 = xM - decal;
         const place = (s: Personne, x: number) => {
           traits.push({ d: `M${x} ${yJ}V${yM - R - 5}` });
-          noeuds.push(noeud(s, moi, x, yM, R, { annee: true, larg: SL - 4 }));
+          noeuds.push(noeud(s, moi, x, yM, R, { annee: true, larg: sl - 4 }));
           busG = Math.min(busG, x);
           busD = Math.max(busD, x);
         };
-        aines.forEach((s, i) => place(s, x0 + (i + 0.5) * SL));
-        cadets.forEach((s, i) => place(s, x0 + nA * SL + bw + (i + 0.5) * SL));
+        cadets.forEach((s, i) => place(s, x0 + bw + (i + 0.5) * sl));
       } else if (defilant) {
-        busG = nA > 0 ? 4 : xM;
+        busG = xM;
         busD = nB > 0 ? W - 4 : xM;
+        const demisBande = [...demisG, ...demisD];
+        for (const s of demisBande) deces ||= estDecede(s);
         const haut0 = yJ - 2;
         const hB = yM + R + 30 + LBL + LIGNE_EN_PLUS - haut0;
-        const bande = (liste: Personne[], gauche: boolean) => {
+        const bande = (liste: Personne[]) => {
           if (liste.length === 0) return;
-          const g = gauche ? 0 : cj ? xC + 34 : xM + 44;
-          const lb = gauche ? xM - 44 : W - g;
-          const cw = Math.max(lb, liste.length * SL + 8);
+          const g = xM + (f.ex ? 136 : 44);
+          const lb = W - g;
+          const cw = Math.max(lb, liste.length * sl + 8);
           const tB: Trait[] = [];
           const nB2: HTMLElement[] = liste.map((s, i) => {
-            const x = gauche ? cw - (liste.length - i - 0.5) * SL : (i + 0.5) * SL;
-            tB.push({ d: `M${x} 2V${yM - R - 5 - haut0}` });
-            return noeud(s, moi, x, yM - haut0, R, { annee: true, larg: SL - 4 });
+            const x = (i + 0.5) * sl;
+            // Les demis sont reliés en pointillé ; sans fratrie, aucun trait ne les rattache à la rangée.
+            if (nB > 0) tB.push({ d: `M${x} 2V${yM - R - 5 - haut0}`, pointille: i >= nB });
+            return noeud(s, moi, x, yM - haut0, R, { annee: true, larg: sl - 4 });
           });
           const defile = h(
             'div',
@@ -218,7 +322,7 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
               class: 'defile',
               style: `left: ${g}px; top: ${haut0}px; width: ${lb}px; height: ${hB}px`,
               role: 'group',
-              'aria-label': `${liste.length} ${gauche ? 'aînés' : 'cadets'}, faire défiler`,
+              'aria-label': `${liste.length} frères, sœurs et demis, faire défiler`,
             },
             h('div', { style: `width: ${cw}px` }, svg(cw, hB, tB), ...nB2),
           );
@@ -228,15 +332,10 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
             defile.classList.toggle('fondu-d', defile.scrollLeft < max - 2);
           };
           defile.addEventListener('scroll', fondus, { passive: true });
-          // Départ contre la personne : fin de la bande pour les aînés, début pour les cadets.
-          requestAnimationFrame(() => {
-            if (gauche) defile.scrollLeft = defile.scrollWidth;
-            fondus();
-          });
+          requestAnimationFrame(fondus);
           bandes.push(defile);
         };
-        bande(aines, true);
-        bande(cadets, false);
+        bande([...cadets, ...demisBande]);
       }
 
       // Parents (et case « + Parent »), puis la fratrie sous les mêmes parents.
@@ -250,7 +349,7 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         adoption ||= f.parents.some((x) => x.adoptif);
         let depart: number;
         if (hauts.length === 2) {
-          const x0 = Math.max(o + 34, cible - 42);
+          const x0 = etendu ? cible - 42 : Math.max(o + 34, cible - 42);
           const x1 = x0 + 84;
           hauts.forEach((x, i) => {
             noeuds.push(noeud(x, moi, i ? x1 : x0, yP, R, { annee: true, manque: p.id }));
@@ -280,18 +379,47 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         traits.push({ d: `M${xM} ${yJ}V${yM - RG - 5}` });
       }
 
+      // Demis en familles : le groupe pend sous le trait entre le parent commun et l'autre parent (trait plein : le pointillé est réservé à l'adoption et aux parents séparés).
+      if (etendu && plan && xParents.length > 0) {
+        const yBus = yM - RG - 18;
+        for (const fam of plan.familles) {
+          const xPar = fam.gauche ? xParents[0] : xParents[xParents.length - 1];
+          const h = xM + fam.h;
+          const xs = fam.xs.map((x) => xM + x);
+          if (fam.autre && fam.xAutre !== undefined) {
+            const xA = xM + fam.xAutre;
+            noeuds.push(noeud(fam.autre, moi, xA, yP, R, { annee: true }));
+            deces ||= estDecede(fam.autre);
+            const sens = Math.sign(xPar - xA);
+            traits.push({ d: `M${xA + sens * (R + 5)} ${yP}H${xPar - sens * (R + 5)}`, pointille: fam.separe });
+            traits.push({ d: `M${h} ${yP}V${yBus}` });
+          } else {
+            traits.push({ d: `M${xPar + (fam.gauche ? -1 : 1) * (R + 5)} ${yP}H${h}V${yBus}` });
+          }
+          const bords = [h, ...xs];
+          const g = Math.min(...bords);
+          const d = Math.max(...bords);
+          if (g < d) traits.push({ d: `M${g} ${yBus}H${d}` });
+          fam.enfants.forEach((s, i) => {
+            traits.push({ d: `M${xs[i]} ${yBus}V${yM - R - 5}` });
+            noeuds.push(noeud(s, moi, xs[i], yM, R, { annee: true, larg: sl - 4 }));
+            deces ||= estDecede(s);
+          });
+        }
+      }
+
       // Demis : trait pointillé depuis leur parent commun, à hauteur des parents, puis descente jusqu'à chacun.
       if (avecDemis && xParents.length > 0) {
-        const gaucheRang = xM - 42 - nA * SL;
-        const droiteRang = xM - 42 + bw + nB * SL;
+        const gaucheRang = xM - decal;
+        const droiteRang = xM - decal + bw + nB * sl;
         const cote = (liste: Personne[], gauche: boolean) => {
           if (liste.length === 0) return;
-          const xs = liste.map((_, i) => (gauche ? gaucheRang - GAP - (liste.length - i - 0.5) * SL : droiteRang + GAP + (i + 0.5) * SL));
+          const xs = liste.map((_, i) => (gauche ? gaucheRang - GAP - (liste.length - i - 0.5) * sl : droiteRang + GAP + (i + 0.5) * sl));
           const xPar = gauche ? xParents[0] - R - 5 : xParents[xParents.length - 1] + R + 5;
           traits.push({ d: `M${xPar} ${yP}H${gauche ? xs[0] : xs[xs.length - 1]}`, pointille: true });
           liste.forEach((s, i) => {
             traits.push({ d: `M${xs[i]} ${yP}V${yM - R - 5}` });
-            noeuds.push(noeud(s, moi, xs[i], yM, R, { annee: true, larg: SL - 4 }));
+            noeuds.push(noeud(s, moi, xs[i], yM, R, { annee: true, larg: sl - 4 }));
             deces ||= estDecede(s);
           });
         };
@@ -299,15 +427,23 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         cote(demisD, false);
       }
 
-      // Enfants : ceux du couple sous le couple, ceux d'une autre union sous la personne seule.
-      // S'ils ne tiennent pas tous, leur rang défile de côté.
+      // Enfants, de gauche à droite : ceux du couple sous le couple, ceux d'une autre union sous la personne seule,
+      // ceux de l'ex sous la personne et son ex. S'ils ne tiennent pas tous, leur rang défile de côté.
+      const groupe = (e: Foyer['enfants'][number]) => (e.duCouple ? 0 : e.duEx ? 2 : 1);
+      const ordonnes = [...f.enfants].sort((a, b) => groupe(a) - groupe(b));
       if (n > 0) {
         const oS = xM;
         const oC = (xM + xC) / 2;
-        const aS = f.enfants.some((e) => !e.duCouple);
-        const aC = f.enfants.some((e) => e.duCouple);
+        const oX = (xM + xX) / 2;
         const yBus = yE - R - 14;
         const departS = yM + RG + 28 + LBL + LIGNE_EN_PLUS;
+        const presents = (
+          [
+            [0, oC, yM],
+            [1, oS, departS],
+            [2, oX, yM],
+          ] as const
+        ).filter(([g]) => ordonnes.some((e) => groupe(e) === g));
         for (const e of f.enfants) {
           adoption ||= e.adoptif;
           deces ||= estDecede(e.personne);
@@ -316,21 +452,18 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
         if (n * 60 <= W - 8) {
           const pas = Math.min(70, (W - 8) / n);
           const total = (n - 1) * pas;
-          const centre = aS && aC ? (oS + oC) / 2 : aC ? oC : oS;
+          const origines = presents.map(([, o]) => o);
+          const centre = (Math.min(...origines) + Math.max(...origines)) / 2;
           const debut = Math.max(34, Math.min(centre - total / 2, W - 34 - total));
-          const bus = (duCouple: boolean) => (!duCouple && aS && aC ? yBus - 10 : yBus);
-          for (const [duCouple, origine, haut] of [
-            [false, oS, departS],
-            [true, oC, yM],
-          ] as const) {
-            const xs = f.enfants.flatMap((e, i) => (e.duCouple === duCouple ? [debut + i * pas] : []));
-            if (xs.length === 0) continue;
-            traits.push({ d: `M${origine} ${haut}V${bus(duCouple)}` });
-            traits.push({ d: `M${Math.min(xs[0], origine)} ${bus(duCouple)}H${Math.max(xs[xs.length - 1], origine)}` });
+          const bus = (g: number) => (g === 1 && presents.length > 1 ? yBus - 10 : yBus);
+          for (const [g, origine, haut] of presents) {
+            const xs = ordonnes.flatMap((e, i) => (groupe(e) === g ? [debut + i * pas] : []));
+            traits.push({ d: `M${origine} ${haut}V${bus(g)}` });
+            traits.push({ d: `M${Math.min(xs[0], origine)} ${bus(g)}H${Math.max(xs[xs.length - 1], origine)}` });
           }
-          f.enfants.forEach((e, i) => {
+          ordonnes.forEach((e, i) => {
             const x = debut + i * pas;
-            traits.push({ d: `M${x} ${bus(e.duCouple)}V${yE - R - 5}`, pointille: e.adoptif });
+            traits.push({ d: `M${x} ${bus(groupe(e))}V${yE - R - 5}`, pointille: e.adoptif });
             noeuds.push(noeud(e.personne, moi, x, yE, R, { annee: true }));
           });
         } else {
@@ -344,8 +477,7 @@ export function dessinFoyer(p: Personne, f: Foyer, moi: string | undefined): HTM
           const largD = 16 + n * pasD;
           const haut0 = yBus - 2;
           const hD = yE + R + 30 + LBL + LIGNE_EN_PLUS - haut0;
-          if (aS) traits.push({ d: `M${oS} ${departS}V${yBus}` });
-          if (aC) traits.push({ d: `M${oC} ${yM}V${yBus}` });
+          for (const [, origine, haut] of presents) traits.push({ d: `M${origine} ${haut}V${yBus}` });
           const xPremier = 8 + pasD / 2;
           const tD: Trait[] = [{ d: `M${xPremier} 2H${xPremier + (n - 1) * pasD}` }];
           const nD: HTMLElement[] = [];

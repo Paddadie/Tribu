@@ -9,7 +9,7 @@ import {
   evenementsAVenir,
   libelleAnnees,
   nomEvenement,
-  quandCourt,
+  pastilleJour,
   titreEvenement,
   type Evenement,
 } from '../modele/evenements';
@@ -32,7 +32,6 @@ import { avatarPersonne, contenuLigne } from './lignePersonne';
 // La recherche survit à l'aller-retour accueil → fiche → accueil.
 let recherche = '';
 
-const SVG = 'http://www.w3.org/2000/svg';
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 /** Lignes de personnes du bloc « Aujourd'hui » avant « + N autres ». */
 const MAX_AUJOURDHUI = 4;
@@ -101,16 +100,9 @@ function lienDe(d: Donnees, moi: Personne | undefined, p: Personne): string | un
   return e && minuscule(e);
 }
 
-/** Avatar d'une personne décédée : grisé. */
-function avatarGris(p: Personne): HTMLElement {
-  const a = avatarPersonne(p);
-  a.classList.add('decede');
-  return a;
-}
-
-/** Avatar seul, ou les deux d'un couple qui se chevauchent (le conjoint décédé en gris). */
+/** Avatar seul, ou les deux d'un couple qui se chevauchent. */
 function avatars(e: Evenement): HTMLElement {
-  const un = (p: Personne) => (estDecede(p) ? avatarGris(p) : avatarPersonne(p));
+  const un = (p: Personne) => avatarPersonne(p);
   return e.personnes.length === 1 ? un(e.personnes[0]) : h('span', { class: 'duo' }, ...e.personnes.map(un));
 }
 
@@ -185,13 +177,13 @@ const ICONES = { anniversaire: 'gateau', union: 'coeur', fete: 'fete', deces: 'a
 
 function vignette(e: Evenement, aujourdhui: Date): HTMLElement {
   const annees = e.genre === 'union' && e.annees === 0 ? 'le grand jour' : e.genre === 'fete' ? '' : libelleAnnees(e.annees);
+  const { haut, jour } = pastilleJour(e, aujourdhui);
   return h(
     'a',
     { class: 'vignette', href: lienFiche(e) },
-    h('span', { class: 'type' }, icone(ICONES[e.genre], 14), titreEvenement(e)),
-    avatars(e),
+    h('span', { class: 'haut' }, avatars(e), h('span', { class: 'jour' }, h('small', {}, haut), h('span', {}, jour))),
     h('span', { class: 'ligne-nom' }, nomEvenement(e, true)),
-    h('span', { class: 'secondaire' }, [quandCourt(e, aujourdhui), annees].filter(Boolean).join(' · ')),
+    h('span', { class: 'secondaire' }, icone(ICONES[e.genre], 14), annees || titreEvenement(e)),
   );
 }
 
@@ -226,7 +218,7 @@ function blocBientot(d: Donnees, evs: Evenement[], aujourdhui: Date): HTMLElemen
       ? calme(d, aujourdhui)
       : h(
           'div',
-          { class: 'defile' },
+          { class: 'defile-bientot' },
           ...montrees.map((e) => vignette(e, aujourdhui)),
           h('a', { class: 'vignette fin', href: '#/agenda' }, icone('agenda', 20), 'Tout voir'),
         ),
@@ -241,38 +233,13 @@ function souvenir(e: Evenement): HTMLElement {
   return h(
     'a',
     { class: 'souvenir', href: lienFiche(e) },
-    avatarGris(p),
+    avatarPersonne(p),
     h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(p)), h('span', {}, libelleDeces(p.deces, p.sexe))),
     h('span', { class: 'quand' }, h('span', {}, e.dans === 0 ? 'aujourd’hui' : 'demain'), h('span', { class: 'etiquette' }, libelleAnnees(e.annees))),
   );
 }
 
 // --- Raccourcis -----------------------------------------------------------------------------------------------------
-
-/** Dessin de 72 × 40 : des ronds de couleur (cx, cy, r, couleur CSS). */
-function dessin(ronds: [number, number, number, string][], traits?: string, contour?: boolean): SVGSVGElement {
-  const svg = document.createElementNS(SVG, 'svg');
-  svg.setAttribute('class', 'dessin');
-  svg.setAttribute('viewBox', '0 0 72 40');
-  svg.setAttribute('aria-hidden', 'true');
-  if (traits) {
-    const chemin = document.createElementNS(SVG, 'path');
-    chemin.setAttribute('d', traits);
-    chemin.setAttribute('class', 'traits');
-    svg.append(chemin);
-  }
-  for (const [cx, cy, r, couleur] of ronds) {
-    const rond = document.createElementNS(SVG, 'circle');
-    rond.setAttribute('cx', String(cx));
-    rond.setAttribute('cy', String(cy));
-    rond.setAttribute('r', String(r));
-    if (contour) rond.setAttribute('class', 'cerne');
-    // Par le CSSOM : la CSP du build bloque un attribut style posé en texte.
-    rond.style.fill = couleur;
-    svg.append(rond);
-  }
-  return svg;
-}
 
 function raccourci(href: string | (() => void), image: Element, titre: string, detail: string): HTMLElement {
   const contenu = [image, h('strong', {}, titre), h('span', { class: 'secondaire' }, detail)];
@@ -327,61 +294,50 @@ function listeAmis(d: Donnees, moi: Personne | undefined): void {
   );
 }
 
+/** Pile des quatre plus grandes familles, une pastille à leur couleur et à l'initiale de leur nom ; une icône s'il n'y en a pas. */
+function pileFamilles(fs: Familles): HTMLElement {
+  const grandes = [...fs].sort((a, b) => b.n - a.n).slice(0, 4);
+  if (grandes.length === 0) return h('span', { class: 'visuel' }, icone('famille', 30));
+  return h(
+    'span',
+    { class: 'visuel pile' },
+    ...grandes.map((f) =>
+      h(
+        'span',
+        { class: f.couleur === undefined ? 'avatar' : 'avatar teinte', style: f.couleur !== undefined && `--a: var(--c${f.couleur})` },
+        initialeFamille(f.nom),
+      ),
+    ),
+  );
+}
+
+/** « Famille Roux » → « R ». */
+const initialeFamille = (nom: string) =>
+  nom
+    .replace(/^Famille /, '')
+    .charAt(0)
+    .toLocaleUpperCase('fr');
+
 function raccourcis(d: Donnees, listees: Personne[], moi: Personne | undefined): HTMLElement {
   const n = listees.length;
   const { famille, amis } = famillesDe(d, moi);
-  const quatre = (fs: Familles) =>
-    [...fs]
-      .sort((a, b) => b.n - a.n)
-      .map((f) => f.couleur)
-      .concat([undefined, undefined, undefined, undefined])
-      .slice(0, 4)
-      .map((c) => (c === undefined ? 'var(--pastille)' : `var(--c${c})`));
-  const nombre = (fs: Familles, vide: string) => (fs.length === 0 ? vide : pluriel(fs.length, 'nom de famille', 'noms de famille'));
   return h(
     'nav',
     { class: 'raccourcis', 'aria-label': 'Raccourcis' },
     raccourci(
       () => listeFamilles(d, moi),
-      dessin(
-        quatre(famille).map((c, i) => [11 + 14 * i, 20, 10, c]),
-        undefined,
-        true,
-      ),
+      pileFamilles(famille),
       'Ma famille',
-      nombre(famille, 'Aucun nom de famille'),
+      famille.length === 0 ? 'Aucune famille' : pluriel(famille.length, 'famille', 'familles'),
     ),
     raccourci(
       () => listeAmis(d, moi),
-      dessin(
-        quatre(amis).map((c, i) => [11 + 14 * i, 20, 10, c]),
-        undefined,
-        true,
-      ),
+      pileFamilles(amis),
       'Mes amis',
-      nombre(amis, 'Aucune famille d’amis'),
+      amis.length === 0 ? 'Aucune famille d’amis' : pluriel(amis.length, 'famille d’amis', 'familles d’amis'),
     ),
-    raccourci(
-      '#/arbre',
-      dessin(
-        [
-          [22, 7, 6, 'var(--c2)'],
-          [50, 7, 6, 'var(--c1)'],
-          [14, 32, 6, 'var(--c2)'],
-          [36, 32, 7, 'var(--accent)'],
-          [58, 32, 6, 'var(--c1)'],
-        ],
-        'M22 7h28M36 7v12M14 19h44M14 19v12M36 19v12M58 19v12',
-      ),
-      'Arbre global',
-      pluriel(n, 'personne', 'personnes'),
-    ),
-    raccourci(
-      '#/personnes',
-      h('span', { class: 'dessin duo' }, ...listees.slice(0, 3).map((p) => avatarPersonne(p))),
-      'Toutes les fiches',
-      pluriel(n, 'fiche', 'fiches'),
-    ),
+    raccourci('#/arbre', h('span', { class: 'visuel' }, icone('arbre', 30)), 'Arbre global', pluriel(n, 'personne', 'personnes')),
+    raccourci('#/personnes', h('span', { class: 'visuel' }, icone('fiches', 30)), 'Toutes les fiches', pluriel(n, 'fiche', 'fiches')),
   );
 }
 

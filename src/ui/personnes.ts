@@ -213,6 +213,6 @@ export function ecranPersonnes(): HTMLElement {
     zoneListe,
     index,
     bulle,
-    h('a', { class: 'ajout', href: '#/nouveau', 'aria-label': 'Ajouter une personne' }, icone('plus', 28)),
+    h('a', { class: 'ajout etendu', href: '#/nouveau' }, icone('plus', 24), 'Nouvelle fiche'),
   );
 }

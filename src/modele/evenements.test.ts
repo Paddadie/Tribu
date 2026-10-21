@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { estDansLeFutur } from './age';
-import { dateEvenement, depuisUnion, detailEvenement, evenementsAVenir, nomEvenement, quandCourt, titreEvenement, type Evenement } from './evenements';
+import {
+  dateEvenement,
+  depuisUnion,
+  detailEvenement,
+  evenementsAVenir,
+  nomEvenement,
+  pastilleJour,
+  quandCourt,
+  titreEvenement,
+  type Evenement,
+} from './evenements';
 import { ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, Personne } from './types';
 
@@ -21,7 +31,12 @@ describe('evenementsAVenir', () => {
     [d] = ajouter(d, { prenom: 'Zorglub', naissance: '--10-22' });
     [d] = ajouter(d, { prenom: 'Odile', naissance: '1930-01-01', deces: '2015-10-22' });
     [d] = ajouter(d, { prenom: 'Zorglub', naissance: '1980-05' });
-    expect(evenementsAVenir(d, AUJOURDHUI, 30).map(resume)).toEqual(['0 anniversaire Céline 36', '0 fete Céline', '1 anniversaire Zorglub', '1 deces Odile 11']);
+    expect(evenementsAVenir(d, AUJOURDHUI, 30).map(resume)).toEqual([
+      '0 anniversaire Céline 36',
+      '0 fete Céline',
+      '1 anniversaire Zorglub',
+      '1 deces Odile 11',
+    ]);
   });
 
   it('respecte l’horizon et passe à l’année suivante', () => {
@@ -123,6 +138,11 @@ describe('libellés', () => {
   it('date une vignette, avec le mois s’il change', () => {
     expect(quandCourt({ annee: 2026, mois: 10, jour: 23 }, AUJOURDHUI)).toBe('ven. 23');
     expect(quandCourt({ annee: 2026, mois: 11, jour: 1 }, AUJOURDHUI)).toBe('dim. 1er nov.');
+  });
+
+  it('met une pastille de date : le jour de la semaine, ou le mois s’il change', () => {
+    expect(pastilleJour({ annee: 2026, mois: 10, jour: 23 }, AUJOURDHUI)).toEqual({ haut: 'ven', jour: '23' });
+    expect(pastilleJour({ annee: 2026, mois: 11, jour: 1 }, AUJOURDHUI)).toEqual({ haut: 'nov', jour: '1er' });
   });
 });
 

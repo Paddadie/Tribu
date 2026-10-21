@@ -224,10 +224,11 @@ class Carte {
     this.barreBas = h(
       'div',
       { class: 'commandes-arbre gauche' },
-      this.puceToi,
-      this.puceTout,
-      this.familles.some((f) => !f.amis) && this.puceListe('familles', 'Familles'),
-      this.cadres.length > 0 && this.puceListe('amis', 'Amis'),
+      // Segment « Toi | Tout » (les vues), puis un filet et les deux listes (les outils).
+      h('div', { class: 'segment-arbre', role: 'group', 'aria-label': 'Vue' }, this.puceToi, this.puceTout),
+      (this.familles.some((f) => !f.amis) || this.cadres.length > 0) && h('span', { class: 'filet-arbre', 'aria-hidden': 'true' }),
+      this.familles.some((f) => !f.amis) && this.puceListe('familles', 'Familles', 'famille'),
+      this.cadres.length > 0 && this.puceListe('amis', 'Amis', 'ami'),
     );
     this.vue = h(
       'div',
@@ -332,8 +333,13 @@ class Carte {
 
   // ——— Listes « Familles » et « Amis » ———
 
-  private puceListe(quoi: 'familles' | 'amis', texte: string): HTMLElement {
-    const b = h('button', { type: 'button', class: 'puce-arbre', 'aria-expanded': 'false', onclick: () => this.basculerFeuille(quoi) }, texte);
+  private puceListe(quoi: 'familles' | 'amis', texte: string, trace: Parameters<typeof icone>[0]): HTMLElement {
+    const b = h(
+      'button',
+      { type: 'button', class: 'puce-arbre outil-arbre', 'aria-expanded': 'false', onclick: () => this.basculerFeuille(quoi) },
+      icone(trace, 20),
+      texte,
+    );
     this.puces.set(quoi, b);
     return b;
   }

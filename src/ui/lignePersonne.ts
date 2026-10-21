@@ -3,13 +3,17 @@
 
 import { detailPersonne } from '../modele/age';
 import { couleurFamille, initiales, nomComplet } from '../modele/liste';
+import { estDecede } from '../modele/modele';
 import type { Personne } from '../modele/types';
 import { h } from './dom';
 
-/** Avatar aux initiales, au pastel du nom de famille, le même que dans l'arbre (vert pâle si la personne n'a pas de nom). */
+/**
+ * Avatar aux initiales, au pastel du nom de famille, le même que dans l'arbre (vert pâle si la personne n'a pas de nom).
+ * Une personne décédée a partout le même avatar : sa couleur, en plus pâle (classe `decede`).
+ */
 export function avatarPersonne(p: Personne, grand = false): HTMLElement {
   const k = couleurFamille(p);
-  const classes = ['avatar', grand && 'avatar-grand', k !== undefined && 'teinte'].filter(Boolean).join(' ');
+  const classes = ['avatar', grand && 'avatar-grand', k !== undefined && 'teinte', estDecede(p) && 'decede'].filter(Boolean).join(' ');
   return h('span', { class: classes, style: k !== undefined && `--a: var(--c${k})` }, initiales(p));
 }
 

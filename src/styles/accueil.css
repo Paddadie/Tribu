@@ -161,9 +161,10 @@
   box-shadow: 0 0 0 2px var(--carte);
 }
 
-/* Personne décédée : avatar gris, sans la couleur de sa famille. */
-.avatar.decede {
-  background: var(--pastille);
+/* Personne décédée : même avatar partout, la couleur de sa famille en plus pâle (gris si sans nom). */
+.avatar.decede,
+.avatar.teinte.decede {
+  background: color-mix(in srgb, var(--a, var(--secondaire)) 40%, var(--carte));
   color: var(--secondaire);
 }
 
@@ -181,6 +182,12 @@
   border-radius: var(--rayon-l);
   background: var(--accent);
   color: var(--sur-accent);
+}
+
+/* En sombre, la dalle menthe éblouit : elle devient un vert profond, texte clair (10,3:1). */
+:root[data-theme='sombre'] .aujourdhui {
+  --sur-accent: var(--encre);
+  background: var(--accent-clair);
 }
 
 .aujourdhui .tete {
@@ -233,7 +240,7 @@
 }
 
 /* Bientôt : vignettes qui défilent de côté jusqu'au bord de l'écran. */
-.defile {
+.defile-bientot {
   display: flex;
   gap: 10px;
   margin: 0 -20px;
@@ -244,7 +251,7 @@
   scrollbar-width: none;
 }
 
-.defile::-webkit-scrollbar {
+.defile-bientot::-webkit-scrollbar {
   display: none;
 }
 
@@ -264,13 +271,33 @@
   scroll-snap-align: start;
 }
 
-.vignette .type {
+.vignette .haut {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--t1);
-  font-weight: var(--gras);
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Pastille de date : jour de la semaine (ou mois) au-dessus du quantième. */
+.vignette .jour {
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+  padding: 5px 7px;
+  border-radius: var(--rayon-s);
+  background: var(--accent-clair);
   color: var(--accent-texte);
+  font-weight: var(--gras);
+}
+
+.vignette .jour small {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vignette .jour span {
+  font-size: var(--t3);
 }
 
 .vignette .ligne-nom {
@@ -280,6 +307,9 @@
 }
 
 .vignette .secondaire {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--t1);
 }
 
@@ -361,23 +391,24 @@
   font-size: var(--t1);
 }
 
-.raccourci .dessin {
-  width: 72px;
+.raccourci .visuel {
   height: 40px;
   margin-bottom: 6px;
   display: flex;
   align-items: center;
+  color: var(--accent);
 }
 
-.dessin .traits {
-  fill: none;
-  stroke: var(--trait);
-  stroke-width: 2;
+/* Pile d'avatars de familles, qui se chevauchent. */
+.visuel.pile .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: var(--t1);
+  box-shadow: 0 0 0 2px var(--carte);
 }
 
-.dessin .cerne {
-  stroke: var(--carte);
-  stroke-width: 2;
+.visuel.pile .avatar + .avatar {
+  margin-left: -8px;
 }
 
 /* En-tête avec retour à gauche du titre (Toutes les fiches, Agenda). */
@@ -414,22 +445,12 @@
 }
 
 .puces.puces-liste {
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 10px 0 0;
-  padding: 0;
-  overflow: visible;
+  margin-top: 10px;
 }
 
-/* Les puces se partagent la largeur de chaque ligne. */
-.puces-liste .puce {
-  flex: 1 1 auto;
-  text-align: center;
-}
-
-/* Sous-filtres : taille naturelle, sans étirement quand il n'y en a que deux ou trois. */
-.puces-sous .puce {
-  flex: 0 0 auto;
+/* Les sous-filtres, sur leur propre rangée, défilent comme les filtres. */
+.puces-sous {
+  margin-top: 8px;
 }
 
 .puces[hidden] {
@@ -511,8 +532,8 @@
 /* Dates de la fiche : l'âge, sur sa propre ligne, ressort. */
 .identite .dates {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 2px 10px;
 }
 
 .identite .dates .age {
@@ -527,12 +548,12 @@
   top: 150px;
   bottom: calc(max(28px, env(safe-area-inset-bottom)) + 76px);
   right: max(2px, env(safe-area-inset-right));
-  width: 24px;
+  width: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--t1);
+  font-size: 10px;
   font-weight: var(--gras);
   color: var(--accent);
   touch-action: none;
@@ -714,6 +735,15 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 16px var(--ombre-bouton);
+}
+
+.ajout.etendu {
+  width: auto;
+  height: 56px;
+  gap: 8px;
+  padding: 0 20px 0 16px;
+  border-radius: var(--rayon-m);
+  font-weight: var(--gras);
 }
 
 button.raccourci {
