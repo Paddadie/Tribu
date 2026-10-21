@@ -1347,12 +1347,34 @@ describe('filtres de la liste', () => {
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
     expect(ecran().textContent).toContain('Naissance inconnue');
     expect(ecran().querySelector<HTMLElement>('.index')!.hidden).toBe(true);
-    await toucher(trouver('button', 'Décès'));
-    expect(ecran().querySelector('.vide')?.textContent).toBe('Aucun résultat.');
-    expect(ecran().textContent).toContain('0 sur 4');
 
     await toucher(trouver('button', 'Toutes'));
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
     expect(ecran().querySelector<HTMLElement>('.index')!.hidden).toBe(false);
+  });
+
+  it('ne montre que les manques présents, et rien si une seule sorte manque', async () => {
+    const { donnees } = famille();
+    // Tous complets sauf une naissance inconnue : un seul manque, donc pas de sous-filtre.
+    const completes = donnees.personnes.map((p) => ({ ...p, prenom: p.prenom || 'X', nom: p.nom || 'Y', naissance: '1980-01-01' }));
+    const un = completes.map((p, i) => (i === 0 ? { ...p, naissance: '' } : p));
+    await demarrer({ ...donnees, personnes: un }, '#/personnes');
+    await toucher(trouver('button', 'À compléter'));
+    expect(ecran().querySelectorAll('a.ligne')).toHaveLength(1);
+    expect(ecran().querySelector<HTMLElement>('.puces-sous')!.hidden).toBe(true);
+
+    // Un décès sans date en plus : deux sous-filtres, et seulement ceux-là.
+    const deux = un.map((p, i) => (i === 1 ? { ...p, decede: true as const, deces: '' } : p));
+    await demarrer({ ...donnees, personnes: deux }, '#/personnes');
+    await toucher(trouver('button', 'À compléter'));
+    const sous = [...ecran().querySelectorAll('.puces-sous button')].map((b) => b.textContent);
+    expect(sous).toEqual(['Naissance', 'Décès']);
+  });
+
+  it('masque « À compléter » quand toutes les fiches sont complètes', async () => {
+    const { donnees } = famille();
+    const completes = donnees.personnes.map((p) => ({ ...p, prenom: p.prenom || 'X', nom: p.nom || 'Y', naissance: '1980-01-01' }));
+    await demarrer({ ...donnees, personnes: completes }, '#/personnes');
+    expect([...ecran().querySelectorAll('.puces-liste button')].map((b) => b.textContent)).toEqual(['Toutes']);
   });
 });

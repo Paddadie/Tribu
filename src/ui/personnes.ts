@@ -126,15 +126,28 @@ export function ecranPersonnes(): HTMLElement {
 
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d)?.id;
+  // Manques réellement présents dans la liste : un filtre sans personne n'est pas proposé.
+  const manquesPresents = new Set(personnesListees(d).flatMap(manquesDe));
+  const manquesDispo = MANQUES.filter((m) => manquesPresents.has(m.manque));
+  for (const m of [...manquesChoisis]) if (!manquesPresents.has(m)) manquesChoisis.delete(m);
+  if (puce === 'acompleter' && manquesDispo.length === 0) puce = 'tous';
   if (puce === 'famille' && !moi) puce = 'tous';
   if (puce === 'groupe' && !d.groupes.some((g) => g.id === groupeChoisi)) groupeChoisi = d.groupes[0]?.id ?? '';
   if ((puce === 'groupe' || puce === 'amis') && d.groupes.length === 0) puce = 'tous';
   const rangPuces = h('div', { class: 'puces puces-liste', role: 'group', 'aria-label': 'Filtrer les fiches' });
-  const rangSous = h('div', { class: 'puces puces-liste', role: 'group' });
+  const rangSous = h('div', { class: 'puces puces-liste puces-sous', role: 'group' });
   const bouton = (libelle: string, actif: boolean, onclick: () => void) =>
     h('button', { type: 'button', class: 'puce', 'aria-pressed': String(actif), onclick }, libelle);
   const dessinerPuces = () => {
-    const dispo = PUCES.filter((x) => (x.filtre === 'famille' ? !!moi : x.filtre === 'amis' || x.filtre === 'groupe' ? d.groupes.length > 0 : true));
+    const dispo = PUCES.filter((x) =>
+      x.filtre === 'famille'
+        ? !!moi
+        : x.filtre === 'amis' || x.filtre === 'groupe'
+          ? d.groupes.length > 0
+          : x.filtre === 'acompleter'
+            ? manquesDispo.length > 0
+            : true,
+    );
     rangPuces.replaceChildren(
       ...dispo.map((x) =>
         bouton(x.libelle, puce === x.filtre, () => {
@@ -145,7 +158,8 @@ export function ecranPersonnes(): HTMLElement {
         }),
       ),
     );
-    rangSous.hidden = puce !== 'groupe' && puce !== 'acompleter';
+    // Un seul manque possible : la rangée n'apporterait rien (la liste le montre déjà).
+    rangSous.hidden = puce === 'groupe' ? false : !(puce === 'acompleter' && manquesDispo.length > 1);
     rangSous.setAttribute('aria-label', puce === 'groupe' ? 'Groupe d’amis' : 'Informations manquantes');
     rangSous.replaceChildren(
       ...(puce === 'groupe'
@@ -157,7 +171,7 @@ export function ecranPersonnes(): HTMLElement {
             }),
           )
         : puce === 'acompleter'
-          ? MANQUES.map((m) =>
+          ? manquesDispo.map((m) =>
               bouton(m.libelle, manquesChoisis.has(m.manque), () => {
                 if (!manquesChoisis.delete(m.manque)) manquesChoisis.add(m.manque);
                 dessinerPuces();

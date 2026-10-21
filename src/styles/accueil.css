@@ -427,6 +427,11 @@
   text-align: center;
 }
 
+/* Sous-filtres : taille naturelle, sans étirement quand il n'y en a que deux ou trois. */
+.puces-sous .puce {
+  flex: 0 0 auto;
+}
+
 .puces[hidden] {
   display: none;
 }
