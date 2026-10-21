@@ -34,6 +34,27 @@ export function manquesDe(p: Personne): Manque[] {
   return m;
 }
 
+/**
+ * Proches directs des porteurs d'un nom de famille qui n'ont pas ce nom, pour le zoom sur une famille :
+ * leurs enfants, leur conjoint actuel, et l'autre parent de leurs enfants (union enregistrée ou non, séparés ou non).
+ */
+export function prochesDeFamille(d: Donnees, porteurs: ReadonlySet<string>): Set<string> {
+  const proches = new Set<string>();
+  const enfantsDesPorteurs = new Set<string>();
+  for (const f of d.filiations) {
+    if (!porteurs.has(f.parent)) continue;
+    enfantsDesPorteurs.add(f.enfant);
+    if (!porteurs.has(f.enfant)) proches.add(f.enfant);
+  }
+  for (const f of d.filiations) if (enfantsDesPorteurs.has(f.enfant) && !porteurs.has(f.parent)) proches.add(f.parent);
+  for (const u of d.unions) {
+    if (u.statut !== 'actuelle') continue;
+    if (porteurs.has(u.personneA) && !porteurs.has(u.personneB)) proches.add(u.personneB);
+    else if (porteurs.has(u.personneB) && !porteurs.has(u.personneA)) proches.add(u.personneA);
+  }
+  return proches;
+}
+
 /** Personnes reliées à `moi` par des liens de filiation ou d'union, de proche en proche (lui compris). */
 export function familleDe(d: Donnees, moi: string): Set<string> {
   const voisins = new Map<string, string[]>();

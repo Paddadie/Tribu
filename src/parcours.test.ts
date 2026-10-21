@@ -1238,19 +1238,26 @@ describe('accueil, agenda et dates', () => {
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(4);
   });
 
-  it('les raccourcis Groupes d’amis et Familles ouvrent une pop-up dont chaque ligne mène à l’arbre zoomé', async () => {
+  it('les raccourcis Ma famille et Mes amis ouvrent une pop-up dont chaque ligne mène à l’arbre zoomé', async () => {
     const { donnees, ids } = famille();
-    const avecGroupe = creerGroupe(donnees, [ids.Anne, ids.Bruno], 'Les voisins');
+    const ami = creerPersonne(donnees, { prenom: 'Victor', nom: 'Voisin', sexe: 'M' });
+    const avecGroupe = creerGroupe(ami.donnees, [ids.Chloé, ami.personne.id], 'Les voisins');
     await demarrer(avecGroupe.donnees, '#/', { moi: ids.Chloé });
-    await toucher(trouver('button.raccourci', 'Groupes d’amis'));
     const lignes = () => [...document.querySelectorAll<HTMLAnchorElement>('dialog.fenetre-liste a.ligne-feuille')];
-    expect(lignes().map((a) => a.getAttribute('href'))).toEqual([`#/arbre/groupe/${avecGroupe.groupe.id}`]);
+
+    await toucher(trouver('button.raccourci', 'Mes amis'));
+    expect(lignes().map((a) => a.getAttribute('href'))).toEqual(['#/arbre/famille/voisin']);
     expect(document.querySelector('.ligne-pied')?.getAttribute('href')).toBe('#/groupes');
+    const puces = [...document.querySelectorAll('dialog.fenetre-liste .puce')].map((p) => p.textContent);
+    expect(puces).toEqual(['Tout', 'Les voisins']);
+    await toucher(trouver('dialog.fenetre-liste .puce', 'Les voisins'));
+    expect(lignes().map((a) => a.getAttribute('href'))).toEqual(['#/arbre/famille/voisin']);
     document.querySelector('dialog.fenetre-liste')!.remove();
 
-    await toucher(trouver('button.raccourci', 'Familles'));
+    await toucher(trouver('button.raccourci', 'Ma famille'));
     expect(lignes().length).toBeGreaterThan(0);
-    for (const a of lignes()) expect(a.getAttribute('href')).toMatch(/^#\/arbre\/famille\/\d+$/);
+    for (const a of lignes()) expect(a.getAttribute('href')).toMatch(/^#\/arbre\/famille\/[a-z0-9%-]+$/);
+    expect(lignes().map((a) => a.getAttribute('href'))).not.toContain('#/arbre/famille/voisin');
     const href = lignes()[0].getAttribute('href')!;
     await toucher(lignes()[0]);
     expect(document.querySelector('dialog.fenetre-liste')).toBeNull();

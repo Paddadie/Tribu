@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { familleDe, filtrerListe, manquesDe } from './filtres';
+import { familleDe, filtrerListe, manquesDe, prochesDeFamille } from './filtres';
 import type { Donnees, Personne } from './types';
 
 function p(id: string, extra: Partial<Personne> = {}): Personne {
@@ -37,6 +37,24 @@ describe('manquesDe', () => {
 describe('familleDe', () => {
   it('suit filiations et unions de proche en proche, sans les amis', () => {
     expect([...familleDe(d, 'moi')].sort()).toEqual(['conjointe', 'mere', 'moi']);
+  });
+});
+
+describe('prochesDeFamille', () => {
+  const f = (parent: string, enfant: string) => ({ id: `${parent}-${enfant}`, parent, enfant, type: 'biologique' as const });
+  const u = (a: string, b: string, statut: 'actuelle' | 'separee') => ({ id: `${a}-${b}`, personneA: a, personneB: b, marie: false, statut });
+  const dd: Donnees = {
+    version: 5,
+    personnes: [],
+    unions: [u('a', 'actuel', 'actuelle'), u('exAvecEnfant', 'a', 'separee'), u('a', 'exSansEnfant', 'separee')],
+    filiations: [f('a', 'fils'), f('exAvecEnfant', 'fils'), f('a', 'fille'), f('fille', 'petit'), f('a', 'fille2'), f('coParent', 'fille2')],
+    groupes: [],
+  };
+  it('prend enfants, conjoint actuel et autre parent des enfants (avec ou sans union), pas les ex sans enfant ni les petits-enfants', () => {
+    expect([...prochesDeFamille(dd, new Set(['a']))].sort()).toEqual(['actuel', 'coParent', 'exAvecEnfant', 'fille', 'fille2', 'fils']);
+  });
+  it('ignore ceux qui portent déjà le nom', () => {
+    expect([...prochesDeFamille(dd, new Set(['a', 'fils', 'actuel']))].sort()).toEqual(['coParent', 'exAvecEnfant', 'fille', 'fille2']);
   });
 });
 

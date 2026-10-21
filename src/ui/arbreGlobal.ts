@@ -4,7 +4,8 @@
 
 import { disposerArbre, type Disposition, type Point } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
-import { filtrerParNom, nomComplet } from '../modele/liste';
+import { prochesDeFamille } from '../modele/filtres';
+import { couleurFamille, filtrerParNom, nomComplet, simplifier } from '../modele/liste';
 import { enregistrerParentSansNom, estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Personne } from '../modele/types';
@@ -35,12 +36,9 @@ const ECHELLE_LOIN = 0.6;
 const HAUT_ETIQUETTE = 16;
 
 /** Une famille de la liste « Familles » : nom, couleur de lignée, effectif, zone occupée (pixels) et personne la plus haute, qui pulse à l'arrivée. */
-interface FamilleListee {
-  nom: string;
-  lignee: number;
-  n: number;
+interface FamilleListee extends ResumeFamille {
   zone: Zone;
-  cible: string;
+  cibles: string[];
 }
 interface Zone {
   x: number;
@@ -58,38 +56,35 @@ interface Vue {
 /** Vue choisie par sa puce (pleine tant qu'on ne s'en écarte pas) ; aucune après un déplacement ou un autre saut. */
 type VueActive = 'toi' | 'tout' | undefined;
 
-/** Une famille de l'arbre principal (une lignée) : son nom et son effectif, par ordre alphabétique. */
+/** Une famille = un nom de famille et tous les placés qui le portent : clé (nom simplifié), nom affiché, couleur, effectif. */
 export interface ResumeFamille {
   nom: string;
-  lignee: number;
+  cle: string;
+  couleur: number | undefined;
   n: number;
+  /** Les placés qui portent ce nom. */
+  ids: string[];
+  /** Vrai si tous les porteurs sont dans la bulle des amis : ni lien ni nom commun avec l'arbre de la famille. */
+  amis: boolean;
 }
 
-/** Une entrée par lignée, nommée d'après son étiquette « Famille X » ; sans étiquette, le nom le plus répandu de la lignée la nomme. */
+/** Une entrée par nom de famille présent sur l'arbre (amis compris), par ordre alphabétique. */
 export function resumesFamilles(disp: Disposition): ResumeFamille[] {
-  const effectifs = new Map<number, number>();
-  const noms = new Map<number, Map<string, number>>();
+  const parNom = new Map<string, ResumeFamille>();
   for (const p of disp.places) {
-    if (p.lignee === undefined || estVirtuel(p.personne.id)) continue;
-    effectifs.set(p.lignee, (effectifs.get(p.lignee) ?? 0) + 1);
     const nom = p.personne.nom.trim();
-    if (nom) {
-      const compte = noms.get(p.lignee) ?? new Map<string, number>();
-      compte.set(nom, (compte.get(nom) ?? 0) + 1);
-      noms.set(p.lignee, compte);
-    }
+    if (!nom || estVirtuel(p.personne.id)) continue;
+    const cle = simplifier(nom);
+    const f = parNom.get(cle) ?? { nom: `Famille ${nom}`, cle, couleur: couleurFamille(p.personne), n: 0, ids: [], amis: true };
+    f.n++;
+    f.ids.push(p.personne.id);
+    if (!p.bulle) f.amis = false;
+    parNom.set(cle, f);
   }
-  const plusRepandu = (lignee: number) => [...(noms.get(lignee) ?? [])].sort((a, b) => b[1] - a[1])[0]?.[0];
-  return [...effectifs]
-    .map(([lignee, n]) => ({
-      lignee,
-      n,
-      nom: disp.etiquettes.find((e) => e.lignee === lignee)?.texte ?? (plusRepandu(lignee) ? `Famille ${plusRepandu(lignee)}` : `Famille ${lignee + 1}`),
-    }))
-    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  return [...parNom.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 }
 
-/** Zone sur laquelle l'arbre s'ouvre (pop-ups de l'accueil) : une famille par sa lignée, un groupe par son identifiant. */
+/** Zone sur laquelle l'arbre s'ouvre (pop-ups de l'accueil) : une famille par son nom simplifié, un groupe par son identifiant. */
 export interface FocusArbre {
   quoi: 'famille' | 'groupe';
   cle: string;
@@ -231,7 +226,7 @@ class Carte {
       { class: 'commandes-arbre gauche' },
       this.puceToi,
       this.puceTout,
-      this.familles.length > 0 && this.puceListe('familles', 'Familles'),
+      this.familles.some((f) => !f.amis) && this.puceListe('familles', 'Familles'),
       this.cadres.length > 0 && this.puceListe('amis', 'Amis'),
     );
     this.vue = h(
@@ -311,26 +306,28 @@ class Carte {
     return s;
   }
 
-  /** Une entrée par lignée de l'arbre principal (par ordre alphabétique), nommée d'après son étiquette « Famille X ». */
+  /** Une entrée par nom de famille, avec la zone qui contient tous ceux qui le portent. */
   private calculerFamilles(): FamilleListee[] {
-    const parLignee = new Map<number, (Point & { id: string })[]>();
+    const membres = new Map<string, (Point & { id: string })[]>();
     for (const p of this.disp.places) {
-      if (p.lignee === undefined || estVirtuel(p.personne.id)) continue;
-      parLignee.set(p.lignee, [...(parLignee.get(p.lignee) ?? []), { ...this.centres.get(p.personne.id)!, id: p.personne.id }]);
+      const nom = p.personne.nom.trim();
+      const c = this.centres.get(p.personne.id);
+      if (!nom || !c || estVirtuel(p.personne.id)) continue;
+      const cle = simplifier(nom);
+      membres.set(cle, [...(membres.get(cle) ?? []), { ...c, id: p.personne.id }]);
     }
-    const resumes = resumesFamilles(this.disp);
-    return [...parLignee]
-      .map(([lignee, pts]) => {
+    return resumesFamilles(this.disp)
+      .filter((r) => membres.has(r.cle))
+      .map((r) => {
+        const porteurs = membres.get(r.cle)!;
+        // Le zoom englobe aussi les proches directs de nom différent (enfants, conjoint, ex avec enfant).
+        const proches = prochesDeFamille(lireDonnees(), new Set(porteurs.map((p) => p.id)));
+        const pts = [...porteurs, ...this.disp.places.filter((p) => proches.has(p.personne.id) && this.centres.has(p.personne.id)).map((p) => ({ ...this.centres.get(p.personne.id)!, id: p.personne.id }))];
         const x = Math.min(...pts.map((p) => p.x)) - LARG / 2;
         const y = Math.min(...pts.map((p) => p.y)) - R - 24;
         const l = Math.max(...pts.map((p) => p.x)) + LARG / 2 - x;
-        const nom = resumes.find((r) => r.lignee === lignee)!.nom;
-        // Cible : sur la ligne la plus haute, la personne la plus proche du milieu de la famille.
-        const haut = pts.filter((p) => p.y === Math.min(...pts.map((q) => q.y)));
-        const cible = haut.reduce((a, b) => (Math.abs(b.x - (x + l / 2)) < Math.abs(a.x - (x + l / 2)) ? b : a)).id;
-        return { nom, lignee, n: pts.length, cible, zone: { x, y, l, ha: Math.max(...pts.map((p) => p.y)) + SOUS_NOM - y } };
-      })
-      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+        return { ...r, cibles: pts.map((p) => p.id), zone: { x, y, l, ha: Math.max(...pts.map((p) => p.y)) + SOUS_NOM - y } };
+      });
   }
 
   // ——— Listes « Familles » et « Amis » ———
@@ -368,10 +365,10 @@ class Carte {
       );
     const lignes =
       quoi === 'familles'
-        ? this.familles.map((f) => {
+        ? this.familles.filter((f) => !f.amis).map((f) => {
             const pastille = h('span', { class: 'pastille-feuille' });
-            pastille.style.background = couleur(f.lignee);
-            return ligne(pastille, f.nom, `${f.n} pers.`, f.zone, [f.cible]);
+            if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
+            return ligne(pastille, f.nom, `${f.n} pers.`, f.zone, f.cibles);
           })
         : this.cadres.map((c, i) => {
             const d = lireDonnees();
@@ -394,18 +391,20 @@ class Carte {
 
   private zoneDe(focus?: FocusArbre): { zone: Zone; cibles: string[] } | undefined {
     if (focus?.quoi === 'famille') {
-      const f = this.familles.find((x) => String(x.lignee) === focus.cle);
-      return f && { zone: f.zone, cibles: [f.cible] };
+      const f = this.familles.find((x) => x.cle === focus.cle);
+      return f && { zone: f.zone, cibles: f.cibles };
     }
     const c = focus && this.cadres.find((x) => x.groupe.id === focus.cle);
     return c && { zone: c, cibles: c.groupe.membres };
   }
 
-  /** Vue qui montre toute la zone (jusqu'à l'échelle 1,2), un peu au-dessus du centre pour laisser la place aux commandes. */
+  /** Vue qui montre toute la zone au plus gros possible (marges fixes en pixels), centrée au-dessus de la barre des puces. */
   private surZone(z: Zone): Vue {
-    const marge = 40;
-    const s = borne(Math.min(this.vue.clientWidth / (z.l + marge), (this.vue.clientHeight * 0.75) / (z.ha + marge), 1.2), this.echelleMin(), ECHELLE_MAX);
-    return { s, tx: this.vue.clientWidth / 2 - (z.x + z.l / 2) * s, ty: this.vue.clientHeight * 0.42 - (z.y + z.ha / 2) * s };
+    const margeX = 72;
+    const margeY = 140;
+    const utile = this.hauteurUtile();
+    const s = borne(Math.min((this.vue.clientWidth - margeX) / z.l, (utile - margeY) / z.ha), this.echelleMin(), ECHELLE_MAX);
+    return { s, tx: this.vue.clientWidth / 2 - (z.x + z.l / 2) * s, ty: (utile + 16) / 2 - (z.y + z.ha / 2) * s };
   }
 
   /** Zone « TES AMIS » : autour de tous les cadres et de toute personne de la bulle ; absente sans bulle. */

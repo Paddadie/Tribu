@@ -33,7 +33,7 @@ import { ecranVerification } from "./ui/verification";
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
 //   #/verification    vérification des données (doublons, isolés, dates)
 //   #/arbre            arbre de tous les liens autour de « Moi »      #/arbre/familles   le même, feuille Familles ouverte
-//   #/arbre/famille/<lignée>   le même, zoomé sur une famille      #/arbre/groupe/<id>   le même, zoomé sur un groupe d'amis
+//   #/arbre/famille/<nom simplifié>   le même, zoomé sur une famille      #/arbre/groupe/<id>   le même, zoomé sur un groupe d'amis
 //   #/groupes          groupes d'amis      #/groupe/nouveau   création      #/groupe/<id>   détail      #/groupe/<id>/ajouter   ajout d'un membre
 const app = document.querySelector<HTMLElement>("#app");
 

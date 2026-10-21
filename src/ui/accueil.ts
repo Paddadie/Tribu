@@ -13,7 +13,7 @@ import {
   titreEvenement,
   type Evenement,
 } from '../modele/evenements';
-import { comparateur, couleurFamille, filtrerParNom, libelleDeces, MOIS, nomComplet, simplifier } from '../modele/liste';
+import { comparateur, filtrerParNom, libelleDeces, MOIS, nomComplet } from '../modele/liste';
 import { estDecede, personnesListees, personnesVisibles } from '../modele/modele';
 import { etiquette, lienAvecMoi } from '../modele/parente';
 import { ficheMoi } from '../modele/reglages';
@@ -26,7 +26,7 @@ import { messageImport } from './import';
 import { disposerArbre } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { couleur, resumesFamilles } from './arbreGlobal';
-import { ouvrirListe } from './fenetreListe';
+import { ouvrirListe, type LigneListe } from './fenetreListe';
 import { avatarPersonne, contenuLigne } from './lignePersonne';
 
 // La recherche survit à l'aller-retour accueil → fiche → accueil.
@@ -274,20 +274,6 @@ function dessin(ronds: [number, number, number, string][], traits?: string, cont
   return svg;
 }
 
-/** Noms de famille distincts, du plus nombreux au moins nombreux, avec leur couleur. */
-function familles(personnes: Personne[]): number[] {
-  const parNom = new Map<string, { n: number; couleur: number }>();
-  for (const p of personnes) {
-    const cle = simplifier(p.nom.trim());
-    const couleur = couleurFamille(p);
-    if (!cle || couleur === undefined) continue;
-    const f = parNom.get(cle) ?? { n: 0, couleur };
-    f.n++;
-    parNom.set(cle, f);
-  }
-  return [...parNom.values()].sort((a, b) => b.n - a.n).map((f) => f.couleur);
-}
-
 function raccourci(href: string | (() => void), image: Element, titre: string, detail: string): HTMLElement {
   const contenu = [image, h('strong', {}, titre), h('span', { class: 'secondaire' }, detail)];
   return typeof href === 'string'
@@ -295,63 +281,85 @@ function raccourci(href: string | (() => void), image: Element, titre: string, d
     : h('button', { type: 'button', class: 'raccourci', onclick: href }, ...contenu);
 }
 
-/** Pop-up « Groupes d'amis » : chaque groupe ouvre l'arbre zoomé dessus. */
-function listeGroupes(d: Donnees): void {
-  const groupes = [...d.groupes].sort((a, b) => nomGroupe(d, a).localeCompare(nomGroupe(d, b), 'fr'));
+type Familles = ReturnType<typeof resumesFamilles>;
+
+/** Familles de l'arbre autour de Moi, séparées entre la famille et les amis (nom porté seulement dans la bulle des amis). */
+function famillesDe(d: Donnees, moi: Personne | undefined): { famille: Familles; amis: Familles } {
+  const toutes = moi ? resumesFamilles(disposerArbre(d, moi.id)) : [];
+  return { famille: toutes.filter((f) => !f.amis), amis: toutes.filter((f) => f.amis) };
+}
+
+/** Lignes de pop-up : une par famille, comptée sur `ids` si on en donne (filtre par groupe), sinon sur tous les porteurs. */
+function lignesFamilles(familles: Familles, ids?: Set<string>): LigneListe[] {
+  return familles.flatMap((f) => {
+    const n = ids ? f.ids.filter((id) => ids.has(id)).length : f.n;
+    if (n === 0) return [];
+    const pastille = h('span', { class: 'pastille-feuille' });
+    if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
+    return [{ href: `#/arbre/famille/${encodeURIComponent(f.cle)}`, pastille, nom: f.nom, detail: `${n} pers.` }];
+  });
+}
+
+/** Pop-up « Ma famille » : chaque famille de l'arbre ouvre l'arbre zoomé dessus. */
+function listeFamilles(d: Donnees, moi: Personne | undefined): void {
   ouvrirListe(
-    'Groupes d’amis',
-    groupes.map((g) => {
-      const pastille = h('span', { class: 'pastille-feuille anneau' });
-      pastille.style.borderColor = 'var(--accent)';
-      return { href: `#/arbre/groupe/${g.id}`, pastille, nom: nomGroupe(d, g), detail: pluriel(g.membres.length, 'personne', 'personnes') };
-    }),
-    'Aucun groupe d’amis pour l’instant.',
-    { href: '#/groupes', texte: 'Gérer les groupes' },
+    'Ma famille',
+    lignesFamilles(famillesDe(d, moi).famille),
+    moi ? 'Aucune famille dans l’arbre.' : 'Choisis d’abord ta fiche dans les réglages : les familles se lisent autour de toi.',
   );
 }
 
-/** Pop-up « Familles » : chaque famille de l'arbre ouvre l'arbre zoomé dessus. */
-function listeFamilles(d: Donnees, moi: Personne | undefined): void {
-  const familles = moi ? resumesFamilles(disposerArbre(d, moi.id)) : [];
+/** Pop-up « Mes amis » : les familles des amis, filtrables par groupe d'amis. */
+function listeAmis(d: Donnees, moi: Personne | undefined): void {
+  const amis = famillesDe(d, moi).amis;
+  const tout = lignesFamilles(amis);
+  const groupes = [...d.groupes].sort((a, b) => nomGroupe(d, a).localeCompare(nomGroupe(d, b), 'fr'));
+  const filtres = groupes.flatMap((g) => {
+    const lignes = lignesFamilles(amis, new Set(g.membres));
+    return lignes.length === 0 ? [] : [{ texte: nomGroupe(d, g), lignes }];
+  });
   ouvrirListe(
-    'Familles',
-    familles.map((f) => {
-      const pastille = h('span', { class: 'pastille-feuille' });
-      pastille.style.background = couleur(f.lignee);
-      return { href: `#/arbre/famille/${f.lignee}`, pastille, nom: f.nom, detail: `${f.n} pers.` };
-    }),
-    moi ? 'Aucune famille dans l’arbre.' : 'Choisis d’abord ta fiche dans les réglages : les familles se lisent autour de toi.',
+    'Mes amis',
+    tout,
+    moi ? 'Aucune famille d’amis pour l’instant.' : 'Choisis d’abord ta fiche dans les réglages : les familles se lisent autour de toi.',
+    { href: '#/groupes', texte: 'Gérer les groupes' },
+    filtres.length === 0 ? [] : [{ texte: 'Tout', lignes: tout }, ...filtres],
   );
 }
 
 function raccourcis(d: Donnees, listees: Personne[], moi: Personne | undefined): HTMLElement {
   const n = listees.length;
-  const couleurs = familles(listees);
-  const quatre = [0, 1, 2, 3].map((i) => (couleurs[i] === undefined ? 'var(--pastille)' : `var(--c${couleurs[i]})`));
-  const nbGroupes = d.groupes.length;
+  const { famille, amis } = famillesDe(d, moi);
+  const quatre = (fs: Familles) =>
+    [...fs]
+      .sort((a, b) => b.n - a.n)
+      .map((f) => f.couleur)
+      .concat([undefined, undefined, undefined, undefined])
+      .slice(0, 4)
+      .map((c) => (c === undefined ? 'var(--pastille)' : `var(--c${c})`));
+  const nombre = (fs: Familles, vide: string) => (fs.length === 0 ? vide : pluriel(fs.length, 'nom de famille', 'noms de famille'));
   return h(
     'nav',
     { class: 'raccourcis', 'aria-label': 'Raccourcis' },
     raccourci(
-      () => listeGroupes(d),
-      dessin([
-        [15, 22, 10, 'var(--c7)'],
-        [32, 12, 8, 'var(--c0)'],
-        [35, 30, 7, 'var(--c4)'],
-        [51, 20, 9, 'var(--c3)'],
-      ]),
-      'Groupes d’amis',
-      nbGroupes === 0 ? 'Aucun groupe' : pluriel(nbGroupes, 'groupe', 'groupes'),
-    ),
-    raccourci(
       () => listeFamilles(d, moi),
       dessin(
-        quatre.map((c, i) => [11 + 14 * i, 20, 10, c]),
+        quatre(famille).map((c, i) => [11 + 14 * i, 20, 10, c]),
         undefined,
         true,
       ),
-      'Familles',
-      couleurs.length === 0 ? 'Aucun nom de famille' : pluriel(couleurs.length, 'nom de famille', 'noms de famille'),
+      'Ma famille',
+      nombre(famille, 'Aucun nom de famille'),
+    ),
+    raccourci(
+      () => listeAmis(d, moi),
+      dessin(
+        quatre(amis).map((c, i) => [11 + 14 * i, 20, 10, c]),
+        undefined,
+        true,
+      ),
+      'Mes amis',
+      nombre(amis, 'Aucune famille d’amis'),
     ),
     raccourci(
       '#/arbre',
