@@ -207,7 +207,12 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
       'div',
       { class: 'contenu' },
       h('div', { class: 'champ' }, h('label', { for: 'nom-groupe' }, 'Nom du groupe'), nom),
-      h('h2', { class: 'titre-section' }, `Membres (${g.membres.length})`),
+      h(
+        'div',
+        { class: 'entete-section' },
+        h('h2', { class: 'titre-section' }, `Membres (${g.membres.length})`),
+        h('a', { class: 'bouton bouton-pilule', href: `#/groupe/${g.id}/ajouter`, 'aria-label': 'Ajouter un membre' }, icone('plus', 20), 'Ajouter'),
+      ),
       h(
         'div',
         { class: 'carte' },
@@ -220,7 +225,6 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
           ),
         ),
       ),
-      h('a', { class: 'bouton', href: `#/groupe/${g.id}/ajouter` }, icone('plus', 20), 'Ajouter un membre'),
       erreur,
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void supprimer() }, 'Supprimer le groupe'),
     ),

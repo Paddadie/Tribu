@@ -571,6 +571,18 @@
   display: none;
 }
 
+.entete-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.entete-section .titre-section {
+  padding-bottom: 0;
+}
+
 .titre-section {
   padding: 0 4px 8px;
   font-size: var(--t1);
