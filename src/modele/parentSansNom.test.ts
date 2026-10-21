@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { disposerArbre } from './arbreGlobal';
 import { etiquette } from './parente';
-import { autreParent, chemin, foyer } from './deductions';
+import { autreParent, chemin } from './deductions';
+import { familleProche } from './familleProche';
 import { ajouterFiliation, creerPersonne, definirMariageParents, donneesVides, modifierPersonne, personnesListees, personnesVisibles } from './modele';
 import { avecParentsSansNom, enregistrerParentSansNom, estParentSansNom, estVirtuel, PARENT_INCONNU } from './parentSansNom';
 import type { Donnees } from './types';
@@ -88,11 +89,12 @@ describe('Fiche du parent sans nom', () => {
     const frere = creerPersonne(d, { prenom: 'Marc', nom: 'B' });
     const deux = ajouterFiliation(frere.donnees, florence, frere.personne.id, 'biologique').donnees;
     const r = enregistrerParentSansNom(deux, `virtuel:${florence}`)!;
-    const f = foyer(r.donnees, r.personne.id, sabine);
-    expect(f.conjoint).toEqual(expect.objectContaining({ separe: true, marie: false }));
-    expect(f.conjoint!.personne.id).toBe(florence);
-    expect(f.enfants.map((e) => e.personne.id).sort()).toEqual([sabine, frere.personne.id].sort());
-    expect(f.enfants.every((e) => e.duCouple)).toBe(true);
+    const f = familleProche(r.donnees, r.personne.id, sabine);
+    // Sans union enregistrée : un co-parent en pointillé, pas un conjoint.
+    expect(f.conjoint).toBeNull();
+    expect(f.partenaires).toEqual([{ id: florence, statut: null }]);
+    expect(f.enfants.map((e) => e.id).sort()).toEqual([sabine, frere.personne.id].sort());
+    expect(f.enfants.every((e) => e.autre === florence)).toBe(true);
     expect(autreParent(r.donnees, florence)?.id).toBe(r.personne.id);
   });
 
@@ -107,7 +109,7 @@ describe('Fiche du parent sans nom', () => {
     const r = enregistrerParentSansNom(d, `virtuel:${florence}`)!;
     const m = definirMariageParents(r.donnees, r.personne.id, florence, true);
     expect(m.unions).toEqual([expect.objectContaining({ marie: true, statut: 'separee' })]);
-    expect(foyer(m, r.personne.id).conjoint?.marie).toBe(true);
+    expect(familleProche(m, r.personne.id).partenaires).toEqual([{ id: florence, statut: 'separee' }]);
     expect(definirMariageParents(m, r.personne.id, florence, false).unions).toHaveLength(0);
   });
 

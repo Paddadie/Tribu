@@ -1,0 +1,213 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Bernard",
+      "nom": "Morel",
+      "sexe": "M",
+      "naissance": "1948",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Odile",
+      "nom": "Morel",
+      "sexe": "F",
+      "naissance": "1950",
+      "note": ""
+    },
+    {
+      "id": "f1",
+      "prenom": "Agnès",
+      "nom": "Morel",
+      "sexe": "F",
+      "naissance": "1972",
+      "note": ""
+    },
+    {
+      "id": "f2",
+      "prenom": "Benoît",
+      "nom": "Morel",
+      "sexe": "M",
+      "naissance": "1973-09",
+      "note": ""
+    },
+    {
+      "id": "f3",
+      "prenom": "Cécile",
+      "nom": "Morel",
+      "sexe": "F",
+      "naissance": "1975-02-11",
+      "note": ""
+    },
+    {
+      "id": "f4",
+      "prenom": "Damien",
+      "nom": "Morel",
+      "sexe": "M",
+      "naissance": "1977-06-14",
+      "note": ""
+    },
+    {
+      "id": "f5",
+      "prenom": "Denis",
+      "nom": "Morel",
+      "sexe": "M",
+      "naissance": "1977-06-14",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Émilie",
+      "nom": "Morel",
+      "sexe": "F",
+      "naissance": "1980",
+      "note": ""
+    },
+    {
+      "id": "f6",
+      "prenom": "Florian",
+      "nom": "Morel",
+      "sexe": "M",
+      "naissance": "--05-12",
+      "note": ""
+    },
+    {
+      "id": "f7",
+      "prenom": "Gaëlle",
+      "nom": "Morel",
+      "sexe": "F",
+      "note": ""
+    },
+    {
+      "id": "f8",
+      "prenom": "Henri",
+      "nom": "Morel",
+      "sexe": "M",
+      "naissance": "1986",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-f1",
+      "parent": "pere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f1",
+      "parent": "mere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f2",
+      "parent": "pere",
+      "enfant": "f2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f2",
+      "parent": "mere",
+      "enfant": "f2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f3",
+      "parent": "pere",
+      "enfant": "f3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f3",
+      "parent": "mere",
+      "enfant": "f3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f4",
+      "parent": "pere",
+      "enfant": "f4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f4",
+      "parent": "mere",
+      "enfant": "f4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f5",
+      "parent": "pere",
+      "enfant": "f5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f5",
+      "parent": "mere",
+      "enfant": "f5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f6",
+      "parent": "pere",
+      "enfant": "f6",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f6",
+      "parent": "mere",
+      "enfant": "f6",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f7",
+      "parent": "pere",
+      "enfant": "f7",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f7",
+      "parent": "mere",
+      "enfant": "f7",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f8",
+      "parent": "pere",
+      "enfant": "f8",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f8",
+      "parent": "mere",
+      "enfant": "f8",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

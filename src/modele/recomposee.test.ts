@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { disposerArbre } from './arbreGlobal';
-import { conjoint, exConjoints, foyer } from './deductions';
+import { conjoint, exConjoints } from './deductions';
+import { familleProche } from './familleProche';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import { estDonneesValides } from './stockage';
 import type { Donnees } from './types';
@@ -80,9 +81,9 @@ describe('Famille recomposée : un ex en plus du conjoint actuel', () => {
     expect(couple.lignee).toBe(lignee('Nicolas'));
   });
 
-  it('foyer : parents séparés signalés, pas pour des parents sans union ou en couple', () => {
+  it('famille proche : statut de l’union des parents (séparés, ou non)', () => {
     const { d, id } = famille();
-    expect(foyer(d, id.Nicolas).parentsSepares).toBe(true);
-    expect(foyer(d, id.Antoine).parentsSepares).toBe(false);
+    expect(familleProche(d, id.Nicolas).couples[0].statut).toBe('separee');
+    expect(familleProche(d, id.Antoine).couples[0].statut).not.toBe('separee');
   });
 });

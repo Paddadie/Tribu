@@ -1,0 +1,105 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "mere",
+      "prenom": "Sarah",
+      "nom": "Klein",
+      "sexe": "F",
+      "naissance": "1975",
+      "note": ""
+    },
+    {
+      "id": "mere2",
+      "prenom": "Julie",
+      "nom": "Klein",
+      "sexe": "F",
+      "naissance": "1977",
+      "note": ""
+    },
+    {
+      "id": "f1",
+      "prenom": "Sacha",
+      "nom": "Klein",
+      "naissance": "2008",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Alex",
+      "nom": "Klein",
+      "naissance": "2006",
+      "note": ""
+    },
+    {
+      "id": "conj",
+      "prenom": "Charlie",
+      "nom": "Weber",
+      "naissance": "2005",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Lou",
+      "nom": "Klein",
+      "naissance": "2025",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-mere-mere2",
+      "personneA": "mere",
+      "personneB": "mere2",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2005"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": false,
+      "statut": "actuelle"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere2-centre",
+      "parent": "mere2",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f1",
+      "parent": "mere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere2-f1",
+      "parent": "mere2",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k1",
+      "parent": "conj",
+      "enfant": "k1",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

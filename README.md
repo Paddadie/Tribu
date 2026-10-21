@@ -74,8 +74,8 @@ Export depuis Réglages, dans un fichier `tribu-AAAA-MM-JJ.json` :
 - `inconnu: true` : parent inconnu, créé en coulisse pour relier des frères et sœurs
   dont on ignore les parents ; jamais affiché.
 - `sansNom: true` : parent sans nom enregistré (le « ? » de l'arbre), affiché comme une personne.
-- Unions : `date` (facultative) : `AAAA`, `AAAA-MM`, `AAAA-MM-JJ` ou `--MM-JJ` ; `statut` vaut `actuelle` (une seule par personne) ou `separee` (un ex,
-  sans limite de nombre).
+- Unions : `date` (facultative) : `AAAA`, `AAAA-MM`, `AAAA-MM-JJ` ou `--MM-JJ` ; `statut` vaut `actuelle` (une seule avec un vivant par personne : un veuf ou
+  une veuve remarié garde aussi son union avec le défunt) ou `separee` (un ex, sans limite de nombre).
 - `type` d'une filiation : `biologique` ou `adoptif` ; au plus deux parents par type.
 - Groupes d'amis : au moins deux membres, tous amis entre eux ; une personne dans un
   seul groupe ; `nom` peut être vide.

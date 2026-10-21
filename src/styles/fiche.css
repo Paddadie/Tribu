@@ -937,6 +937,7 @@ fieldset.champ legend {
 
 /* ——— Dessins de la fiche : « Lien avec toi » et « Famille proche » (FEAT-09) ——— */
 .dessin {
+  position: relative;
   gap: 12px;
   padding: 16px 12px 12px;
 }
@@ -968,6 +969,14 @@ fieldset.champ legend {
 
 .trait.pointille {
   stroke-dasharray: 3 4;
+}
+
+/* Sous un trait qui en croise d'autres (descente vers une 2e ligne, union par une voie) : il s'en détache. */
+.arbre .halo {
+  fill: none;
+  stroke: var(--carte);
+  stroke-width: 7;
+  stroke-linecap: butt;
 }
 
 .noeud {
@@ -1145,6 +1154,59 @@ a.noeud:active .avatar {
 
 .cles[hidden] {
   display: none;
+}
+
+/* « Famille proche » trop large : le dessin défile ; la petite barre montre la part visible. */
+.indice {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--t1);
+  color: var(--secondaire);
+}
+
+.indice[hidden] {
+  display: none;
+}
+
+.indice i {
+  position: relative;
+  width: 28px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--bord);
+}
+
+.indice b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  background: var(--trait);
+}
+
+/* Appui long sur un nœud : le nom complet, sans le menu du téléphone. */
+.arbre.foyer .noeud {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.bulle-nom {
+  position: absolute;
+  z-index: 2;
+  max-width: 220px;
+  padding: 6px 10px;
+  transform: translate(-50%, calc(-100% - 6px));
+  border-radius: var(--rayon-s);
+  background: var(--encre);
+  color: var(--carte);
+  font-size: var(--t1);
+  font-weight: var(--gras);
+  text-align: center;
+  pointer-events: none;
 }
 
 .cles span {

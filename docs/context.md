@@ -7,14 +7,14 @@ Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run
 ## Carte du code
 - src/modele/types.ts : `Personne`, `Union`, `Filiation`, `GroupeAmis`, `Donnees`. migration.ts : `migrer()` v1 → v4.
 - src/modele/modele.ts : opérations pures (`creerPersonne`, `ajouterUnion`, `ajouterFiliation`, groupes), `estDecede`, `personnesVisibles`, `personnesListees`, `groupesDeLaFamille`.
-- src/modele/deductions.ts : `amis`, `relation`, `chemin`, `foyer`, `parcours`. parente.ts : `etiquette`, `motsChemin`, `lienDepuisAmi`. saisie.ts : `suggestions`.
+- src/modele/deductions.ts : `amis`, `relation`, `chemin`, `fratrie` (`freresComplets`), `parcours`. familleProche.ts : dessin « Famille proche » sans DOM, `familleProche` (qui) puis `disposerFoyer(f, largeur)` (où) ; tests de référence sur tests/fixtures/famille-proche (src/ui/familleProche.test.ts). parente.ts : `etiquette`, `motsChemin`, `lienDepuisAmi`. saisie.ts : `suggestions`.
 - src/modele/arbreGlobal.ts : `disposerArbre(d, moi)` → places, couples, branches, `groupes`, `etiquettes`. partie.ts : `disposerPartie` en étapes (blocs, générations, classe `Lignes`). parentSansNom.ts : parent « ? ».
 - src/modele/anonymiser.ts + fixtures/arbre-anonyme.json : vrai arbre anonymisé ; arbreGlobal.fixture.test.ts = invariants et instantané (à régénérer avec `-u` seulement si la disposition change exprès).
 - src/modele/evenements.ts : `evenementsAVenir(d, aujourdhui, jours, {fetes})` (anniversaires, unions, fêtes, décès) ; noces.ts (`dureeUnion`, nom des noces) ; fetes.ts (calendrier des prénoms, `entreesCalendrier`).
 - src/modele/fusion.ts : import par fusion (`fusionner`, questions de conflit) ; src/ui/choisir.ts (question à choix), fenetreListe.ts (fenêtre-liste), import.ts, reglages.ts (4 onglets).
 - src/modele/filtres.ts : filtres de la liste (`filtrerListe`, `manquesDe`, `familleDe`).
 - src/ui/accueil.ts (salutation, recherche, Aujourd'hui, Bientôt, souvenir, raccourcis), personnes.ts (`#/personnes`, liste + index), agenda.ts (`#/agenda`).
-- src/ui/ : fiche.ts, arbre.ts (`dessinFoyer`, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts. src/main.ts : routes et View Transition.
+- src/ui/ : fiche.ts, arbre.ts (`dessinFoyer` = rendu seul, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts. src/main.ts : routes et View Transition.
 - src/style.css : jetons en tête ; blocs « Dessins de la fiche », « Arbre global », « États communs », « Animations » en fin.
 - Tests : `*.test.ts` à côté du code ; src/parcours.test.ts = écrans sous happy-dom (`demarrer(donnees, route, reglages?)`).
 

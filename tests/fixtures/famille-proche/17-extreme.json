@@ -1,0 +1,533 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "bio1",
+      "prenom": "Valérie",
+      "nom": "Noël",
+      "sexe": "F",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "bio2",
+      "prenom": "Stéphane",
+      "nom": "Noël",
+      "sexe": "M",
+      "naissance": "1958",
+      "note": ""
+    },
+    {
+      "id": "ad1",
+      "prenom": "Laurent",
+      "nom": "Brun",
+      "sexe": "M",
+      "naissance": "1955",
+      "note": ""
+    },
+    {
+      "id": "ad2",
+      "prenom": "Évelyne",
+      "nom": "Brun",
+      "sexe": "F",
+      "naissance": "1957",
+      "note": ""
+    },
+    {
+      "id": "exb1",
+      "prenom": "Didier",
+      "nom": "Roche",
+      "sexe": "M",
+      "naissance": "1956",
+      "note": ""
+    },
+    {
+      "id": "conjb2",
+      "prenom": "Nathalie",
+      "nom": "Noël",
+      "sexe": "F",
+      "naissance": "1966",
+      "note": ""
+    },
+    {
+      "id": "s1",
+      "prenom": "Amandine",
+      "nom": "Noël",
+      "sexe": "F",
+      "naissance": "1981",
+      "note": ""
+    },
+    {
+      "id": "s2",
+      "prenom": "Benjamin",
+      "nom": "Noël",
+      "sexe": "M",
+      "naissance": "1983",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Coralie",
+      "nom": "Noël",
+      "sexe": "F",
+      "naissance": "1985",
+      "note": ""
+    },
+    {
+      "id": "r1",
+      "prenom": "Damien",
+      "nom": "Roche",
+      "sexe": "M",
+      "naissance": "1978",
+      "note": ""
+    },
+    {
+      "id": "r2",
+      "prenom": "Estelle",
+      "nom": "Roche",
+      "sexe": "F",
+      "naissance": "1979",
+      "note": ""
+    },
+    {
+      "id": "r3",
+      "prenom": "Félix",
+      "nom": "Roche",
+      "sexe": "M",
+      "naissance": "1988",
+      "note": ""
+    },
+    {
+      "id": "n1",
+      "prenom": "Gaspard",
+      "nom": "Noël",
+      "sexe": "M",
+      "naissance": "1993",
+      "note": ""
+    },
+    {
+      "id": "n2",
+      "prenom": "Héloïse",
+      "nom": "Noël",
+      "sexe": "F",
+      "naissance": "1995",
+      "note": ""
+    },
+    {
+      "id": "n3",
+      "prenom": "Ilan",
+      "nom": "Noël",
+      "sexe": "M",
+      "naissance": "1998",
+      "note": ""
+    },
+    {
+      "id": "b1",
+      "prenom": "Jérémie",
+      "nom": "Brun",
+      "sexe": "M",
+      "naissance": "1979",
+      "note": ""
+    },
+    {
+      "id": "b2",
+      "prenom": "Karen",
+      "nom": "Brun",
+      "sexe": "F",
+      "naissance": "1982",
+      "note": ""
+    },
+    {
+      "id": "b3",
+      "prenom": "Loïc",
+      "nom": "Brun",
+      "sexe": "M",
+      "naissance": "1987",
+      "note": ""
+    },
+    {
+      "id": "b4",
+      "prenom": "Maud",
+      "nom": "Brun",
+      "sexe": "F",
+      "naissance": "1990",
+      "note": ""
+    },
+    {
+      "id": "ex",
+      "prenom": "Olivier",
+      "nom": "Mercier",
+      "sexe": "M",
+      "naissance": "1982",
+      "note": ""
+    },
+    {
+      "id": "conj",
+      "prenom": "Rachid",
+      "nom": "Benali",
+      "sexe": "M",
+      "naissance": "1984",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Anna",
+      "nom": "Mercier",
+      "sexe": "F",
+      "naissance": "2006",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Bilal",
+      "nom": "Mercier",
+      "sexe": "M",
+      "naissance": "2008",
+      "note": ""
+    },
+    {
+      "id": "k3",
+      "prenom": "Célia",
+      "nom": "Mercier",
+      "sexe": "F",
+      "naissance": "2010",
+      "note": ""
+    },
+    {
+      "id": "k4",
+      "prenom": "Dalia",
+      "nom": "Benali",
+      "sexe": "F",
+      "naissance": "2015",
+      "note": ""
+    },
+    {
+      "id": "k5",
+      "prenom": "Elias",
+      "nom": "Benali",
+      "sexe": "M",
+      "naissance": "2017",
+      "note": ""
+    },
+    {
+      "id": "k6",
+      "prenom": "Farah",
+      "nom": "Benali",
+      "sexe": "F",
+      "naissance": "2019",
+      "note": ""
+    },
+    {
+      "id": "k7",
+      "prenom": "Gabriel",
+      "nom": "Benali",
+      "sexe": "M",
+      "naissance": "2022",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-bio1-bio2",
+      "personneA": "bio1",
+      "personneB": "bio2",
+      "marie": true,
+      "statut": "separee",
+      "date": "1980"
+    },
+    {
+      "id": "u-ad1-ad2",
+      "personneA": "ad1",
+      "personneB": "ad2",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1978"
+    },
+    {
+      "id": "u-bio1-exb1",
+      "personneA": "bio1",
+      "personneB": "exb1",
+      "marie": false,
+      "statut": "separee"
+    },
+    {
+      "id": "u-bio2-conjb2",
+      "personneA": "bio2",
+      "personneB": "conjb2",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1992"
+    },
+    {
+      "id": "u-centre-ex",
+      "personneA": "centre",
+      "personneB": "ex",
+      "marie": true,
+      "statut": "separee",
+      "date": "2005"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2014"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-bio1-s1",
+      "parent": "bio1",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-s1",
+      "parent": "bio2",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-s2",
+      "parent": "bio1",
+      "enfant": "s2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-s2",
+      "parent": "bio2",
+      "enfant": "s2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-centre",
+      "parent": "bio1",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-centre",
+      "parent": "bio2",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-r1",
+      "parent": "bio1",
+      "enfant": "r1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exb1-r1",
+      "parent": "exb1",
+      "enfant": "r1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-r2",
+      "parent": "bio1",
+      "enfant": "r2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exb1-r2",
+      "parent": "exb1",
+      "enfant": "r2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-r3",
+      "parent": "bio1",
+      "enfant": "r3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exb1-r3",
+      "parent": "exb1",
+      "enfant": "r3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-n1",
+      "parent": "bio2",
+      "enfant": "n1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conjb2-n1",
+      "parent": "conjb2",
+      "enfant": "n1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-n2",
+      "parent": "bio2",
+      "enfant": "n2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conjb2-n2",
+      "parent": "conjb2",
+      "enfant": "n2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-n3",
+      "parent": "bio2",
+      "enfant": "n3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conjb2-n3",
+      "parent": "conjb2",
+      "enfant": "n3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad1-b1",
+      "parent": "ad1",
+      "enfant": "b1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad2-b1",
+      "parent": "ad2",
+      "enfant": "b1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad1-b2",
+      "parent": "ad1",
+      "enfant": "b2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad2-b2",
+      "parent": "ad2",
+      "enfant": "b2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad1-b3",
+      "parent": "ad1",
+      "enfant": "b3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad2-b3",
+      "parent": "ad2",
+      "enfant": "b3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad1-b4",
+      "parent": "ad1",
+      "enfant": "b4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad2-b4",
+      "parent": "ad2",
+      "enfant": "b4",
+      "type": "biologique"
+    },
+    {
+      "id": "a-ad1-centre",
+      "parent": "ad1",
+      "enfant": "centre",
+      "type": "adoptif"
+    },
+    {
+      "id": "a-ad2-centre",
+      "parent": "ad2",
+      "enfant": "centre",
+      "type": "adoptif"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-k1",
+      "parent": "ex",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-k2",
+      "parent": "ex",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k3",
+      "parent": "centre",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-k3",
+      "parent": "ex",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k4",
+      "parent": "centre",
+      "enfant": "k4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k4",
+      "parent": "conj",
+      "enfant": "k4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k5",
+      "parent": "centre",
+      "enfant": "k5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k5",
+      "parent": "conj",
+      "enfant": "k5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k6",
+      "parent": "centre",
+      "enfant": "k6",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k6",
+      "parent": "conj",
+      "enfant": "k6",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k7",
+      "parent": "centre",
+      "enfant": "k7",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k7",
+      "parent": "conj",
+      "enfant": "k7",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

@@ -1,0 +1,190 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Jacques",
+      "nom": "Perrot",
+      "sexe": "M",
+      "naissance": "1945",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Monique",
+      "nom": "Perrot",
+      "sexe": "F",
+      "naissance": "1948",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Nicolas",
+      "nom": "Perrot",
+      "sexe": "M",
+      "naissance": "1972",
+      "note": ""
+    },
+    {
+      "id": "conj",
+      "prenom": "Virginie",
+      "nom": "Perrot",
+      "sexe": "F",
+      "naissance": "1974",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Adrien",
+      "nom": "Perrot",
+      "sexe": "M",
+      "naissance": "1997",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Bérénice",
+      "nom": "Perrot",
+      "sexe": "F",
+      "naissance": "1999",
+      "note": ""
+    },
+    {
+      "id": "k3",
+      "prenom": "Corentin",
+      "nom": "Perrot",
+      "sexe": "M",
+      "naissance": "2001",
+      "note": ""
+    },
+    {
+      "id": "k4",
+      "prenom": "Diane",
+      "nom": "Perrot",
+      "sexe": "F",
+      "naissance": "2003",
+      "note": ""
+    },
+    {
+      "id": "k5",
+      "prenom": "Éloi",
+      "nom": "Perrot",
+      "sexe": "M",
+      "naissance": "2006",
+      "note": ""
+    },
+    {
+      "id": "k6",
+      "prenom": "Flore",
+      "nom": "Perrot",
+      "sexe": "F",
+      "naissance": "2010",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1996"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k1",
+      "parent": "conj",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k2",
+      "parent": "conj",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k3",
+      "parent": "centre",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k3",
+      "parent": "conj",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k4",
+      "parent": "centre",
+      "enfant": "k4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k4",
+      "parent": "conj",
+      "enfant": "k4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k5",
+      "parent": "centre",
+      "enfant": "k5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k5",
+      "parent": "conj",
+      "enfant": "k5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k6",
+      "parent": "centre",
+      "enfant": "k6",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k6",
+      "parent": "conj",
+      "enfant": "k6",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

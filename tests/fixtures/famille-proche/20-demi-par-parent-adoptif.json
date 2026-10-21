@@ -1,0 +1,103 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Pierre",
+      "nom": "Simon",
+      "sexe": "M",
+      "naissance": "1965",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Lucie",
+      "nom": "Simon",
+      "sexe": "F",
+      "naissance": "1967",
+      "note": ""
+    },
+    {
+      "id": "ad",
+      "prenom": "Hélène",
+      "nom": "Carré",
+      "sexe": "F",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "cad",
+      "prenom": "Marc",
+      "nom": "Carré",
+      "sexe": "M",
+      "naissance": "1958",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Tristan",
+      "nom": "Simon",
+      "sexe": "M",
+      "naissance": "1992",
+      "note": ""
+    },
+    {
+      "id": "dx",
+      "prenom": "Juliette",
+      "nom": "Carré",
+      "sexe": "F",
+      "naissance": "1988",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": false,
+      "statut": "separee"
+    },
+    {
+      "id": "u-ad-cad",
+      "personneA": "ad",
+      "personneB": "cad",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1985"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad-dx",
+      "parent": "ad",
+      "enfant": "dx",
+      "type": "biologique"
+    },
+    {
+      "id": "f-cad-dx",
+      "parent": "cad",
+      "enfant": "dx",
+      "type": "biologique"
+    },
+    {
+      "id": "a-ad-centre",
+      "parent": "ad",
+      "enfant": "centre",
+      "type": "adoptif"
+    }
+  ],
+  "groupes": []
+}

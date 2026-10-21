@@ -32,7 +32,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 ## Couples (unions)
 - Une union relie deux personnes ayant chacune leur fiche.
 - Indicateur « marié » oui/non.
-- Une personne n'a qu'un seul conjoint actuel à la fois. Une union a un statut : actuelle ou séparée.
+- Une personne n'a qu'un seul conjoint actuel vivant à la fois. Une union a un statut : actuelle ou séparée. Veuvage : l'union avec le défunt reste actuelle (trait plein) et n'empêche pas une nouvelle union ; une fois remariée, la personne a son nouveau conjoint sous « Conjoint » et le défunt sous « Conjoint décédé », et seule la nouvelle union est fêtée. Retirer le décès du défunt est alors refusé.
 - « Se sont séparés » passe l'union au statut séparé ; la fiche affiche l'ex-conjoint dans une section « Ex-conjoint » sous le conjoint actuel. « Rétablir le couple » la remet en actuelle (refusé si l'un des deux a déjà un autre conjoint). Un ex n'est jamais de la famille par alliance.
 - « Supprimer l'union » l'efface pour de bon (une erreur de saisie). Séparation, rétablissement et suppression sont sans confirmation, annulables par le bandeau.
 - Deux personnes n'ont qu'une union entre elles : pour un retour ensemble, on rétablit l'ancienne.
@@ -52,8 +52,8 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Enfants d'un couple : déduits des parents communs, jamais ressaisis ; leur nombre s'affiche sous le conjoint.
 
 ## Frères et sœurs (déduits)
-- Frères et sœurs : mêmes parents.
-- Demi-frères et demi-sœurs : un seul parent en commun.
+- Frères et sœurs : mêmes parents, ou un même couple de parents de chaque côté (les deux biologiques, ou les deux adoptifs : un enfant adopté par mes parents reste mon frère même avec ses parents biologiques enregistrés).
+- Demi-frères et demi-sœurs : au moins un parent en commun, sans être frères et sœurs.
 - Affichés séparément sur la fiche.
 - Ajouter un frère ou une sœur : la personne devient enfant des parents connus de la fiche, tous cochés d'office ; en décocher un donne un demi-frère ou une demi-sœur. Un seul type de lien pour tous les parents cochés. Aucun lien de fratrie n'est stocké.
 - Sans parent connu : pas de case de parent ni de type de lien ; les deux personnes sont reliées à un **parent inconnu**, personne sans nom créée en coulisse (`inconnu: true`). Une troisième personne rejoint le même parent inconnu ; deux fratries inconnues se fondent en une. Si l'autre personne a des parents connus, la fiche devient leur enfant.
@@ -81,7 +81,12 @@ V1 : moi seul. Partage avec des proches : plus tard.
 
 ## Dessins de la fiche
 - « Lien avec toi » : le chemin le plus court de « Moi » à la personne, l'ancêtre commun en haut ; coude pour parent et enfant, trait double pour un couple, simple pour une amitié. Sous le dessin, la phrase « Toi → ta mère → sa mère → son fils ». Masqué quand le lien est direct (une seule étape) ou sans « Moi ». Par la famille d'abord ; sinon par une amitié. Après le dernier ami, la phrase donne le lien le plus court avec lui (« Toi → ton ami → son neveu ») et le dessin passe directement de frère à sœur sans leur parent commun ; le chemin de famille, lui, reste inchangé.
-- « Famille proche » (s'il y a un parent, un frère ou une sœur, un conjoint ou un enfant) : deux parents au plus (biologiques d'abord), puis une rangée avec chaque frère et sœur nommé, rangés par âge : la personne y garde sa place (aînés à sa gauche, cadets à sa droite), son conjoint actuel contre elle ; trop nombreux, aînés et cadets défilent de chaque côté de la personne. Ses demi-frères et demi-sœurs qui ont un parent dessiné en commun avec elle se placent au bout de la rangée, du côté de ce parent (à gauche pour le parent de gauche ou le seul parent), reliés à lui par un trait pointillé à hauteur des parents ; si la rangée défile ou si tout ne tient pas en largeur, ils ne sont pas dessinés (ils restent dans leur section). Ses enfants sous le couple ou sous la personne seule s'ils viennent d'une autre union. Années sous chaque nom, décédés grisés, lien adoptif en pointillé, légende seulement si besoin.
+- « Famille proche » (s'il y a quelqu'un d'autre que la personne à dessiner), en rangées repliées (`modele/familleProche.ts`) :
+  - Qui : ses parents (au-delà de deux, le couple biologique puis le couple adoptif), ses frères et sœurs, ses demi-frères et demi-sœurs avec leur autre parent, son conjoint, ses enfants et leur autre parent. Pas le nouveau conjoint d'un parent sans enfant avec lui (il est sur la fiche du parent), ni les enfants qu'un ex d'un parent a eus avec quelqu'un d'autre.
+  - Rangée des parents : chaque parent avec ses autres partenaires à l'extérieur, les demis sous leur couple. Rangée de la personne : le conjoint (sinon le co-parent le plus récent) à sa gauche, les autres co-parents (ex, parent « ? ») à sa droite, la fratrie à côté par âge. Enfants sous leur couple.
+  - Trait plein : union actuelle, même avec un défunt. Pointillé : union terminée, ou couple sans union enregistrée (trait droit). Lien adoptif en pointillé. Un trait qui en croise d'autres a un halo.
+  - Une fratrie ou des enfants trop nombreux passent sur une ligne de plus sous le même couple, la ligne de la personne en dernier avec les plus jeunes ; au-dessus, les aînés en lignes égalisées, pour lire l'âge de haut en bas. Le cadre ne défile de côté que si une rangée insécable ne tient pas (les parents avec leurs autres partenaires, ou la personne avec les siens) : il s'ouvre centré sur la personne, avec « Glisse pour voir toute la famille ».
+  - Nom sur deux lignes au plus, puis « … » ; nom complet au survol et à l'appui long (sans ouvrir la fiche). Années sous chaque nom, décédés pâles, légende seulement si besoin.
 - Un proche qu'on vient d'ajouter apparaît en fondu, avec une légère mise à l'échelle, dans « Famille proche » (sans animation si le téléphone réduit les animations).
 - Case « + Parent » s'il manque un parent, seulement pour la famille de « Moi » (ou si « Moi » n'est pas choisi) ; elle ouvre l'ajout d'un parent.
 - Trop d'enfants pour la largeur : leur rang défile de côté, l'aîné à gauche au départ, du plus âgé au plus jeune toutes unions confondues, avec un fondu sur le bord.
@@ -168,7 +173,7 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Aucune modification n'est enregistrée tant que Paul n'a pas choisi.
 
 ## Format des données (version 5)
-- `Personne.deces` facultatif ; `Personne.decede: true` pour un décès sans date (absent quand la date est connue ; ajout compatible, sans changement de version) ; `Union.statut` « actuelle » ou « separee » ; une seule union actuelle par personne.
+- `Personne.deces` facultatif ; `Personne.decede: true` pour un décès sans date (absent quand la date est connue ; ajout compatible, sans changement de version) ; `Union.statut` « actuelle » ou « separee » ; une seule union actuelle avec un vivant par personne (veuvage : `conjointEnTrop`, modele.ts).
 - `groupes` : `{ id, nom, membres: string[] }`, au moins deux membres connus et distincts, id unique (partagé avec les unions et filiations), nom chaîne éventuellement vide.
 - `Personne.sansNom: true` repère le parent sans nom enregistré (plus son prénom) ; il le reste tant que son prénom et son nom ne changent pas. `Union.date` facultative : « AAAA », « AAAA-MM », « AAAA-MM-JJ » ou « --MM-JJ ». `modifierUnion` et `ajouterUnion` prennent `prendLeNom` (vrai par défaut) : faux = le mariage ne change aucun nom.
 - Un export v1, v2, v3 ou v4 s'importe : `migrer()` le convertit avant la validation (unions v1 → actuelles ; si une personne en avait deux, la seconde devient séparée ; v2 → v3 ajoute une liste vide ; v3 → v4 réunit les amitiés par composantes connexes : chaque ensemble d'amis, directs ou d'amis d'amis, devient un groupe sans nom ; v4 → v5 pose `sansNom` sur les « Parent inconnu » sans nom). Rien n'est perdu, mais deux cercles d'amis reliés par un ami commun fusionnent.

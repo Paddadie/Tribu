@@ -146,12 +146,41 @@ export function modifierPersonne(d: Donnees, id: string, champs: ChampsPersonne)
   // Un parent sans nom le reste tant qu'on ne lui a donné ni prénom ni nom.
   const resteSansNom = avant.sansNom && champsNormalises.prenom === avant.prenom && !champsNormalises.nom;
   const maj: Personne = { id, ...champsNormalises, ...(resteSansNom ? { sansNom: true as const } : {}) };
-  return { ...d, personnes: d.personnes.map((p) => (p.id === id ? maj : p)) };
+  const apres = { ...d, personnes: d.personnes.map((p) => (p.id === id ? maj : p)) };
+  // Retirer un décès peut redonner deux conjoints vivants à son veuf ou sa veuve remariée.
+  if (estDecede(avant) && !estDecede(maj) && conjointEnTrop(apres.personnes, apres.unions)) {
+    throw new Error('Son conjoint s’est remarié depuis : passe d’abord l’une des deux unions en séparée');
+  }
+  return apres;
 }
 
-/** La personne a un conjoint actuel (une seule union actuelle à la fois ; les séparées ne comptent pas). */
+/**
+ * Union actuelle avec un partenaire vivant, vue depuis `id`. Une personne n'en a qu'une à la fois ; une union actuelle
+ * avec un défunt (veuvage) n'en est pas une : elle reste dessinée en trait plein, et n'empêche pas une nouvelle union.
+ */
+function unionAvecVivant(d: Pick<Donnees, 'personnes'>, u: Union, id: string): boolean {
+  if (u.statut !== 'actuelle' || (u.personneA !== id && u.personneB !== id)) return false;
+  const autre = d.personnes.find((p) => p.id === (u.personneA === id ? u.personneB : u.personneA));
+  return !!autre && !estDecede(autre);
+}
+
+/** La personne a un conjoint actuel vivant (un seul à la fois ; les séparées et les veuvages ne comptent pas). */
 export function enCouple(d: Donnees, id: string): boolean {
-  return d.unions.some((u) => u.statut === 'actuelle' && (u.personneA === id || u.personneB === id));
+  return d.unions.some((u) => unionAvecVivant(d, u, id));
+}
+
+/** Première personne qui aurait deux unions actuelles avec des vivants, sinon `undefined`. */
+export function conjointEnTrop(personnes: Personne[], unions: Union[]): string | undefined {
+  const d = { personnes };
+  const vus = new Set<string>();
+  for (const u of unions) {
+    for (const id of [u.personneA, u.personneB]) {
+      if (!unionAvecVivant(d, u, id)) continue;
+      if (vus.has(id)) return id;
+      vus.add(id);
+    }
+  }
+  return undefined;
 }
 
 /** La personne a au moins une union (même séparée), une filiation (parent ou enfant) ou une amitié. */
@@ -225,12 +254,10 @@ export function ajouterUnion(
   if (personneA === personneB) throw new Error('Une union relie deux personnes différentes');
   const doublon = d.unions.some((u) => (u.personneA === personneA && u.personneB === personneB) || (u.personneA === personneB && u.personneB === personneA));
   if (doublon) throw new Error('Ces deux personnes ont déjà une union : rétablis-la depuis leur fiche');
-  // Un seul conjoint actuel par personne ; les ex (union séparée) ne sont pas limités.
-  if (statut === 'actuelle' && (enCouple(d, personneA) || enCouple(d, personneB))) {
-    throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
-  }
   const union: Union = { id: nouvelId(), personneA, personneB, marie, statut, ...(dateUnion ? { date: dateUnion } : {}) };
   const ajoute = { ...d, unions: [...d.unions, union] };
+  // Un seul conjoint actuel vivant par personne ; les ex (union séparée) et les veuvages ne sont pas limités.
+  if (conjointEnTrop(ajoute.personnes, ajoute.unions)) throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
   return { donnees: marie && statut === 'actuelle' && prendLeNom ? prendreNomDuConjoint(ajoute, union) : ajoute, union };
 }
 
@@ -272,11 +299,10 @@ export function separerUnion(d: Donnees, id: string): Donnees {
 
 /** Remet une union séparée en union actuelle, si aucun des deux n'a entre-temps un autre conjoint. */
 export function retablirUnion(d: Donnees, id: string): Donnees {
-  const union = exigerUnion(d, id);
-  if (enCouple(d, union.personneA) || enCouple(d, union.personneB)) {
-    throw new Error('L’un des deux a déjà un autre conjoint');
-  }
-  return { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, statut: 'actuelle' } : u)) };
+  exigerUnion(d, id);
+  const maj: Donnees = { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, statut: 'actuelle' } : u)) };
+  if (conjointEnTrop(maj.personnes, maj.unions)) throw new Error('L’un des deux a déjà un autre conjoint');
+  return maj;
 }
 
 export function supprimerUnion(d: Donnees, id: string): Donnees {

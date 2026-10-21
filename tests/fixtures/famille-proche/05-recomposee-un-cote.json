@@ -1,0 +1,150 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "ex",
+      "prenom": "Bruno",
+      "nom": "Garnier",
+      "sexe": "M",
+      "naissance": "1955",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Nadia",
+      "nom": "Roux",
+      "sexe": "F",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "pere",
+      "prenom": "Olivier",
+      "nom": "Roux",
+      "sexe": "M",
+      "naissance": "1958",
+      "note": ""
+    },
+    {
+      "id": "d1",
+      "prenom": "Kevin",
+      "nom": "Garnier",
+      "sexe": "M",
+      "naissance": "1980",
+      "note": ""
+    },
+    {
+      "id": "d2",
+      "prenom": "Laura",
+      "nom": "Garnier",
+      "sexe": "F",
+      "naissance": "1982",
+      "note": ""
+    },
+    {
+      "id": "d3",
+      "prenom": "Enzo",
+      "nom": "Garnier",
+      "sexe": "M",
+      "naissance": "1985",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Manon",
+      "nom": "Roux",
+      "sexe": "F",
+      "naissance": "1992",
+      "note": ""
+    },
+    {
+      "id": "f1",
+      "prenom": "Lucas",
+      "nom": "Roux",
+      "sexe": "M",
+      "naissance": "1995",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-ex-mere",
+      "personneA": "ex",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "separee",
+      "date": "1979"
+    },
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1990"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-ex-d1",
+      "parent": "ex",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-d1",
+      "parent": "mere",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-d2",
+      "parent": "ex",
+      "enfant": "d2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-d2",
+      "parent": "mere",
+      "enfant": "d2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-d3",
+      "parent": "ex",
+      "enfant": "d3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-d3",
+      "parent": "mere",
+      "enfant": "d3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f1",
+      "parent": "pere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f1",
+      "parent": "mere",
+      "enfant": "f1",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

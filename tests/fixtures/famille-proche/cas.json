@@ -1,0 +1,134 @@
+[
+  {
+    "fichier": "01-simple.json",
+    "titre": "Deux parents en couple, deux frères et sœurs, pas de conjoint",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "02a-un-seul-parent.json",
+    "titre": "Enfant unique, un seul parent connu",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "02b-parent-sans-nom.json",
+    "titre": "Enfant unique, un parent connu et un parent « ? »",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "03-parents-inconnus.json",
+    "titre": "Fratrie reliée par des parents inconnus",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "04-famille-nombreuse.json",
+    "titre": "Huit frères et sœurs complets, dates partielles ou absentes, jumeaux",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "05-recomposee-un-cote.json",
+    "titre": "La mère a eu trois enfants avec un ex, puis deux avec le père",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "06-recomposee-deux-cotes.json",
+    "titre": "La mère a deux ex avec enfants ; le père un ex avec enfants et une nouvelle conjointe avec un enfant",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "07-parents-sans-union.json",
+    "titre": "Les parents ont un enfant en commun sans union enregistrée",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "08-demis-sans-nom-inconnu.json",
+    "titre": "Un demi-frère dont l'autre parent est « ? », une demi-sœur dont l'autre parent est inconnu",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "09-ex-d-un-parent.json",
+    "titre": "Les ex de la mère ont eu d'autres enfants avec une tierce personne (pas des demis)",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "10-conjoint-ex-enfants.json",
+    "titre": "Conjoint actuel, un ex, des enfants avec chacun, et un enfant avec une personne sans union",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "11-six-enfants.json",
+    "titre": "Six enfants avec le conjoint actuel",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "12-deces.json",
+    "titre": "Père décédé, frère mort enfant, conjoint décédé puis remariage",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "13-adoption.json",
+    "titre": "Deux parents biologiques et deux adoptifs ; fratrie adoptive mêlant enfants biologiques et adoptés",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "14-meme-sexe.json",
+    "titre": "Deux mères ; conjoint et enfants sans sexe renseigné",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "15-noms-longs.json",
+    "titre": "Prénoms composés et noms très longs sur tous les nœuds",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "16-autre-que-moi.json",
+    "titre": "Fiche du frère de « Moi » : pas de badge « Toi » sur la personne centrale (mais sur sa sœur)",
+    "centre": "centre",
+    "moi": "moi"
+  },
+  {
+    "fichier": "17-extreme.json",
+    "titre": "Quatre parents, douze frères, sœurs et demis sur quatre couples, conjoint, ex, sept enfants",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "18-conjoint-de-parent.json",
+    "titre": "Parents séparés ; chacun a un nouveau conjoint, sans enfant avec lui",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "19-frere-adopte-avec-bio.json",
+    "titre": "Frère adopté par les mêmes parents, avec ses parents biologiques enregistrés",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "20-demi-par-parent-adoptif.json",
+    "titre": "Deux parents biologiques ; une mère adoptive qui a un autre enfant avec son conjoint",
+    "centre": "centre",
+    "moi": "centre"
+  },
+  {
+    "fichier": "21-deux-ex-sans-conjoint.json",
+    "titre": "Sans conjoint actuel : enfants avec deux ex et avec un parent « ? »",
+    "centre": "centre",
+    "moi": "centre"
+  }
+]

@@ -1,0 +1,130 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Daniel",
+      "nom": "Girard",
+      "sexe": "M",
+      "naissance": "1955",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Françoise",
+      "nom": "Girard",
+      "sexe": "F",
+      "naissance": "1957",
+      "note": ""
+    },
+    {
+      "id": "moi",
+      "prenom": "Margaux",
+      "nom": "Girard",
+      "sexe": "F",
+      "naissance": "1984",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Quentin",
+      "nom": "Girard",
+      "sexe": "M",
+      "naissance": "1981",
+      "note": ""
+    },
+    {
+      "id": "conj",
+      "prenom": "Pauline",
+      "nom": "Girard",
+      "sexe": "F",
+      "naissance": "1983",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Rose",
+      "nom": "Girard",
+      "sexe": "F",
+      "naissance": "2012",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Jules",
+      "nom": "Girard",
+      "sexe": "M",
+      "naissance": "2015",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2010"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-moi",
+      "parent": "pere",
+      "enfant": "moi",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-moi",
+      "parent": "mere",
+      "enfant": "moi",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k1",
+      "parent": "conj",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k2",
+      "parent": "conj",
+      "enfant": "k2",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

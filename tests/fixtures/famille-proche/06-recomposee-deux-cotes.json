@@ -1,0 +1,276 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "exm1",
+      "prenom": "Alain",
+      "nom": "Vidal",
+      "sexe": "M",
+      "naissance": "1950",
+      "note": ""
+    },
+    {
+      "id": "exm2",
+      "prenom": "Denis",
+      "nom": "Masson",
+      "sexe": "M",
+      "naissance": "1952",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Martine",
+      "nom": "Leroy",
+      "sexe": "F",
+      "naissance": "1955",
+      "note": ""
+    },
+    {
+      "id": "pere",
+      "prenom": "Patrick",
+      "nom": "Leroy",
+      "sexe": "M",
+      "naissance": "1954",
+      "note": ""
+    },
+    {
+      "id": "exp",
+      "prenom": "Fabienne",
+      "nom": "Caron",
+      "sexe": "F",
+      "naissance": "1956",
+      "note": ""
+    },
+    {
+      "id": "conjp",
+      "prenom": "Hélène",
+      "nom": "Faure",
+      "sexe": "F",
+      "naissance": "1965",
+      "note": ""
+    },
+    {
+      "id": "a1",
+      "prenom": "Sandra",
+      "nom": "Vidal",
+      "sexe": "F",
+      "naissance": "1975",
+      "note": ""
+    },
+    {
+      "id": "a2",
+      "prenom": "Yohan",
+      "nom": "Vidal",
+      "sexe": "M",
+      "naissance": "1977",
+      "note": ""
+    },
+    {
+      "id": "b1",
+      "prenom": "Céline",
+      "nom": "Masson",
+      "sexe": "F",
+      "naissance": "1980",
+      "note": ""
+    },
+    {
+      "id": "b2",
+      "prenom": "Romain",
+      "nom": "Masson",
+      "sexe": "M",
+      "naissance": "1982",
+      "note": ""
+    },
+    {
+      "id": "c1",
+      "prenom": "Karine",
+      "nom": "Leroy",
+      "sexe": "F",
+      "naissance": "1977",
+      "note": ""
+    },
+    {
+      "id": "c2",
+      "prenom": "Mickaël",
+      "nom": "Leroy",
+      "sexe": "M",
+      "naissance": "1979",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Anaïs",
+      "nom": "Leroy",
+      "sexe": "F",
+      "naissance": "1987",
+      "note": ""
+    },
+    {
+      "id": "f1",
+      "prenom": "Bastien",
+      "nom": "Leroy",
+      "sexe": "M",
+      "naissance": "1989",
+      "note": ""
+    },
+    {
+      "id": "e1",
+      "prenom": "Jade",
+      "nom": "Leroy",
+      "sexe": "F",
+      "naissance": "2000",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-exm1-mere",
+      "personneA": "exm1",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "separee",
+      "date": "1974"
+    },
+    {
+      "id": "u-exm2-mere",
+      "personneA": "exm2",
+      "personneB": "mere",
+      "marie": false,
+      "statut": "separee"
+    },
+    {
+      "id": "u-exp-pere",
+      "personneA": "exp",
+      "personneB": "pere",
+      "marie": true,
+      "statut": "separee",
+      "date": "1976"
+    },
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "separee",
+      "date": "1985"
+    },
+    {
+      "id": "u-pere-conjp",
+      "personneA": "pere",
+      "personneB": "conjp",
+      "marie": false,
+      "statut": "actuelle"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-exm1-a1",
+      "parent": "exm1",
+      "enfant": "a1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-a1",
+      "parent": "mere",
+      "enfant": "a1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exm1-a2",
+      "parent": "exm1",
+      "enfant": "a2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-a2",
+      "parent": "mere",
+      "enfant": "a2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exm2-b1",
+      "parent": "exm2",
+      "enfant": "b1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-b1",
+      "parent": "mere",
+      "enfant": "b1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exm2-b2",
+      "parent": "exm2",
+      "enfant": "b2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-b2",
+      "parent": "mere",
+      "enfant": "b2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exp-c1",
+      "parent": "exp",
+      "enfant": "c1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-c1",
+      "parent": "pere",
+      "enfant": "c1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-exp-c2",
+      "parent": "exp",
+      "enfant": "c2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-c2",
+      "parent": "pere",
+      "enfant": "c2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f1",
+      "parent": "pere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f1",
+      "parent": "mere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-e1",
+      "parent": "pere",
+      "enfant": "e1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conjp-e1",
+      "parent": "conjp",
+      "enfant": "e1",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

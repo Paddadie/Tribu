@@ -3,7 +3,7 @@
 
 import { feteDuPrenom } from './fetes';
 import { MOIS, nomComplet } from './liste';
-import { estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE, personnesListees } from './modele';
+import { enCouple, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE, personnesListees } from './modele';
 import { libelleAnniversaireUnion } from './noces';
 import type { Donnees, Personne } from './types';
 
@@ -56,7 +56,7 @@ export interface OptionsEvenements {
 /**
  * Événements des `horizon` prochains jours (aujourd'hui compris), du plus proche au plus lointain, puis par genre et par nom.
  * - Anniversaire : personne vivante, jour et mois de naissance connus, au moins 1 an si l'année est connue.
- * - Union : union actuelle entre deux personnes listées, dont une au moins vivante, jour et mois connus. Le jour même
+ * - Union : union actuelle entre deux personnes listées, dont une au moins vivante (pas l’union avec un défunt d’un veuf remarié), jour et mois connus. Le jour même
  *   d'une union à venir donne 0 an ; avant, rien.
  * - Fête : personne vivante dont le premier prénom est au calendrier.
  * - Décès : date de décès complète, au moins 1 an.
@@ -89,6 +89,8 @@ export function evenementsAVenir(d: Donnees, aujourdhui: Date, horizon: number, 
     const [a, b] = [parId.get(u.personneA), parId.get(u.personneB)];
     const date = jourMois(u.date);
     if (u.statut !== 'actuelle' || !a || !b || !date || (estDecede(a) && estDecede(b))) continue;
+    // Veuf ou veuve remarié : seule la nouvelle union est fêtée.
+    if ((estDecede(a) && enCouple(d, b.id)) || (estDecede(b) && enCouple(d, a.id))) continue;
     ajouter('union', [a, b], date.mois, date.jour, date.annee, { marie: u.marie });
   }
 

@@ -3,7 +3,7 @@
 // conflit (deux valeurs différentes) ou doute (homonyme probable), `demander` tranche.
 // Les ids sont des UUID : une même id des deux côtés = la même personne ou le même lien.
 
-import { MAX_PARENTS_PAR_TYPE, nouvelId } from './modele';
+import { estDecede, MAX_PARENTS_PAR_TYPE, nouvelId } from './modele';
 import { estDonneesValides } from './stockage';
 import type { Donnees, Filiation, GroupeAmis, Personne, Union } from './types';
 
@@ -142,12 +142,22 @@ export async function fusionner(actuelles: Donnees, importees: Donnees, demander
   };
   const memePaire = (u: Union, a: string, b: string) => (u.personneA === a && u.personneB === b) || (u.personneA === b && u.personneB === a);
 
-  /** Une personne n'a qu'un conjoint actuel : si `u` en devient un en doublon, on demande qui reste. */
+  const vivant = (id: string) => {
+    const p = personnes.find((x) => x.id === id);
+    return !!p && !estDecede(p);
+  };
+  /**
+   * Une personne n'a qu'un conjoint actuel vivant : si `u` en devient un en doublon, on demande qui reste.
+   * Une union actuelle avec un défunt (veuvage) ne compte pas.
+   */
   const verifierActuelle = async (u: Union) => {
     if (u.statut !== 'actuelle') return;
     for (const autre of unions) {
       if (autre === u || autre.statut !== 'actuelle') continue;
-      if (![autre.personneA, autre.personneB].some((x) => x === u.personneA || x === u.personneB)) continue;
+      const commun = [u.personneA, u.personneB].find((x) => x === autre.personneA || x === autre.personneB);
+      if (!commun) continue;
+      const partenaire = (v: Union) => (v.personneA === commun ? v.personneB : v.personneA);
+      if (!vivant(partenaire(u)) || !vivant(partenaire(autre))) continue;
       const r = await choisir(
         `${nom(u.personneA)} et ${nom(u.personneB)} sont en couple dans le fichier, mais ${nom(autre.personneA)} et ${nom(autre.personneB)} le sont déjà chez toi. Une personne n’a qu’un conjoint actuel.`,
         ['Garder le couple actuel (l’autre devient un ex)', 'Prendre l’autre couple (l’actuel devient un ex)'],

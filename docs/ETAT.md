@@ -1,32 +1,28 @@
 # État en cours
 
-**Non commité** (à commiter par Paul) : audit UX/UI, étapes 1 à 6, sessions C et D (voir ci-dessous). Tests 531, `tsc` et build verts au 21/10.
-**Audit UX/UI** : rapport publié (https://claude.ai/artifact/5FzpsxbmAw7qgUyC2oXoZH, privé) ; maquettes validées par Paul : accueil « sobre affinée » (A), fiche « compacte » (A). Captures hors dépôt : scratchpad de la session.
+**Non commité** (à commiter par Paul) : mission « Famille proche » (phases 1 à 5) et veuvage ; l'audit UX/UI est commité (28bf002). Au 21/10 : tests, `tsc` et build verts.
+**Audit UX/UI** : rapport https://claude.ai/artifact/5FzpsxbmAw7qgUyC2oXoZH (privé). D non revu par Paul en entier (fiche, arbre, Toutes les fiches).
 
-## Fait (plan d'audit)
-1-2. `.defile` de l'accueil renommé `.defile-bientot` ; `--bord-champ` à 3:1 ; carte « Aujourd'hui » en `--accent-clair` en sombre.
-3. Formulaires d'ajout : pastille « pour <personne> », « Type de lien » sous le choix, onglet « Déjà dans Tribu ».
-4. Fiche : en-tête à gauche, « Modifier » en icône, crayons gris, familles élargies > 6 repliées (`<details>`).
-5. « Modifier » : retour + « Modifier <prénom> » ; microcopie ; croix des groupes grises.
-6. Accueil A : vignettes « Bientôt » à pastille de date, raccourcis en piles d'avatars + icônes.
-C. Décédés pâles partout (`avatarPersonne`) ; sélection « clair » / « plein ».
-D (21/10, captures claires de la fiche et de l'arbre vues, le reste non revu) :
-- Dessin « Famille proche » : conjoint à gauche, fratrie entière à droite par âge (`arbre.ts`, `decal`).
-- Fiche : section « Parents et fratrie » (demis inclus), lignes « sœur · 65 ans » via `detailProche` (age.ts, testé).
-- Barre de l'arbre : segment « Toi | Tout », filet, outils « Familles » / « Amis » avec icône.
-- Toutes les fiches : puces sur une ligne qui défile, index fin, bouton « + Nouvelle fiche ».
+## Mission « Famille proche » : faite, à regarder par Paul
+Rapport et maquettes : https://claude.ai/artifact/2JMCd1nRBCtLXRPY8jBt6U (privé). Stratégie S2 et réponses de Paul : DECISIONS.md (21/10).
+- `fratrie()` corrigée (`freresComplets`) : un couple de parents d'un même type suffit (adoption).
+- src/modele/familleProche.ts : `familleProche` (qui) et `disposerFoyer` (où), pur, testé ; `foyer()` supprimé.
+- arbre.ts : `dessinFoyer(f)` ne fait que le rendu (halo, défilement centré sur la personne, indice, appui long = nom complet).
+- src/ui/familleProche.test.ts : plus d'`ECHECS`, défilement admis selon la règle des 5 (4 sous 280 px) ; `scrollAutorise` retiré de cas.json.
+- Captures avant / après hors dépôt (scratchpad de la session), via `node scripts/captures.mjs --famille-proche <dossier>` (`npm run` avale l'option sous PowerShell).
+- Veuvage : union actuelle avec un défunt hors de la règle « un seul conjoint » (`conjointEnTrop`) ; fiche « Conjoint décédé » ; src/modele/veuvage.test.ts.
 
-## Reste à faire
-- **D, non fait** : pile d'avatars qui replie « Neveux et nièces » / « Belle-famille » ; âge sous les nœuds du dessin (maquette floue) ; astuce de l'arbre en haut avec « Compris » ; zoom en un bloc.
-- **P3** (sur accord) : Réglages, couleurs de familles (instantané de la fixture à régénérer), deux colonnes sur ordinateur.
+**Prochaine étape** : Paul regarde l'arbre de quelques fiches réelles (famille recomposée, adoption, noms longs, veuvage).
 
-**Prochaine étape** : Paul regarde les captures (`npm run captures -- <export.json> <dossier>`) : fiche, arbre, Toutes les fiches, clair et sombre, avec ses vraies données ; puis valider ou ajuster D. Après validation : cocher PLAN.md, DECISIONS.md, SPEC.md (pas encore mis à jour).
+## Reste à faire (audit UX/UI)
+- D, non fait : pile d'avatars « Neveux et nièces » / « Belle-famille » ; âge sous les nœuds ; astuce de l'arbre avec « Compris » ; zoom en un bloc.
+- P3 (sur accord) : Réglages, couleurs de familles, deux colonnes sur ordinateur.
+- Après validation de D : PLAN.md, DECISIONS.md, SPEC.md.
 
-## À valider / à faire par Paul
-- Rendu non vu : Toutes les fiches, accueil sur téléphone, écrans d'ajout en clair.
-- Calendrier des fêtes (`fetes.ts`) ; `.ics` ; forme de la famille publique (fixtures/, __snapshots__/) ; profils Edge `%TEMP%\tribu-captures-*` ; Prettier signale des fichiers non reformatés (déjà avant D).
-
-## Points ouverts
-- Téléphone : bandeau de mise à jour, Retour par geste pendant une saisie, flou de la barre de l'arbre, partage du PNG.
-- UX-20 : couple entre deux fratries décalé d'environ 0,4 case ; instantané de la fixture à régénérer (`npx vitest run src/modele/arbreGlobal.fixture.test.ts -u`) seulement après vérification à l'œil.
+## À valider / points ouverts
+- Veuvage : un export avec un remariage est refusé par une version d'avant ; pour noter après coup le défunt d'une personne déjà remariée, « Un conjoint » est grisé : saisir le défunt avant le nouveau conjoint.
+- `format:check` : fichiers de l'appli non formatés (déjà avant ce travail : fiche.ts, fiche.css, tests de parents…).
+- Calendrier des fêtes ; `.ics` ; profils Edge `%TEMP%\tribu-captures-*`.
+- Téléphone : bandeau de mise à jour, Retour par geste en saisie, flou de la barre de l'arbre, partage du PNG.
+- UX-20 : couple entre deux fratries décalé (~0,4 case) ; instantané de la fixture à régénérer après vérification à l'œil.
 - Nettoyage possible : `prochainsAnniversaires`, `anniversairesDeces`, `libelleDelai` (age.ts).

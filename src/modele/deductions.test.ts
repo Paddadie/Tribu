@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { conjoint, enfantsDuCouple, foyer, fratrie, liensEnfants, liensParents, parentsCommuns } from './deductions';
+import { conjoint, enfantsDuCouple, fratrie, freresComplets, liensEnfants, liensParents, parentsCommuns } from './deductions';
+import { familleProche } from './familleProche';
 import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, TypeFiliation } from './types';
 
@@ -114,22 +115,26 @@ describe('frères et sœurs', () => {
     m.filiation('Père', 'Moi');
     m.filiation('Mère', 'Demi-frère');
     m.filiation('Beau-père', 'Demi-frère');
-    expect(foyer(m.d, m.id.Moi).demis.map((x) => [x.autre?.prenom, x.autreSepare])).toEqual([['Beau-père', false]]);
+    // Sans union enregistrée : statut inconnu (trait en pointillé, comme une union terminée).
+    expect(familleProche(m.d, m.id.Moi).autresCouples.map((a) => [a.autre, a.statut])).toEqual([[m.id['Beau-père'], null]]);
     m.d.unions.push(...ajouterUnion(m.d, m.id.Mère, m.id['Beau-père'], false, 'separee').donnees.unions);
-    expect(foyer(m.d, m.id.Moi).demis[0].autreSepare).toBe(true);
+    expect(familleProche(m.d, m.id.Moi).autresCouples[0].statut).toBe('separee');
   });
 
-  it('dessine l’ex avec qui il a des enfants, seulement sans conjoint actuel', () => {
+  it('dessine l’ex avec qui il a des enfants, avec ou sans conjoint actuel', () => {
     const m = monde();
     ['Michel', 'Catherine', 'Alice', 'Enfant', 'Autre'].forEach((p) => m.pers(p));
     m.filiation('Michel', 'Enfant');
     m.filiation('Catherine', 'Enfant');
     m.d.unions.push(...ajouterUnion(m.d, m.id.Michel, m.id.Catherine, false, 'separee').donnees.unions);
-    const f = foyer(m.d, m.id.Michel);
-    expect(f.conjoint).toMatchObject({ separe: true, personne: { prenom: 'Catherine' } });
-    expect(f.enfants.map((e) => e.duCouple)).toEqual([true]);
+    const f = familleProche(m.d, m.id.Michel);
+    expect(f.conjoint).toBeNull();
+    expect(f.partenaires).toEqual([{ id: m.id.Catherine, statut: 'separee' }]);
+    expect(f.enfants.map((e) => e.autre)).toEqual([m.id.Catherine]);
     m.d.unions.push(...ajouterUnion(m.d, m.id.Michel, m.id.Alice).donnees.unions);
-    expect(foyer(m.d, m.id.Michel).conjoint?.personne.prenom).toBe('Alice');
+    const g = familleProche(m.d, m.id.Michel);
+    expect(g.conjoint?.id).toBe(m.id.Alice);
+    expect(g.partenaires.map((p) => p.id)).toEqual([m.id.Catherine]);
   });
 
   it('est symétrique et exclut la personne elle-même', () => {
@@ -151,6 +156,67 @@ describe('frères et sœurs', () => {
     m.filiation('Mère', 'Adopté', 'adoptif');
     m.filiation('Père', 'Adopté', 'adoptif');
     expect(prenoms(fratrie(m.d, m.id.Moi).freresSoeurs)).toEqual(['Adopté']);
+  });
+
+  it('adopté par mes parents, avec ses parents biologiques enregistrés : frère, pas demi', () => {
+    const m = monde();
+    ['Mère', 'Père', 'Génitrice', 'Géniteur', 'Moi', 'Adopté'].forEach((p) => m.pers(p));
+    m.filiation('Mère', 'Moi');
+    m.filiation('Père', 'Moi');
+    m.filiation('Génitrice', 'Adopté');
+    m.filiation('Géniteur', 'Adopté');
+    m.filiation('Mère', 'Adopté', 'adoptif');
+    m.filiation('Père', 'Adopté', 'adoptif');
+    expect(fratrie(m.d, m.id.Moi)).toMatchObject({ freresSoeurs: [{ prenom: 'Adopté' }], demis: [] });
+    expect(fratrie(m.d, m.id.Adopté)).toMatchObject({ freresSoeurs: [{ prenom: 'Moi' }], demis: [] });
+    expect(freresComplets(m.d, m.id.Moi, m.id.Adopté)).toBe(true);
+  });
+
+  it('adopté avec parents biologiques : les autres enfants de ses parents adoptifs sont ses frères', () => {
+    const m = monde();
+    ['Génitrice', 'Géniteur', 'Adoptante', 'Adoptant', 'Moi', 'Sœur', 'Autre adopté'].forEach((p) => m.pers(p));
+    m.filiation('Génitrice', 'Moi');
+    m.filiation('Géniteur', 'Moi');
+    m.filiation('Adoptante', 'Moi', 'adoptif');
+    m.filiation('Adoptant', 'Moi', 'adoptif');
+    m.filiation('Adoptante', 'Sœur');
+    m.filiation('Adoptant', 'Sœur');
+    m.filiation('Adoptante', 'Autre adopté', 'adoptif');
+    m.filiation('Adoptant', 'Autre adopté', 'adoptif');
+    const f = fratrie(m.d, m.id.Moi);
+    expect(prenoms(f.freresSoeurs).sort()).toEqual(['Autre adopté', 'Sœur']);
+    expect(f.demis).toEqual([]);
+  });
+
+  it('un seul parent adoptif en commun : demi', () => {
+    const m = monde();
+    ['Mère', 'Père', 'Adoptante', 'Son conjoint', 'Moi', 'Autre'].forEach((p) => m.pers(p));
+    m.filiation('Mère', 'Moi');
+    m.filiation('Père', 'Moi');
+    m.filiation('Adoptante', 'Moi', 'adoptif');
+    m.filiation('Adoptante', 'Autre');
+    m.filiation('Son conjoint', 'Autre');
+    expect(fratrie(m.d, m.id.Moi)).toMatchObject({ freresSoeurs: [], demis: [{ prenom: 'Autre' }] });
+    expect(freresComplets(m.d, m.id.Autre, m.id.Moi)).toBe(false);
+  });
+
+  it('beau-père qui adopte : mêmes parents de part et d’autre, frères', () => {
+    const m = monde();
+    ['Mère', 'Beau-père', 'Moi', 'Cadet'].forEach((p) => m.pers(p));
+    m.filiation('Mère', 'Moi');
+    m.filiation('Beau-père', 'Moi', 'adoptif');
+    m.filiation('Mère', 'Cadet');
+    m.filiation('Beau-père', 'Cadet');
+    expect(prenoms(fratrie(m.d, m.id.Moi).freresSoeurs)).toEqual(['Cadet']);
+  });
+
+  it('même mère seule, mais adopté par un autre d’un seul côté : demi', () => {
+    const m = monde();
+    ['Mère', 'Adoptant', 'Moi', 'Autre'].forEach((p) => m.pers(p));
+    m.filiation('Mère', 'Moi');
+    m.filiation('Mère', 'Autre');
+    m.filiation('Adoptant', 'Autre', 'adoptif');
+    expect(fratrie(m.d, m.id.Moi)).toMatchObject({ freresSoeurs: [], demis: [{ prenom: 'Autre' }] });
   });
 
   it('un seul parent connu de part et d’autre, le même : frères et sœurs', () => {

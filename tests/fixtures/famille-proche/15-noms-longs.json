@@ -1,0 +1,166 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Jean-Christophe",
+      "nom": "de-La-Rochefoucauld-Montbel",
+      "sexe": "M",
+      "naissance": "1955",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Marie-Bernadette",
+      "nom": "Saint-Exupéry-Delacroix",
+      "sexe": "F",
+      "naissance": "1957",
+      "note": ""
+    },
+    {
+      "id": "ex",
+      "prenom": "Pierre-Alexandre",
+      "nom": "Vandenberghe-Lefebvre",
+      "sexe": "M",
+      "naissance": "1950",
+      "note": ""
+    },
+    {
+      "id": "d1",
+      "prenom": "Anne-Charlotte",
+      "nom": "Vandenberghe-Lefebvre",
+      "sexe": "F",
+      "naissance": "1976",
+      "note": ""
+    },
+    {
+      "id": "s1",
+      "prenom": "Marie-Loan",
+      "nom": "de-La-Rochefoucauld-Montbel",
+      "sexe": "F",
+      "naissance": "1982",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Charles-Edouard",
+      "nom": "de-La-Rochefoucauld-Montbel",
+      "sexe": "M",
+      "naissance": "1985",
+      "note": ""
+    },
+    {
+      "id": "conj",
+      "prenom": "Maximilienne",
+      "nom": "Grandjean-Bonaventure",
+      "sexe": "F",
+      "naissance": "1986",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Pierre-Emmanuel",
+      "nom": "de-La-Rochefoucauld-Montbel",
+      "sexe": "M",
+      "naissance": "2014",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Marie-Antoinette",
+      "nom": "de-La-Rochefoucauld-Montbel",
+      "sexe": "F",
+      "naissance": "2017",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1980"
+    },
+    {
+      "id": "u-ex-mere",
+      "personneA": "ex",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "separee",
+      "date": "1975"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2012"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-ex-d1",
+      "parent": "ex",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-d1",
+      "parent": "mere",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-s1",
+      "parent": "pere",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-s1",
+      "parent": "mere",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k1",
+      "parent": "conj",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k2",
+      "parent": "conj",
+      "enfant": "k2",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

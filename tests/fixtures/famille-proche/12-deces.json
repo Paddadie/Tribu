@@ -1,0 +1,170 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Roger",
+      "nom": "Martin",
+      "sexe": "M",
+      "naissance": "1940",
+      "note": "",
+      "deces": "2015-03-02"
+    },
+    {
+      "id": "mere",
+      "prenom": "Simone",
+      "nom": "Martin",
+      "sexe": "F",
+      "naissance": "1943",
+      "note": ""
+    },
+    {
+      "id": "f1",
+      "prenom": "Alain",
+      "nom": "Martin",
+      "sexe": "M",
+      "naissance": "1965",
+      "note": "",
+      "deces": "1972"
+    },
+    {
+      "id": "centre",
+      "prenom": "Brigitte",
+      "nom": "Martin",
+      "sexe": "F",
+      "naissance": "1967",
+      "note": ""
+    },
+    {
+      "id": "f2",
+      "prenom": "Pascal",
+      "nom": "Martin",
+      "sexe": "M",
+      "naissance": "1970",
+      "note": ""
+    },
+    {
+      "id": "defunt",
+      "prenom": "Christian",
+      "nom": "Lopez",
+      "sexe": "M",
+      "naissance": "1962",
+      "note": "",
+      "deces": "2005"
+    },
+    {
+      "id": "conj",
+      "prenom": "Henri",
+      "nom": "Dubois",
+      "sexe": "M",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Laetitia",
+      "nom": "Lopez",
+      "sexe": "F",
+      "naissance": "1990",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Sébastien",
+      "nom": "Lopez",
+      "sexe": "M",
+      "naissance": "1993",
+      "note": "",
+      "decede": true
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1964"
+    },
+    {
+      "id": "u-centre-defunt",
+      "personneA": "centre",
+      "personneB": "defunt",
+      "marie": true,
+      "statut": "separee",
+      "date": "1988"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2010"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-f1",
+      "parent": "pere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f1",
+      "parent": "mere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f2",
+      "parent": "pere",
+      "enfant": "f2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f2",
+      "parent": "mere",
+      "enfant": "f2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-defunt-k1",
+      "parent": "defunt",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-defunt-k2",
+      "parent": "defunt",
+      "enfant": "k2",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

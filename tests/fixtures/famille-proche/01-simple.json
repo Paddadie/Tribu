@@ -1,0 +1,94 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Marc",
+      "nom": "Durand",
+      "sexe": "M",
+      "naissance": "1958",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Sylvie",
+      "nom": "Durand",
+      "sexe": "F",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "lea",
+      "prenom": "Léa",
+      "nom": "Durand",
+      "sexe": "F",
+      "naissance": "1985",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Hugo",
+      "nom": "Durand",
+      "sexe": "M",
+      "naissance": "1988",
+      "note": ""
+    },
+    {
+      "id": "tom",
+      "prenom": "Tom",
+      "nom": "Durand",
+      "sexe": "M",
+      "naissance": "1992",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-lea",
+      "parent": "pere",
+      "enfant": "lea",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-lea",
+      "parent": "mere",
+      "enfant": "lea",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-tom",
+      "parent": "pere",
+      "enfant": "tom",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-tom",
+      "parent": "mere",
+      "enfant": "tom",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

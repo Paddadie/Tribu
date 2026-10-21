@@ -3,7 +3,7 @@
 
 import { estDansLeFutur } from './age';
 import { comparateur } from './liste';
-import { anneeDe, estInconnu, groupesDe, groupesDeLaFamille } from './modele';
+import { anneeDe, estDecede, estInconnu, groupesDe, groupesDeLaFamille } from './modele';
 import { estParentSansNom } from './parentSansNom';
 import type { Donnees, Filiation, GroupeAmis, Personne, Union } from './types';
 
@@ -34,13 +34,24 @@ function autreDeLUnion(d: Donnees, union: Union, id: string): { union: Union; pe
   return personne && { union, personne };
 }
 
+/** Unions actuelles, le conjoint vivant d'abord (il n'y en a qu'un), puis les défunts du plus récent au plus ancien. */
+function unionsActuelles(d: Donnees, id: string): { union: Union; personne: Personne }[] {
+  const liees = d.unions.filter((u) => u.statut === 'actuelle' && (u.personneA === id || u.personneB === id)).flatMap((u) => autreDeLUnion(d, u, id) ?? []);
+  return liees.reverse().sort((a, b) => Number(estDecede(a.personne)) - Number(estDecede(b.personne)));
+}
+
 /**
- * Conjoint actuel : une personne n'a qu'une union actuelle à la fois. Les unions séparées n'en font pas
- * partie : c'est ce qui empêche un ex de devenir de la famille par alliance (voir `exConjoints`).
+ * Conjoint actuel : une personne n'a qu'un conjoint actuel vivant à la fois ; veuve ou veuf, son conjoint reste le défunt
+ * tant qu'il n'y a pas de nouvelle union. Les unions séparées n'en font pas partie : c'est ce qui empêche un ex de devenir
+ * de la famille par alliance (voir `exConjoints`).
  */
 export function conjoint(d: Donnees, id: string): { union: Union; personne: Personne } | undefined {
-  const union = d.unions.find((u) => u.statut === 'actuelle' && (u.personneA === id || u.personneB === id));
-  return union && autreDeLUnion(d, union, id);
+  return unionsActuelles(d, id)[0];
+}
+
+/** Conjoints défunts d'une personne remariée depuis (unions actuelles autres que `conjoint`), du plus récent au plus ancien. */
+export function conjointsDefunts(d: Donnees, id: string): { union: Union; personne: Personne }[] {
+  return unionsActuelles(d, id).slice(1);
 }
 
 /** Ex-conjoints (unions séparées), dans l'ordre des unions ; purement informatif, sans effet sur la parenté. */
@@ -99,22 +110,50 @@ export function parentsCommuns(d: Donnees, idA: string, idB: string): Personne[]
     .sort(parPrenom);
 }
 
+interface GroupesParents {
+  tous: Set<string>;
+  /** Clés des couples de parents qui suffisent à faire des frères et sœurs : tous les parents, les biologiques, les adoptifs (deux au moins). */
+  couples: Set<string>;
+}
+
+function groupesParents(d: Donnees, id: string): GroupesParents {
+  const liens = d.filiations.filter((f) => f.enfant === id);
+  const tous = new Set(liens.map((f) => f.parent));
+  const couples = new Set<string>();
+  for (const groupe of [liens, liens.filter((f) => f.type === 'biologique'), liens.filter((f) => f.type === 'adoptif')]) {
+    const ids = new Set(groupe.map((f) => f.parent));
+    if (ids.size >= 2) couples.add([...ids].sort().join('|'));
+  }
+  return { tous, couples };
+}
+
+function complets(a: GroupesParents, b: GroupesParents): boolean {
+  if (a.tous.size > 0 && a.tous.size === b.tous.size && [...a.tous].every((p) => b.tous.has(p))) return true;
+  return [...a.couples].some((c) => b.couples.has(c));
+}
+
 /**
- * Frères et sœurs : mêmes parents (ensemble identique, non vide).
- * Demi-frères et demi-sœurs : au moins un parent en commun, mais pas tous.
+ * Frères et sœurs complets : mêmes parents, ou un même couple de parents d'un même type de chaque côté
+ * (un enfant adopté par mes parents est mon frère, même si ses parents biologiques sont enregistrés).
+ */
+export function freresComplets(d: Donnees, a: string, b: string): boolean {
+  return complets(groupesParents(d, a), groupesParents(d, b));
+}
+
+/**
+ * Frères et sœurs : `freresComplets`.
+ * Demi-frères et demi-sœurs : au moins un parent en commun, sans être frères et sœurs complets.
  */
 export function fratrie(d: Donnees, id: string): { freresSoeurs: Personne[]; demis: Personne[] } {
-  const parentsDe = (x: string) => new Set(d.filiations.filter((f) => f.enfant === x).map((f) => f.parent));
-  const miens = parentsDe(id);
+  const miens = groupesParents(d, id);
   const freres: string[] = [];
   const demis: string[] = [];
-  if (miens.size > 0) {
+  if (miens.tous.size > 0) {
     for (const autre of d.personnes) {
       if (autre.id === id) continue;
-      const siens = parentsDe(autre.id);
-      const communs = [...siens].filter((p) => miens.has(p)).length;
-      if (communs === 0) continue;
-      if (communs === miens.size && communs === siens.size) freres.push(autre.id);
+      const siens = groupesParents(d, autre.id);
+      if (![...siens.tous].some((p) => miens.tous.has(p))) continue;
+      if (complets(miens, siens)) freres.push(autre.id);
       else demis.push(autre.id);
     }
   }
@@ -197,10 +236,8 @@ function sang(d: Donnees, parents: Parents, de: string, vers: string): Sang | un
   }
   if (!meilleur) return undefined;
   const [montee, descente] = meilleur;
-  // Même règle que `fratrie` : frères et sœurs si les ensembles de parents sont identiques.
-  const pDe = parents.get(de) ?? new Set<string>();
-  const pVers = parents.get(vers) ?? new Set<string>();
-  const demi = montee === 1 && descente === 1 && (pDe.size !== pVers.size || [...pDe].some((p) => !pVers.has(p)));
+  // Même règle que `fratrie`.
+  const demi = montee === 1 && descente === 1 && !freresComplets(d, de, vers);
   const direct = montee === 1 && descente === 0 ? { parent: vers, enfant: de } : montee === 0 && descente === 1 ? { parent: de, enfant: vers } : undefined;
   const adoptif = !!direct && d.filiations.some((f) => f.parent === direct.parent && f.enfant === direct.enfant && f.type === 'adoptif');
   return { type: 'sang', montee, descente, demi, adoptif };
@@ -426,79 +463,4 @@ export function autreParent(d: Donnees, id: string): Personne | undefined {
     }
   }
   return undefined;
-}
-
-/** Contenu du dessin « Famille proche » d'une fiche. */
-export interface Foyer {
-  /** Deux parents au plus : les premiers de `liensParents` (biologiques d'abord). */
-  parents: { personne: Personne; adoptif: boolean }[];
-  /** Case « + Parent » à montrer (0 ou 1) : seulement pour la famille, quand il manque un parent. */
-  manque: number;
-  /** Les deux parents dessinés ont une union terminée (trait pointillé entre eux). */
-  parentsSepares: boolean;
-  /** `separe` : pas d'union actuelle, c'est l'autre parent des enfants d'un parent sans nom, ou l'ex avec qui il a des enfants (trait pointillé). */
-  conjoint?: { personne: Personne; marie: boolean; separe?: boolean };
-  /** Ex avec qui il a des enfants, quand il a aussi un conjoint actuel : dessiné de l'autre côté de la personne (trait pointillé). */
-  ex?: { personne: Personne; marie: boolean };
-  /** Frères et sœurs (mêmes parents), du plus âgé au plus jeune. */
-  fratrie: Personne[];
-  /** Demi-frères et demi-sœurs qui ont exactement un parent dessiné en commun (`parent` : son id), du plus âgé au plus jeune ; `autre` : leur autre parent, s'il est connu (`autreSepare` : leur union est terminée). */
-  demis: { personne: Personne; parent: string; autre?: Personne; autreSepare?: boolean }[];
-  /** Enfants : ceux d'une autre union d'abord, puis ceux du couple ; du plus âgé au plus jeune dans chaque groupe. */
-  enfants: { personne: Personne; adoptif: boolean; duCouple: boolean; duEx: boolean }[];
-}
-
-/** Famille proche de `id`. `moi` absent : tout le monde compte comme de la famille (case « + Parent » comprise). */
-export function foyer(d: Donnees, id: string, moi?: string): Foyer {
-  const tousParents = liensParents(d, id);
-  const famille = !moi || moi === id || relation(d, moi, id) !== undefined;
-  const c = conjoint(d, id);
-  const autre = c ? undefined : autreParent(d, id);
-  const uniAutre = autre && d.unions.find((u) => (u.personneA === id && u.personneB === autre.id) || (u.personneA === autre.id && u.personneB === id));
-  const liens = liensEnfants(d, id);
-  // L'ex avec qui il a des enfants (le premier) est dessiné en pointillé : à la place du conjoint s'il n'en a pas, sinon de l'autre côté.
-  const exParent = autre
-    ? undefined
-    : exConjoints(d, id).find((e) => liens.some((l) => d.filiations.some((f) => f.parent === e.personne.id && f.enfant === l.personne.id)));
-  const cj = c
-    ? { personne: c.personne, marie: c.union.marie }
-    : autre
-      ? { personne: autre, marie: !!uniAutre?.marie, separe: true }
-      : exParent && { personne: exParent.personne, marie: exParent.union.marie, separe: true };
-  const ex = c && exParent ? { personne: exParent.personne, marie: exParent.union.marie } : undefined;
-  const enfants = liens.map(({ filiation, personne }) => ({
-    personne,
-    adoptif: filiation.type === 'adoptif',
-    duCouple: !!cj && d.filiations.some((f) => f.parent === cj.personne.id && f.enfant === personne.id),
-    duEx: !!ex && d.filiations.some((f) => f.parent === ex.personne.id && f.enfant === personne.id),
-  }));
-  const dessines = tousParents.slice(0, 2);
-  const fr = fratrie(d, id);
-  const demis = fr.demis.flatMap((personne) => {
-    const communs = dessines.filter(({ personne: par }) => d.filiations.some((f) => f.parent === par.id && f.enfant === personne.id));
-    if (communs.length !== 1) return [];
-    const autre = liensParents(d, personne.id).find(({ personne: par }) => par.id !== communs[0].personne.id)?.personne;
-    const commun = communs[0].personne.id;
-    const autreSepare =
-      !!autre &&
-      d.unions.some(
-        (u) => u.statut === 'separee' && ((u.personneA === commun && u.personneB === autre.id) || (u.personneA === autre.id && u.personneB === commun)),
-      );
-    return [{ personne, parent: commun, autre, autreSepare }];
-  });
-  return {
-    parents: dessines.map(({ filiation, personne }) => ({ personne, adoptif: filiation.type === 'adoptif' })),
-    manque: famille && tousParents.length < 2 ? 1 : 0,
-    parentsSepares:
-      tousParents.length >= 2 &&
-      d.unions.some((u) => {
-        const [a, b] = [tousParents[0].personne.id, tousParents[1].personne.id];
-        return u.statut === 'separee' && ((u.personneA === a && u.personneB === b) || (u.personneA === b && u.personneB === a));
-      }),
-    conjoint: cj,
-    ex,
-    fratrie: fr.freresSoeurs,
-    demis,
-    enfants: [...enfants.filter((e) => !e.duCouple), ...enfants.filter((e) => e.duCouple)],
-  };
 }

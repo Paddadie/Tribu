@@ -200,6 +200,8 @@ Règles valables partout : maquette validée par Paul avant tout changement visi
 - [x] Arbre global (après FEAT-09) : maquette A validée le 19/10 (claude.ai/artifact/QeJzzjcSac5fzuuZ3R9Cow), personnes sans lien masquées, codé le 19/10 ; bouton sur l'accueil, « Moi » au centre, toutes les personnes et leurs liens (amis compris) ; zoom au pincement, défilement libre, toucher une personne ouvre sa fiche
 - [x] Arbre global lisible (19/10) : couleur par nom de famille (12 pastels, amis compris), décédés pâles avec « † », enfants centrés entre leurs parents (chaînes d'ex élargies), parents sans union côte à côte, familles d'amis resserrées, fonds de lignée supprimés
 - [x] Groupes d'amis (après l'arbre global) : nom de famille au-dessus des lignées, cadres de groupes dans « Tes amis », saisie par groupe, Réglages → Groupes d'amis ; maquette validée le 19/10 (claude.ai/artifact/C5fAaf2hkT89PDdtXV6E4T), codé le 19/10
+- [x] « Famille proche » fiabilisé (21/10) : 22 cas fictifs (tests/fixtures/famille-proche), test de référence, rapport et 3 maquettes (claude.ai/artifact/2JMCd1nRBCtLXRPY8jBt6U), stratégie S2 « rangées repliées » choisie par Paul ; correction de `fratrie()` (`freresComplets`) ; placement pur `modele/familleProche.ts`
+- [x] Veuvage (21/10) : nouvelle union possible après le décès du conjoint ; règle « une union actuelle avec un vivant » à la création, à l'import et à la fusion ; section « Conjoint décédé » sur la fiche.
 - Plusieurs groupes par personne (règle « un seul » levée dans les écrans)
 - Photos (IndexedDB nécessaire)
 - Import et export GEDCOM

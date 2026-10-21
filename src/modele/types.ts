@@ -29,7 +29,10 @@ export interface Personne {
   sansNom?: true;
 }
 
-/** `actuelle` : le couple de maintenant (un seul par personne) ; `separee` : un ex, gardé pour l'historique. */
+/**
+ * `actuelle` : le couple de maintenant (un seul avec un vivant par personne : un veuf ou une veuve garde son union avec le
+ * défunt et peut en avoir une nouvelle) ; `separee` : un ex, gardé pour l'historique.
+ */
 export type StatutUnion = 'actuelle' | 'separee';
 
 /** Couple : relie deux personnes distinctes. */

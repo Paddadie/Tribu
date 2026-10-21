@@ -1,0 +1,83 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "i1",
+      "prenom": "",
+      "nom": "",
+      "note": "",
+      "inconnu": true
+    },
+    {
+      "id": "i2",
+      "prenom": "",
+      "nom": "",
+      "note": "",
+      "inconnu": true
+    },
+    {
+      "id": "ana",
+      "prenom": "Ana",
+      "nom": "Lefort",
+      "sexe": "F",
+      "naissance": "1990",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Yanis",
+      "nom": "Lefort",
+      "sexe": "M",
+      "naissance": "1993",
+      "note": ""
+    },
+    {
+      "id": "noe",
+      "prenom": "Noé",
+      "nom": "Lefort",
+      "sexe": "M",
+      "naissance": "1997",
+      "note": ""
+    }
+  ],
+  "unions": [],
+  "filiations": [
+    {
+      "id": "f-i1-ana",
+      "parent": "i1",
+      "enfant": "ana",
+      "type": "biologique"
+    },
+    {
+      "id": "f-i2-ana",
+      "parent": "i2",
+      "enfant": "ana",
+      "type": "biologique"
+    },
+    {
+      "id": "f-i1-centre",
+      "parent": "i1",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-i2-centre",
+      "parent": "i2",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-i1-noe",
+      "parent": "i1",
+      "enfant": "noe",
+      "type": "biologique"
+    },
+    {
+      "id": "f-i2-noe",
+      "parent": "i2",
+      "enfant": "noe",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

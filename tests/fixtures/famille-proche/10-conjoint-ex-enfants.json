@@ -1,0 +1,214 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Michel",
+      "nom": "Robin",
+      "sexe": "M",
+      "naissance": "1950",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Annie",
+      "nom": "Robin",
+      "sexe": "F",
+      "naissance": "1952",
+      "note": ""
+    },
+    {
+      "id": "s1",
+      "prenom": "Élodie",
+      "nom": "Robin",
+      "sexe": "F",
+      "naissance": "1978",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Julien",
+      "nom": "Robin",
+      "sexe": "M",
+      "naissance": "1980",
+      "note": ""
+    },
+    {
+      "id": "ex",
+      "prenom": "Sophie",
+      "nom": "Marchand",
+      "sexe": "F",
+      "naissance": "1981",
+      "note": ""
+    },
+    {
+      "id": "conj",
+      "prenom": "Camille",
+      "nom": "Robin",
+      "sexe": "F",
+      "naissance": "1984",
+      "note": ""
+    },
+    {
+      "id": "aut",
+      "prenom": "Aurélie",
+      "nom": "Dupuis",
+      "sexe": "F",
+      "naissance": "1983",
+      "note": ""
+    },
+    {
+      "id": "k1",
+      "prenom": "Lucie",
+      "nom": "Robin",
+      "sexe": "F",
+      "naissance": "2006",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Théo",
+      "nom": "Robin",
+      "sexe": "M",
+      "naissance": "2008",
+      "note": ""
+    },
+    {
+      "id": "k3",
+      "prenom": "Mathis",
+      "nom": "Robin",
+      "sexe": "M",
+      "naissance": "2011",
+      "note": ""
+    },
+    {
+      "id": "k4",
+      "prenom": "Louise",
+      "nom": "Robin",
+      "sexe": "F",
+      "naissance": "2016",
+      "note": ""
+    },
+    {
+      "id": "k5",
+      "prenom": "Gabin",
+      "nom": "Robin",
+      "sexe": "M",
+      "naissance": "2019",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    },
+    {
+      "id": "u-centre-ex",
+      "personneA": "centre",
+      "personneB": "ex",
+      "marie": true,
+      "statut": "separee",
+      "date": "2005"
+    },
+    {
+      "id": "u-centre-conj",
+      "personneA": "centre",
+      "personneB": "conj",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2015"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-s1",
+      "parent": "pere",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-s1",
+      "parent": "mere",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-k1",
+      "parent": "ex",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex-k2",
+      "parent": "ex",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k3",
+      "parent": "centre",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-aut-k3",
+      "parent": "aut",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k4",
+      "parent": "centre",
+      "enfant": "k4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k4",
+      "parent": "conj",
+      "enfant": "k4",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k5",
+      "parent": "centre",
+      "enfant": "k5",
+      "type": "biologique"
+    },
+    {
+      "id": "f-conj-k5",
+      "parent": "conj",
+      "enfant": "k5",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

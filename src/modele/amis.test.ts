@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { amis, chemin, foyer, nomGroupe, raisonGroupe } from './deductions';
+import { amis, chemin, nomGroupe, raisonGroupe } from './deductions';
+import { disposerFoyer, familleProche, type FamilleProche } from './familleProche';
 import {
   aDesLiens,
   ajouterAuGroupe,
@@ -268,23 +269,27 @@ describe('étiquettes courtes', () => {
 });
 
 describe('famille proche (dessin de la fiche)', () => {
-  const noms = (ps: { personne: { prenom: string } }[]) => ps.map((x) => x.personne.prenom);
+  const prenoms = (f: FamilleProche, ids: (string | null)[]) => ids.map((x) => (x ? f.personnes.get(x)!.prenom : null));
 
   it('parents, conjoint, frères et sœurs, enfants avec leur lien', () => {
-    const f = foyer(d, id.Hugo, id.Mathis);
-    expect(noms(f.parents)).toEqual(['Agnès', 'Bruno']);
-    expect(f.manque).toBe(0);
-    expect(f.conjoint?.personne.prenom).toBe('Nadia');
-    expect(f.conjoint?.marie).toBe(false);
-    expect(f.fratrie.map((p) => p.prenom)).toEqual(['Sophie']);
-    expect(f.enfants.map((e) => [e.personne.prenom, e.adoptif, e.duCouple])).toEqual([
+    const f = familleProche(d, id.Hugo, id.Mathis);
+    expect(prenoms(f, f.couples[0].membres)).toEqual(['Agnès', 'Bruno']);
+    expect(f.couples[0].manque).toBe(false);
+    expect(f.conjoint?.id).toBe(id.Nadia);
+    expect(
+      prenoms(
+        f,
+        f.freres.map((x) => x.id),
+      ),
+    ).toEqual(['Sophie']);
+    expect(f.enfants.map((e) => [f.personnes.get(e.id)!.prenom, e.adoptif, e.autre === id.Nadia])).toEqual([
       ['Camille', false, true],
       ['Jade', true, true],
     ]);
   });
 
-  it('demi-frères et sœurs reliés à leur parent dessiné en commun, du plus âgé au plus jeune', () => {
-    expect(foyer(d, id.Hugo, id.Mathis).demis).toEqual([]);
+  it('demi-frères et sœurs groupés par leur parent dessiné en commun et leur autre parent, le plus récent d’abord', () => {
+    expect(familleProche(d, id.Hugo, id.Mathis).autresCouples).toEqual([]);
     let y = d;
     const ajout = (prenom: string, naissance: string, parents: string[]) => {
       const r = creerPersonne(y, { prenom, nom: 'X', naissance });
@@ -295,37 +300,58 @@ describe('famille proche (dessin de la fiche)', () => {
     const autre = ajout('Yves', '1950', []);
     ajout('Zoé', '1985', [id.Agnès, autre]);
     ajout('Axel', '1975', [id.Bruno]);
-    const f = foyer(y, id.Hugo, id.Mathis);
-    expect(f.demis.map((x) => [x.personne.prenom, x.parent])).toEqual([
-      ['Axel', id.Bruno],
-      ['Zoé', id.Agnès],
+    const f = familleProche(y, id.Hugo, id.Mathis);
+    expect(
+      f.autresCouples.map((a) => [
+        ...prenoms(f, [a.parent, a.autre]),
+        ...prenoms(
+          f,
+          a.enfants.map((e) => e.id),
+        ),
+      ]),
+    ).toEqual([
+      ['Agnès', 'Yves', 'Zoé'],
+      ['Bruno', null, 'Axel'],
     ]);
-    expect(f.fratrie.map((p) => p.prenom)).toEqual(['Sophie']);
+    expect(
+      prenoms(
+        f,
+        f.freres.map((x) => x.id),
+      ),
+    ).toEqual(['Sophie']);
   });
 
-  it('les enfants d’une autre union passent avant ceux du couple', () => {
+  it('les enfants d’une autre union pendent de la personne seule, à droite de ceux du couple', () => {
     const x = creerPersonne(d, { prenom: 'Malo', nom: 'X', naissance: '2014' });
     const malo = x.personne.id;
     const y = ajouterFiliation(x.donnees, id.Théo, malo, 'biologique').donnees;
-    expect(foyer(y, id.Théo, id.Mathis).enfants.map((e) => [e.personne.prenom, e.duCouple])).toEqual([
+    const f = familleProche(y, id.Théo, id.Mathis);
+    expect(f.enfants.map((e) => [f.personnes.get(e.id)!.prenom, e.autre === f.conjoint?.id])).toEqual([
       ['Malo', false],
       ['Lou', true],
     ]);
+    // Le couple à gauche de la personne : ses enfants aussi, même plus jeunes.
+    const dis = disposerFoyer(f, 360);
+    const x0 = (p: string) => dis.noeuds.find((n) => n.personne?.prenom === p)!.x;
+    expect(x0('Lou')).toBeLessThan(x0('Malo'));
   });
 
-  it('case « + Parent » pour la famille seulement, et au plus deux parents montrés', () => {
-    expect(foyer(d, id.Marc, id.Mathis).manque).toBe(1);
-    expect(foyer(d, id.Samia, id.Mathis).manque).toBe(0);
-    expect(foyer(d, id.Samia).manque).toBe(1);
-    expect(foyer(d, id.Karim, id.Mathis).manque).toBe(0);
-    // Deux parents biologiques et un adoptif : les biologiques sont montrés.
+  it('case « + Parent » pour la famille seulement ; un parent adoptif en plus forme son propre couple', () => {
+    const manque = (x: string, moi?: string) => familleProche(d, x, moi).couples.some((K) => K.manque);
+    expect(manque(id.Marc, id.Mathis)).toBe(true);
+    expect(manque(id.Samia, id.Mathis)).toBe(false);
+    expect(manque(id.Samia)).toBe(true);
+    expect(manque(id.Karim, id.Mathis)).toBe(false);
+    // Deux parents biologiques et un adoptif : les biologiques d'abord.
     const x = creerPersonne(d, { prenom: 'Paul', nom: 'X' });
     const z = ajouterFiliation(x.donnees, x.personne.id, id.Mathis, 'adoptif').donnees;
     // Filiation adoptive enregistrée en premier : l'ordre de saisie ne compte pas.
     const y = { ...z, filiations: [z.filiations[z.filiations.length - 1], ...z.filiations.slice(0, -1)] };
-    const f = foyer(y, id.Mathis, id.Mathis);
-    expect(noms(f.parents)).toEqual(['Marc', 'Sophie']);
-    expect(f.manque).toBe(0);
+    const f = familleProche(y, id.Mathis, id.Mathis);
+    expect(f.couples.map((K) => [prenoms(f, K.membres), K.adoptif, K.manque])).toEqual([
+      [['Marc', 'Sophie'], false, false],
+      [['Paul'], true, false],
+    ]);
   });
 });
 

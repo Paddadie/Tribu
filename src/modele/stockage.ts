@@ -2,8 +2,8 @@
 // fichier JSON. Le `Storage` est injecté pour pouvoir tester sans navigateur.
 
 import { migrer } from './migration';
-import { donneesVides, estDateSansAnneeValide, estDateValide, MAX_PARENTS_PAR_TYPE } from './modele';
-import type { Donnees, Filiation } from './types';
+import { conjointEnTrop, donneesVides, estDateSansAnneeValide, estDateValide, MAX_PARENTS_PAR_TYPE } from './modele';
+import type { Donnees, Filiation, Personne, Union } from './types';
 
 export const CLE_STOCKAGE = 'tribu:donnees';
 /** Copie d'un contenu illisible trouvé sous CLE_STOCKAGE. */
@@ -55,7 +55,6 @@ export function estDonneesValides(v: unknown): v is Donnees {
   }
 
   const idsLiens = new Set<string>();
-  const enCouple = new Set<string>();
   for (const u of unions) {
     if (!estObjet(u) || typeof u.id !== 'string' || idsLiens.has(u.id)) return false;
     if (typeof u.marie !== 'boolean') return false;
@@ -63,13 +62,10 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (typeof u.personneA !== 'string' || typeof u.personneB !== 'string') return false;
     if (u.date !== undefined && (typeof u.date !== 'string' || !(estDateValide(u.date) || estDateSansAnneeValide(u.date)))) return false;
     if (!ids.has(u.personneA) || !ids.has(u.personneB) || u.personneA === u.personneB) return false;
-    // Un seul conjoint actuel par personne.
-    if (u.statut === 'actuelle') {
-      if (enCouple.has(u.personneA) || enCouple.has(u.personneB)) return false;
-      enCouple.add(u.personneA).add(u.personneB);
-    }
     idsLiens.add(u.id);
   }
+  // Un seul conjoint actuel vivant par personne (un veuf ou une veuve peut s'être remarié).
+  if (conjointEnTrop(personnes as Personne[], unions as Union[])) return false;
 
   const parentsParType = new Map<string, number>();
   const paires = new Set<string>();

@@ -7,9 +7,9 @@ import {
   nomGroupe,
   conjoint,
   enfantsDuCouple,
+  conjointsDefunts,
   exConjoints,
   familleElargie,
-  foyer,
   fratrie,
   liensEnfants,
   liensParents,
@@ -37,6 +37,7 @@ import { estParentSansNom } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { GroupeAmis, Personne, Union } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
+import { aDuMonde, familleProche } from '../modele/familleProche';
 import { dessinChemin, dessinFoyer } from './arbre';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
@@ -114,11 +115,11 @@ function sectionsDessins(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d)?.id;
   const etapes = moi ? chemin(d, moi, p.id) : undefined;
-  const f = foyer(d, p.id, moi);
+  const f = familleProche(d, p.id, moi);
   const dessin = (titre: string, contenu: HTMLElement) => h('section', {}, h('h2', { class: 'titre-section' }, titre), contenu);
   return [
     etapes && moi && (etapes.length > 2 || estParentSansNom(p)) ? dessin('Lien avec toi', dessinChemin(etapes, moi, d)) : null,
-    f.parents.length > 0 || f.fratrie.length > 0 || f.conjoint || f.enfants.length > 0 ? dessin('Famille proche', dessinFoyer(p, f, moi)) : null,
+    aDuMonde(f) ? dessin('Famille proche', dessinFoyer(f)) : null,
   ];
 }
 
@@ -220,20 +221,22 @@ function ligneUnion(p: Personne, { union, personne: c }: { union: Union; personn
   return ligneProche(c, statut && h('span', { class: 'etiquette' }, statut), `#/union/${union.id}/${p.id}`, 'Modifier l’union', detail);
 }
 
-/** Conjoint actuel (un seul) touchable, puis les ex-conjoints sous leur propre titre ; rien s'il n'y en a pas. */
+/** Conjoint actuel (un seul) touchable, le conjoint défunt d'un remarié, puis les ex-conjoints ; rien s'il n'y en a pas. */
 function sectionsConjoint(p: Personne): (HTMLElement | null)[] {
   const d = lireDonnees();
   const actuel = conjoint(d, p.id);
+  const defunts = conjointsDefunts(d, p.id);
   const ex = exConjoints(d, p.id);
   return [
     actuel ? section('Conjoint', ligneUnion(p, actuel)) : null,
+    defunts.length > 0 ? section(defunts.length > 1 ? 'Conjoints décédés' : 'Conjoint décédé', ...defunts.map((e) => ligneUnion(p, e))) : null,
     ex.length > 0 ? section(ex.length > 1 ? 'Ex-conjoints' : 'Ex-conjoint', ...ex.map((e) => ligneUnion(p, e))) : null,
   ];
 }
 
 /**
  * Feuille « Ajouter un proche » : conjoint, parent, enfant, frère ou sœur, ami.
- * Le conjoint est grisé s'il y en a déjà un. Un frère ou une sœur s'ajoute même sans parent connu (parent inconnu en coulisse).
+ * Le conjoint est grisé s'il y en a déjà un de vivant (veuf ou veuve, on peut en ajouter un nouveau). Un frère ou une sœur s'ajoute même sans parent connu (parent inconnu en coulisse).
  */
 function ouvrirChoixProche(p: Personne): void {
   const d = lireDonnees();

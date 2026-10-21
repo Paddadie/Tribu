@@ -1,0 +1,194 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Franck",
+      "nom": "Henry",
+      "sexe": "M",
+      "naissance": "1962",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Isabelle",
+      "nom": "Henry",
+      "sexe": "F",
+      "naissance": "1964",
+      "note": ""
+    },
+    {
+      "id": "ex1",
+      "prenom": "Gérard",
+      "nom": "Lambert",
+      "sexe": "M",
+      "naissance": "1958",
+      "note": ""
+    },
+    {
+      "id": "tierce1",
+      "prenom": "Monique",
+      "nom": "Lambert",
+      "sexe": "F",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "ex2",
+      "prenom": "Rémi",
+      "nom": "Barbier",
+      "sexe": "M",
+      "naissance": "1961",
+      "note": ""
+    },
+    {
+      "id": "tierce2",
+      "prenom": "Josiane",
+      "nom": "Barbier",
+      "sexe": "F",
+      "naissance": "1963",
+      "note": ""
+    },
+    {
+      "id": "d1",
+      "prenom": "Arnaud",
+      "nom": "Lambert",
+      "sexe": "M",
+      "naissance": "1983",
+      "note": ""
+    },
+    {
+      "id": "x1",
+      "prenom": "Delphine",
+      "nom": "Lambert",
+      "sexe": "F",
+      "naissance": "1988",
+      "note": ""
+    },
+    {
+      "id": "x2",
+      "prenom": "Fabien",
+      "nom": "Lambert",
+      "sexe": "M",
+      "naissance": "1990",
+      "note": ""
+    },
+    {
+      "id": "y1",
+      "prenom": "Maëva",
+      "nom": "Barbier",
+      "sexe": "F",
+      "naissance": "1992",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Clara",
+      "nom": "Henry",
+      "sexe": "F",
+      "naissance": "1993",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    },
+    {
+      "id": "u-ex1-mere",
+      "personneA": "ex1",
+      "personneB": "mere",
+      "marie": false,
+      "statut": "separee"
+    },
+    {
+      "id": "u-ex1-tierce1",
+      "personneA": "ex1",
+      "personneB": "tierce1",
+      "marie": true,
+      "statut": "actuelle"
+    },
+    {
+      "id": "u-ex2-mere",
+      "personneA": "ex2",
+      "personneB": "mere",
+      "marie": false,
+      "statut": "separee"
+    },
+    {
+      "id": "u-ex2-tierce2",
+      "personneA": "ex2",
+      "personneB": "tierce2",
+      "marie": true,
+      "statut": "actuelle"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-ex1-d1",
+      "parent": "ex1",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-d1",
+      "parent": "mere",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex1-x1",
+      "parent": "ex1",
+      "enfant": "x1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-tierce1-x1",
+      "parent": "tierce1",
+      "enfant": "x1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex1-x2",
+      "parent": "ex1",
+      "enfant": "x2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-tierce1-x2",
+      "parent": "tierce1",
+      "enfant": "x2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex2-y1",
+      "parent": "ex2",
+      "enfant": "y1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-tierce2-y1",
+      "parent": "tierce2",
+      "enfant": "y1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

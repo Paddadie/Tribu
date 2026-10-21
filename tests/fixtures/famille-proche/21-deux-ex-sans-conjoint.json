@@ -1,0 +1,152 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Alain",
+      "nom": "Giraud",
+      "sexe": "M",
+      "naissance": "1950",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Mireille",
+      "nom": "Giraud",
+      "sexe": "F",
+      "naissance": "1953",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Sylvain",
+      "nom": "Giraud",
+      "sexe": "M",
+      "naissance": "1975",
+      "note": ""
+    },
+    {
+      "id": "ex1",
+      "prenom": "Nadège",
+      "nom": "Poirier",
+      "sexe": "F",
+      "naissance": "1976",
+      "note": ""
+    },
+    {
+      "id": "ex2",
+      "prenom": "Sonia",
+      "nom": "Leclerc",
+      "sexe": "F",
+      "naissance": "1980",
+      "note": ""
+    },
+    {
+      "id": "sn",
+      "prenom": "Parent inconnu",
+      "nom": "",
+      "note": "",
+      "sansNom": true
+    },
+    {
+      "id": "k1",
+      "prenom": "Hugo",
+      "nom": "Giraud",
+      "sexe": "M",
+      "naissance": "1999",
+      "note": ""
+    },
+    {
+      "id": "k2",
+      "prenom": "Zoé",
+      "nom": "Giraud",
+      "sexe": "F",
+      "naissance": "2006",
+      "note": ""
+    },
+    {
+      "id": "k3",
+      "prenom": "Malo",
+      "nom": "Giraud",
+      "sexe": "M",
+      "naissance": "2012",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    },
+    {
+      "id": "u-centre-ex1",
+      "personneA": "centre",
+      "personneB": "ex1",
+      "marie": true,
+      "statut": "separee",
+      "date": "1998"
+    },
+    {
+      "id": "u-centre-ex2",
+      "personneA": "centre",
+      "personneB": "ex2",
+      "marie": false,
+      "statut": "separee"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k1",
+      "parent": "centre",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex1-k1",
+      "parent": "ex1",
+      "enfant": "k1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k2",
+      "parent": "centre",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ex2-k2",
+      "parent": "ex2",
+      "enfant": "k2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-centre-k3",
+      "parent": "centre",
+      "enfant": "k3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-sn-k3",
+      "parent": "sn",
+      "enfant": "k3",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

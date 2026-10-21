@@ -1,0 +1,149 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "bio1",
+      "prenom": "Lina",
+      "nom": "Haddad",
+      "sexe": "F",
+      "naissance": "1975",
+      "note": ""
+    },
+    {
+      "id": "bio2",
+      "prenom": "Samir",
+      "nom": "Haddad",
+      "sexe": "M",
+      "naissance": "1973",
+      "note": ""
+    },
+    {
+      "id": "ad1",
+      "prenom": "Philippe",
+      "nom": "Moreau",
+      "sexe": "M",
+      "naissance": "1965",
+      "note": ""
+    },
+    {
+      "id": "ad2",
+      "prenom": "Catherine",
+      "nom": "Moreau",
+      "sexe": "F",
+      "naissance": "1967",
+      "note": ""
+    },
+    {
+      "id": "s1",
+      "prenom": "Victor",
+      "nom": "Moreau",
+      "sexe": "M",
+      "naissance": "1992",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Yasmine",
+      "nom": "Moreau",
+      "sexe": "F",
+      "naissance": "1996",
+      "note": ""
+    },
+    {
+      "id": "s2",
+      "prenom": "Kim",
+      "nom": "Moreau",
+      "sexe": "F",
+      "naissance": "1998",
+      "note": ""
+    },
+    {
+      "id": "s3",
+      "prenom": "Rayan",
+      "nom": "Haddad",
+      "sexe": "M",
+      "naissance": "2001",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-bio1-bio2",
+      "personneA": "bio1",
+      "personneB": "bio2",
+      "marie": false,
+      "statut": "separee"
+    },
+    {
+      "id": "u-ad1-ad2",
+      "personneA": "ad1",
+      "personneB": "ad2",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1990"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-ad1-s1",
+      "parent": "ad1",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-ad2-s1",
+      "parent": "ad2",
+      "enfant": "s1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-centre",
+      "parent": "bio1",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-centre",
+      "parent": "bio2",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio1-s3",
+      "parent": "bio1",
+      "enfant": "s3",
+      "type": "biologique"
+    },
+    {
+      "id": "f-bio2-s3",
+      "parent": "bio2",
+      "enfant": "s3",
+      "type": "biologique"
+    },
+    {
+      "id": "a-ad1-centre",
+      "parent": "ad1",
+      "enfant": "centre",
+      "type": "adoptif"
+    },
+    {
+      "id": "a-ad2-centre",
+      "parent": "ad2",
+      "enfant": "centre",
+      "type": "adoptif"
+    },
+    {
+      "id": "a-ad1-s2",
+      "parent": "ad1",
+      "enfant": "s2",
+      "type": "adoptif"
+    },
+    {
+      "id": "a-ad2-s2",
+      "parent": "ad2",
+      "enfant": "s2",
+      "type": "adoptif"
+    }
+  ],
+  "groupes": []
+}

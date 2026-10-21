@@ -1,0 +1,44 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "mere",
+      "prenom": "Claire",
+      "nom": "Bonnet",
+      "sexe": "F",
+      "naissance": "1970",
+      "note": ""
+    },
+    {
+      "id": "pere",
+      "prenom": "Parent inconnu",
+      "nom": "",
+      "note": "",
+      "sansNom": true
+    },
+    {
+      "id": "centre",
+      "prenom": "Inès",
+      "nom": "Bonnet",
+      "sexe": "F",
+      "naissance": "2000",
+      "note": ""
+    }
+  ],
+  "unions": [],
+  "filiations": [
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

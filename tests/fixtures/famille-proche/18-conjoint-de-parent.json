@@ -1,0 +1,105 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Serge",
+      "nom": "Aubert",
+      "sexe": "M",
+      "naissance": "1962",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Valérie",
+      "nom": "Aubert",
+      "sexe": "F",
+      "naissance": "1964",
+      "note": ""
+    },
+    {
+      "id": "cp",
+      "prenom": "Corinne",
+      "nom": "Lemaire",
+      "sexe": "F",
+      "naissance": "1966",
+      "note": ""
+    },
+    {
+      "id": "cm",
+      "prenom": "Yves",
+      "nom": "Charpentier",
+      "sexe": "M",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Léna",
+      "nom": "Aubert",
+      "sexe": "F",
+      "naissance": "1990",
+      "note": ""
+    },
+    {
+      "id": "f1",
+      "prenom": "Maxime",
+      "nom": "Aubert",
+      "sexe": "M",
+      "naissance": "1993",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "separee",
+      "date": "1988"
+    },
+    {
+      "id": "u-pere-cp",
+      "personneA": "pere",
+      "personneB": "cp",
+      "marie": false,
+      "statut": "actuelle"
+    },
+    {
+      "id": "u-mere-cm",
+      "personneA": "mere",
+      "personneB": "cm",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "2001"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-f1",
+      "parent": "pere",
+      "enfant": "f1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-f1",
+      "parent": "mere",
+      "enfant": "f1",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}

@@ -548,6 +548,24 @@ describe('retrait sans confirmation, annulable', () => {
     expect(enregistrees().unions).toEqual(donnees.unions);
   });
 
+  it('veuvage : on peut ajouter un nouveau conjoint, le défunt reste sur la fiche', async () => {
+    let d = donneesVides();
+    const jeanne = creerPersonne(d, { prenom: 'Jeanne', nom: 'Morel' });
+    const pierre = creerPersonne(jeanne.donnees, { prenom: 'Pierre', nom: 'Morel', deces: '2015' });
+    const henri = creerPersonne(pierre.donnees, { prenom: 'Henri', nom: 'Dubois' });
+    d = ajouterUnion(henri.donnees, jeanne.personne.id, pierre.personne.id, true).donnees;
+    await demarrer(d, `#/personne/${jeanne.personne.id}`);
+
+    await toucher(trouver('button', 'Ajouter un proche'));
+    expect(trouver('dialog.feuille .option', 'Un conjoint').tagName).toBe('A');
+
+    await demarrer(ajouterUnion(d, jeanne.personne.id, henri.personne.id).donnees, `#/personne/${jeanne.personne.id}`);
+    expect(trouver('section', 'Conjoint').textContent).toContain('Henri Dubois');
+    expect(trouver('section', 'Conjoint décédé').textContent).toContain('Pierre Morel');
+    await toucher(trouver('button', 'Ajouter un proche'));
+    expect(trouver('dialog.feuille .option', 'Un conjoint').classList.contains('inactive')).toBe(true);
+  });
+
   it('séparation : l’union est gardée, l’ex-conjoint reste sur la fiche, annulable par le bandeau', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/union/${donnees.unions[0].id}/${ids.Anne}`);

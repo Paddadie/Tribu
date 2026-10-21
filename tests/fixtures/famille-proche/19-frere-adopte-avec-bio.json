@@ -1,0 +1,102 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Hervé",
+      "nom": "Collin",
+      "sexe": "M",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Agathe",
+      "nom": "Collin",
+      "sexe": "F",
+      "naissance": "1962",
+      "note": ""
+    },
+    {
+      "id": "b1",
+      "prenom": "Ngozi",
+      "nom": "Okafor",
+      "sexe": "F",
+      "naissance": "1975",
+      "note": ""
+    },
+    {
+      "id": "b2",
+      "prenom": "Emeka",
+      "nom": "Okafor",
+      "sexe": "M",
+      "naissance": "1973",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Ambre",
+      "nom": "Collin",
+      "sexe": "F",
+      "naissance": "1990",
+      "note": ""
+    },
+    {
+      "id": "ad",
+      "prenom": "Tobi",
+      "nom": "Collin",
+      "sexe": "M",
+      "naissance": "1994",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-b1-ad",
+      "parent": "b1",
+      "enfant": "ad",
+      "type": "biologique"
+    },
+    {
+      "id": "f-b2-ad",
+      "parent": "b2",
+      "enfant": "ad",
+      "type": "biologique"
+    },
+    {
+      "id": "a-pere-ad",
+      "parent": "pere",
+      "enfant": "ad",
+      "type": "adoptif"
+    },
+    {
+      "id": "a-mere-ad",
+      "parent": "mere",
+      "enfant": "ad",
+      "type": "adoptif"
+    }
+  ],
+  "groupes": []
+}

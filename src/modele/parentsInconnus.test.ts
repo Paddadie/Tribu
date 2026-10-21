@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { disposerArbre } from './arbreGlobal';
-import { chemin, familleElargie, foyer, fratrie, liensParents, parentsCommuns, relation } from './deductions';
+import { chemin, familleElargie, fratrie, liensParents, parentsCommuns, relation } from './deductions';
+import { familleProche } from './familleProche';
 import { aDesLiens, ajouterFiliation, ajouterFiliations, ajouterFrereSansParent, creerPersonne, donneesVides, personnesVisibles, supprimerFiliation, supprimerPersonne } from './modele';
 import { lienAvecMoi, motsChemin } from './parente';
 import { estDonneesValides } from './stockage';
@@ -112,9 +113,9 @@ describe('frère ou sœur sans parent connu', () => {
     const { d, id } = avec('Ana', 'Bob');
     const r = ajouterFrereSansParent(d, id.Ana, id.Bob);
     expect(aDesLiens(r, id.Ana)).toBe(true);
-    expect(foyer(r, id.Ana).parents).toEqual([]);
-    expect(foyer(r, id.Ana).manque).toBe(1);
-    expect(nomsDe(foyer(r, id.Ana).fratrie)).toEqual(['Bob']);
+    const f = familleProche(r, id.Ana);
+    expect(f.couples).toEqual([{ membres: [], adoptif: false, statut: null, manque: true }]);
+    expect(f.freres.map((x) => x.id)).toEqual([id.Bob]);
   });
 });
 

@@ -1,0 +1,108 @@
+{
+  "version": 5,
+  "personnes": [
+    {
+      "id": "pere",
+      "prenom": "Gilles",
+      "nom": "Fabre",
+      "sexe": "M",
+      "naissance": "1960",
+      "note": ""
+    },
+    {
+      "id": "mere",
+      "prenom": "Karima",
+      "nom": "Fabre",
+      "sexe": "F",
+      "naissance": "1963",
+      "note": ""
+    },
+    {
+      "id": "sn",
+      "prenom": "Parent inconnu",
+      "nom": "",
+      "note": "",
+      "sansNom": true
+    },
+    {
+      "id": "inc",
+      "prenom": "",
+      "nom": "",
+      "note": "",
+      "inconnu": true
+    },
+    {
+      "id": "d1",
+      "prenom": "Jordan",
+      "nom": "Fabre",
+      "sexe": "M",
+      "naissance": "1982",
+      "note": ""
+    },
+    {
+      "id": "d2",
+      "prenom": "Océane",
+      "nom": "Fabre",
+      "sexe": "F",
+      "naissance": "1984",
+      "note": ""
+    },
+    {
+      "id": "centre",
+      "prenom": "Mehdi",
+      "nom": "Fabre",
+      "sexe": "M",
+      "naissance": "1990",
+      "note": ""
+    }
+  ],
+  "unions": [
+    {
+      "id": "u-pere-mere",
+      "personneA": "pere",
+      "personneB": "mere",
+      "marie": true,
+      "statut": "actuelle",
+      "date": "1984-06-02"
+    }
+  ],
+  "filiations": [
+    {
+      "id": "f-pere-d1",
+      "parent": "pere",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-sn-d1",
+      "parent": "sn",
+      "enfant": "d1",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-d2",
+      "parent": "pere",
+      "enfant": "d2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-inc-d2",
+      "parent": "inc",
+      "enfant": "d2",
+      "type": "biologique"
+    },
+    {
+      "id": "f-pere-centre",
+      "parent": "pere",
+      "enfant": "centre",
+      "type": "biologique"
+    },
+    {
+      "id": "f-mere-centre",
+      "parent": "mere",
+      "enfant": "centre",
+      "type": "biologique"
+    }
+  ],
+  "groupes": []
+}
