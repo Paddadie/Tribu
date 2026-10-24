@@ -304,23 +304,23 @@ export function fiche(p: Personne): HTMLElement {
     { class: 'ecran' },
     h(
       'div',
-      { class: 'barre' },
+      { class: 'barre barre-fiche' },
       lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
+      h(
+        'div',
+        { class: 'identite' },
+        avatarPersonne(p, true),
+        h('h1', {}, nomComplet(p)),
+        dates.length > 0 && h('span', { class: 'dates secondaire' }, ...dates),
+        (p.nomNaissance || lien) &&
+          h(
+            'span',
+            { class: 'pastilles' },
+            p.nomNaissance && h('span', { class: 'lien-moi' }, `née ${p.nomNaissance}`),
+            lien && h('span', { class: 'lien-moi' }, lien),
+          ),
+      ),
       h('a', { class: 'bouton-icone', href: `#/modifier/${p.id}`, 'aria-label': 'Modifier' }, icone('crayon', 22), h('span', { class: 'sr-only' }, 'Modifier')),
-    ),
-    h(
-      'div',
-      { class: 'identite' },
-      avatarPersonne(p, true),
-      h('h1', {}, nomComplet(p)),
-      dates.length > 0 && h('span', { class: 'dates secondaire' }, ...dates),
-      (p.nomNaissance || lien) &&
-        h(
-          'span',
-          { class: 'pastilles' },
-          p.nomNaissance && h('span', { class: 'lien-moi' }, `née ${p.nomNaissance}`),
-          lien && h('span', { class: 'lien-moi' }, lien),
-        ),
     ),
     h(
       'div',

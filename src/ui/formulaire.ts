@@ -87,6 +87,7 @@ export function formulaire(existante: Personne | undefined, saisie = ''): HTMLEl
       { class: 'contenu', onsubmit: enregistrer, novalidate: true },
       ...identite.noeuds,
       ...(caseMarie ? [caseMarie] : []),
+      identite.noeudDeces,
       erreur,
       h('button', { type: 'submit', class: 'bouton bouton-plein' }, 'Enregistrer'),
       lienRetour(retour, { class: 'bouton' }, 'Annuler'),

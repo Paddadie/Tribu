@@ -7,11 +7,13 @@ import {
   depuisUnion,
   detailEvenement,
   evenementsAVenir,
+  fetesDuJour,
   libelleAnnees,
   nomEvenement,
   pastilleJour,
   titreEvenement,
   type Evenement,
+  type FeteDuJour,
 } from '../modele/evenements';
 import { comparateur, filtrerParNom, libelleDeces, MOIS, nomComplet } from '../modele/liste';
 import { estDecede, personnesListees, personnesVisibles } from '../modele/modele';
@@ -35,7 +37,7 @@ let recherche = '';
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 /** Lignes de personnes du bloc « Aujourd'hui » avant « + N autres ». */
 const MAX_AUJOURDHUI = 4;
-const MAX_FETES_AUJOURDHUI = 2;
+const MAX_FETES_AUJOURDHUI = 4;
 const MAX_VIGNETTES = 10;
 const HORIZON = 30;
 /** Fêtes annoncées dans « Bientôt » : la semaine à venir seulement. */
@@ -137,36 +139,48 @@ function ligneDuJour(d: Donnees, moi: Personne | undefined, e: Evenement): HTMLE
   );
 }
 
-function ligneFete(d: Donnees, moi: Personne | undefined, e: Evenement): HTMLElement {
-  const [p] = e.personnes;
-  const lien = lienDe(d, moi, p);
-  return h(
-    'a',
-    { class: 'fete', href: lienFiche(e) },
-    h('span', { class: 'picto' }, icone('fete', 16)),
+const DETAIL_FETE = { saint: 'Saint du jour', religieuse: 'Fête religieuse', civile: 'Fête civile' } as const;
+
+/** Un saint (ou jour férié) du jour, puis les proches qui le portent en dessous. */
+function ligneFete(d: Donnees, moi: Personne | undefined, f: FeteDuJour, proches: Personne[]): HTMLElement[] {
+  return [
     h(
-      'span',
-      { class: 'ligne-texte' },
-      h('span', { class: 'ligne-nom' }, `Bonne fête ${nomComplet(p)}`),
-      h('span', { class: 'detail' }, lien ? `${e.saint} · ${lien}` : e.saint),
+      'div',
+      { class: 'fete' },
+      h('span', { class: 'picto' }, icone('fete', 16)),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, f.nom), h('span', { class: 'detail' }, DETAIL_FETE[f.type])),
     ),
-  );
+    ...proches.map((p) => {
+      const lien = lienDe(d, moi, p);
+      return h(
+        'a',
+        { class: 'fete fete-proche', href: `#/personne/${p.id}` },
+        h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomComplet(p)), lien && h('span', { class: 'detail' }, lien)),
+      );
+    }),
+  ];
 }
 
-/** Carte verte : anniversaires et unions du jour en lignes blanches, fêtes en dessous ; au-delà, « + N autres » ouvre l'agenda. */
-function blocAujourdhui(d: Donnees, moi: Personne | undefined, evs: Evenement[]): HTMLElement | false {
+/** Carte verte : anniversaires et unions du jour en lignes blanches, saints du jour en dessous avec leurs proches ; au-delà, « + N autres » ouvre l'agenda. */
+function blocAujourdhui(d: Donnees, moi: Personne | undefined, evs: Evenement[], fetes: FeteDuJour[]): HTMLElement | false {
   const personnes = evs.filter((e) => e.genre === 'anniversaire' || e.genre === 'union');
-  const fetes = evs.filter((e) => e.genre === 'fete');
   if (personnes.length + fetes.length === 0) return false;
   const montrees = personnes.slice(0, MAX_AUJOURDHUI);
-  const fetesMontrees = fetes.slice(0, MAX_FETES_AUJOURDHUI);
-  const autres = personnes.length - montrees.length + fetes.length - fetesMontrees.length;
+  let places = MAX_FETES_AUJOURDHUI;
+  let cachees = 0;
+  const lignesFetes = fetes.flatMap((f) => {
+    const proches = f.personnes.slice(0, places);
+    places -= proches.length;
+    cachees += f.personnes.length - proches.length;
+    return ligneFete(d, moi, f, proches);
+  });
+  const autres = personnes.length - montrees.length + cachees;
   return h(
     'section',
     { class: 'aujourdhui', 'aria-label': 'Aujourd’hui' },
-    h('h2', { class: 'tete' }, 'Aujourd’hui'),
+    h('h2', { class: 'tete' }, 'Aujourd’hui', fetes.some((f) => f.ferie) && h('span', { class: 'ferie' }, 'Férié')),
     montrees.length > 0 && h('div', { class: 'carte' }, ...montrees.map((e) => ligneDuJour(d, moi, e))),
-    ...fetesMontrees.map((e) => ligneFete(d, moi, e)),
+    ...lignesFetes,
     autres > 0 && h('a', { class: 'autres', href: '#/agenda' }, `+ ${autres} ${autres > 1 ? 'autres' : 'autre'}`),
   );
 }
@@ -348,9 +362,12 @@ function sommaire(d: Donnees, moi: Personne | undefined, listees: Personne[]): H
   const evs = evenementsAVenir(d, aujourdhui, HORIZON, { fetes: lireReglages().fetes });
   const duJour = evs.filter((e) => e.dans === 0);
   const deces = evs.filter((e) => e.genre === 'deces' && e.dans <= 1);
-  return [blocAujourdhui(d, moi, duJour), blocBientot(d, evs, aujourdhui), ...deces.map(souvenir), raccourcis(d, listees, moi)].filter(
-    (e): e is HTMLElement => e !== false,
-  );
+  return [
+    blocAujourdhui(d, moi, duJour, lireReglages().fetes === false ? [] : fetesDuJour(aujourdhui, duJour)),
+    blocBientot(d, evs, aujourdhui),
+    ...deces.map(souvenir),
+    raccourcis(d, listees, moi),
+  ].filter((e): e is HTMLElement => e !== false);
 }
 
 export function accueil(): HTMLElement {

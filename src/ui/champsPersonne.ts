@@ -12,6 +12,15 @@ import { lireDonnees } from './etat';
 export interface ChampsIdentite {
   /** Contrôles à insérer dans un formulaire, dans l'ordre d'affichage. */
   noeuds: HTMLElement[];
+  /** Interrupteur « Décédé » et sa date : à placer en dernier de l'écran. */
+  noeudDeces: HTMLElement;
+  /** Nom de jeune fille saisi, et remplacement (sans compter comme une saisie). */
+  lireNomNaissance: () => string;
+  definirNomNaissance: (nom: string) => void;
+  /** Sexe coché. */
+  sexe: () => Sexe | undefined;
+  /** Appelle `rappel` quand le sexe change. */
+  surSexe: (rappel: () => void) => void;
   lire: () => ChampsPersonne;
   /** Bloc du champ Nom, pour y ajouter un bouton. */
   champNom: HTMLElement;
@@ -89,8 +98,8 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
 
   // Décès : un interrupteur, la date (facultative) n'apparaît qu'une fois allumé.
   const decede = h('input', { id: 'decede', type: 'checkbox', class: 'bascule', checked: !!existante && estDecede(existante) });
-  const motDecede = h('span', {});
-  const dateDeces = h('div', { hidden: !decede.checked }, deces.groupe);
+  const motDecede = h('span', { class: 'ligne-nom' });
+  const dateDeces = h('div', { class: 'champ', hidden: !decede.checked }, deces.groupe);
   const accorderDecede = () => (motDecede.textContent = accorder(sexeCoche(), 'Décédé', 'Décédée', 'Décédé(e)'));
   accorderDecede();
   for (const { radio } of radios) radio.addEventListener('change', accorderDecede);
@@ -127,9 +136,23 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
         h('legend', {}, 'Date de naissance (facultative, année seule possible)'),
         naissance.groupe,
       ),
-      h('div', { class: 'champ' }, h('label', { class: 'ligne-deces', for: 'decede' }, motDecede, decede), dateDeces),
       ...(avecNote ? [champ('Note', 'note', note)] : []),
     ],
+    noeudDeces: h(
+      'div',
+      {},
+      h('label', { class: 'carte interrupteur', for: 'decede' }, h('span', { class: 'ligne-texte' }, motDecede), decede),
+      dateDeces,
+    ),
+    lireNomNaissance: () => nomNaissance.value,
+    definirNomNaissance: (valeur) => {
+      nomNaissance.value = valeur;
+      depart[7] = valeur;
+    },
+    sexe: sexeCoche,
+    surSexe: (rappel) => {
+      for (const { radio } of radios) radio.addEventListener('change', rappel);
+    },
     lire: () => ({
       prenom: prenom.value,
       nom: nom.value,

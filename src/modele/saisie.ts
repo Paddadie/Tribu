@@ -4,7 +4,7 @@
 import { conjoint } from './deductions';
 import { avecDe, comparateur, memeNom } from './liste';
 import { anneeDe, enCouple } from './modele';
-import type { Donnees, Personne } from './types';
+import type { Donnees, Personne, Sexe } from './types';
 
 export interface NomPropose {
   nom: string;
@@ -27,6 +27,24 @@ export function nomsEnfant(parents: Personne[]): NomPropose[] {
     vus.add(nom);
     return [{ nom, de }];
   });
+}
+
+/**
+ * Nom proposé pour un nouveau conjoint de `parent` : celui de leurs enfants, s'il est homme (une femme garde son nom,
+ * le mariage le change ensuite). Les noms vides et les doublons sont retirés ; `de` est l'enfant qui le porte.
+ */
+export function nomsConjointSelonEnfants(d: Donnees, parent: string, sexe: Sexe | undefined): NomPropose[] {
+  if (sexe !== 'M') return [];
+  const vus = new Set<string>();
+  return d.filiations
+    .filter((f) => f.parent === parent)
+    .flatMap((f) => {
+      const enfant = d.personnes.find((p) => p.id === f.enfant);
+      const nom = enfant?.nom.trim();
+      if (!enfant || !nom || vus.has(nom)) return [];
+      vus.add(nom);
+      return [{ nom, de: enfant }];
+    });
 }
 
 export type RoleSuggere = 'conjoint' | 'parent' | 'enfant' | 'frere';

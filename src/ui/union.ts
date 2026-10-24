@@ -45,7 +45,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
       'span',
       { class: 'ligne-texte' },
       h('span', { class: 'ligne-nom' }, `Prend le nom ${avecDe(prenomAutre)}`),
-      h('span', { class: 'secondaire' }, 'La femme du couple garde son nom de jeune fille'),
+      h('span', { class: 'secondaire' }, 'Éteint, elle garde son nom de jeune fille'),
     ),
     prendLeNom,
   );

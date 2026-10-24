@@ -24,6 +24,7 @@ let ecran = { route: '', profondeur: -1 };
 // Retour en cours vers l'écran gardé : les changements d'adresse d'ici là sont ignorés.
 let retablir: number | undefined;
 
+const FICHE = '#/personne/';
 const ABANDON = 'Abandonner la saisie ? Ce que tu as saisi sera perdu.';
 
 function entreeCourante(): Entree | undefined {
@@ -57,6 +58,17 @@ export function demarrerNavigation(rendu: () => void): void {
   };
   // Le défilement est géré par l'appli (position de la liste gardée au retour).
   history.scrollRestoration = 'manual';
+  // D'une fiche à une autre : la nouvelle fiche prend la place de l'ancienne, pour que Retour
+  // (bouton ou geste) sorte d'un coup de la chaîne de fiches vers l'écran d'où l'on est entré.
+  window.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button > 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (!location.hash.startsWith(FICHE)) return;
+    const lien = (e.target as Element | null)?.closest?.('a');
+    const cible = lien?.getAttribute('href');
+    if (!cible?.startsWith(FICHE) || cible === location.hash) return;
+    e.preventDefault();
+    remplacer(cible);
+  });
   // popstate arrive aussi quand l'écran précédent a la même adresse (sans hashchange).
   window.addEventListener('popstate', () => {
     recul = false;

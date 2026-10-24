@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fratrie } from './deductions';
 import { avecDe, enumerer, grouperParLettre, groupeVise, homonymes, lettresIndex } from './liste';
 import { ajouterFiliation, ajouterFiliations, ajouterUnion, creerPersonne, donneesVides } from './modele';
-import { nomsEnfant, suggestions } from './saisie';
+import { nomsConjointSelonEnfants, nomsEnfant, suggestions } from './saisie';
 import type { Donnees, Personne, Sexe } from './types';
 
 /** Petit constructeur de scénario : personnes par prénom, liens par prénom. */
@@ -97,6 +97,41 @@ describe('nomsEnfant', () => {
     expect(nomsEnfant([lea, personne('Paul', 'Dubois', 'M')]).map((n) => n.nom)).toEqual(['Dubois']);
     expect(nomsEnfant([personne('Paul', ' ', 'M'), lea]).map((n) => n.nom)).toEqual(['Dubois']);
     expect(nomsEnfant([personne('Paul', '', 'M')])).toEqual([]);
+  });
+});
+
+describe('nomsConjointSelonEnfants', () => {
+  function famille() {
+    const m = monde();
+    m.pers('Lea', 'Dubois', 'F');
+    m.pers('Hugo', 'Petit', 'M');
+    m.pers('Zoe', 'Petit', 'F');
+    m.pers('Sam', 'Roux', 'M');
+    m.filiation('Lea', 'Hugo');
+    m.filiation('Lea', 'Zoe');
+    m.filiation('Lea', 'Sam');
+    return m;
+  }
+
+  it('propose le nom des enfants à un homme, sans doublon', () => {
+    const m = famille();
+    expect(nomsConjointSelonEnfants(m.d, m.id.Lea, 'M').map((n) => n.nom)).toEqual(['Petit', 'Roux']);
+  });
+
+  it('ne propose rien à une femme ni sans sexe : son nom change au mariage', () => {
+    const m = famille();
+    expect(nomsConjointSelonEnfants(m.d, m.id.Lea, 'F')).toEqual([]);
+    expect(nomsConjointSelonEnfants(m.d, m.id.Lea, undefined)).toEqual([]);
+  });
+
+  it('ne propose rien sans enfant ni nom d’enfant', () => {
+    const m = famille();
+    expect(nomsConjointSelonEnfants(m.d, m.id.Hugo, 'M')).toEqual([]);
+    const sansNom = monde();
+    sansNom.pers('Lea', 'Dubois', 'F');
+    sansNom.pers('Bebe', '', 'M');
+    sansNom.filiation('Lea', 'Bebe');
+    expect(nomsConjointSelonEnfants(sansNom.d, sansNom.id.Lea, 'M')).toEqual([]);
   });
 });
 

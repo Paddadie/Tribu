@@ -8,9 +8,11 @@ import {
   nomEvenement,
   pastilleJour,
   quandCourt,
+  fetesDuJour,
   titreEvenement,
   type Evenement,
 } from './evenements';
+import { paques } from './fetes';
 import { ajouterUnion, creerPersonne, donneesVides } from './modele';
 import type { Donnees, Personne } from './types';
 
@@ -107,6 +109,71 @@ describe('evenementsAVenir', () => {
       expect(couple({ date: '2016-10-23', decesA: '2020', decesB: '2021' })).toEqual([]);
       expect(couple({ date: '2016-10-23', decesA: '2020' }).map((e) => e.genre)).toEqual(['union']);
     });
+  });
+});
+
+describe('fetesDuJour', () => {
+  it('donne le saint du jour sans aucun proche', () => {
+    expect(evenementsAVenir(donneesVides(), AUJOURDHUI, 0)).toEqual([]);
+    expect(fetesDuJour(AUJOURDHUI)).toEqual([{ nom: 'Sainte Céline', type: 'saint', ferie: false, personnes: [] }]);
+  });
+
+  it('place les proches sous le saint qu’ils portent, et garde les autres saints du jour', () => {
+    const [d1, raymond] = ajouter(donneesVides(), { prenom: 'Raymond' });
+    const jour = new Date(2026, 0, 7);
+    const fetes = fetesDuJour(jour, evenementsAVenir(d1, jour, 0));
+    expect(fetes.map((f) => [f.nom, f.personnes.map((p) => p.id)])).toEqual([
+      ['Saint Raymond', [raymond.id]],
+      ['Sainte Virginie', []],
+    ]);
+  });
+
+  it('rattache une variante de prénom à son saint, sans doublon', () => {
+    const [d1, ginette] = ajouter(donneesVides(), { prenom: 'Ginette' });
+    const jour = new Date(2026, 0, 3);
+    expect(fetesDuJour(jour, evenementsAVenir(d1, jour, 0))).toEqual([{ nom: 'Sainte Geneviève', type: 'saint', ferie: false, personnes: [ginette] }]);
+  });
+
+  it('ignore la fête d’un proche un autre jour', () => {
+    const [d1] = ajouter(donneesVides(), { prenom: 'Raymond' });
+    expect(fetesDuJour(AUJOURDHUI, evenementsAVenir(d1, AUJOURDHUI, 30))).toEqual([{ nom: 'Sainte Céline', type: 'saint', ferie: false, personnes: [] }]);
+  });
+
+  it('fête le 29 février les années bissextiles, le 28 sinon (avec le saint du 28)', () => {
+    expect(fetesDuJour(new Date(2028, 1, 29)).map((f) => f.nom)).toEqual(['Saint Auguste']);
+    expect(fetesDuJour(new Date(2028, 1, 28)).map((f) => f.nom)).toEqual(['Saint Romain']);
+    expect(fetesDuJour(new Date(2027, 1, 28)).map((f) => f.nom)).toEqual(['Saint Romain', 'Saint Auguste']);
+  });
+
+  it('donne le nom des fêtes civiles et religieuses, avec leur caractère férié', () => {
+    expect(fetesDuJour(new Date(2026, 0, 1))).toEqual([{ nom: 'Jour de l’an', type: 'civile', ferie: true, personnes: [] }]);
+    expect(fetesDuJour(new Date(2026, 10, 1))[0]).toMatchObject({ nom: 'Toussaint', type: 'religieuse', ferie: true });
+    expect(fetesDuJour(new Date(2026, 10, 2))).toEqual([{ nom: 'Commémoration des défunts', type: 'religieuse', ferie: false, personnes: [] }]);
+    expect(fetesDuJour(new Date(2026, 11, 8))[0]).toMatchObject({ nom: 'Immaculée Conception', ferie: false });
+  });
+
+  it('garde le saint et ajoute la fête fériée du même jour', () => {
+    expect(fetesDuJour(new Date(2026, 6, 14)).map((f) => [f.nom, f.ferie])).toEqual([
+      ['Sainte Camille', false],
+      ['Fête nationale', true],
+    ]);
+  });
+
+  it('calcule les fêtes mobiles d’après Pâques', () => {
+    expect(paques(2026)).toEqual(new Date(2026, 3, 5));
+    expect(paques(2027)).toEqual(new Date(2027, 2, 28));
+    const nomsFeries = (d: Date) =>
+      fetesDuJour(d)
+        .filter((f) => f.type !== 'saint')
+        .map((f) => [f.nom, f.ferie]);
+    expect(nomsFeries(new Date(2026, 3, 6))).toEqual([['Lundi de Pâques', true]]);
+    expect(nomsFeries(new Date(2026, 4, 14))).toEqual([['Ascension', true]]);
+    expect(nomsFeries(new Date(2026, 4, 24))).toEqual([['Pentecôte', false]]);
+    expect(nomsFeries(new Date(2026, 4, 25))).toEqual([['Lundi de Pentecôte', true]]);
+  });
+
+  it('reste vide un jour sans saint ni fête', () => {
+    expect(fetesDuJour(new Date(2026, 2, 2))).toEqual([]);
   });
 });
 

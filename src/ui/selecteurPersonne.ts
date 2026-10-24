@@ -8,7 +8,7 @@ import { avecDe, comparateur, filtrerParNom, nomListe } from '../modele/liste';
 import { creerPersonne, personnesVisibles } from '../modele/modele';
 import type { NomPropose, Suggestion } from '../modele/saisie';
 import type { Donnees, Personne, Sexe } from '../modele/types';
-import { accepterHomonyme, champsIdentite } from './champsPersonne';
+import { accepterHomonyme, champsIdentite, type ChampsIdentite } from './champsPersonne';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { signaler } from './surbrillance';
@@ -27,8 +27,8 @@ export interface OptionsSelecteur {
   libelleValiderPlusieurs?: (n: number) => string;
   /** Sexe coché d'avance pour une nouvelle personne. */
   sexeParDefaut?: Sexe;
-  /** Noms proposés pour une nouvelle personne : le premier est prérempli, un bouton passe au suivant. */
-  noms?: () => NomPropose[];
+  /** Noms proposés pour une nouvelle personne (de ce sexe) : le premier est prérempli, un bouton passe au suivant. */
+  noms?: (sexe: Sexe | undefined) => NomPropose[];
   /** Personnes proposées en tête de liste, avec la raison. */
   suggestions?: (d: Donnees) => Suggestion[];
   /** Raison affichée à la place de la naissance quand `c` n'est pas choisissable. */
@@ -39,6 +39,8 @@ export interface OptionsSelecteur {
   lier: (d: Donnees, autre: string) => Donnees;
   /** Après un enregistrement réussi. */
   apres: () => void;
+  /** Le choix change : onglet, sexe de la nouvelle personne, personne cochée. */
+  surChoix?: () => void;
 }
 
 /** Morceaux à placer dans l'écran, dans cet ordre, avec les champs propres au lien entre eux. */
@@ -53,6 +55,12 @@ export interface Selecteur {
   rafraichir: () => void;
   /** Une saisie de nouvelle personne serait perdue. */
   modifie: () => boolean;
+  /** Champs de la nouvelle personne. */
+  identite: ChampsIdentite;
+  /** Onglet ouvert. */
+  mode: () => Mode;
+  /** Sexe de la personne qui sera reliée : celui coché (nouvelle) ou celui de l'unique personne cochée (existante). */
+  sexeChoisi: () => Sexe | undefined;
 }
 
 const appel = (p: Personne) => p.prenom || p.nom;
@@ -75,7 +83,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   let nomAuto = '';
   const boutonNom = h('button', { type: 'button', class: 'bouton-nom', hidden: true });
   const poserNom = (forcer: boolean) => {
-    const noms = o.noms?.() ?? [];
+    const noms = o.noms?.(identite.sexe()) ?? [];
     if (rangNom >= noms.length) rangNom = 0;
     if (forcer || identite.lireNom().trim() === nomAuto) {
       nomAuto = noms[rangNom]?.nom ?? '';
@@ -90,6 +98,11 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     poserNom(true);
   });
   identite.champNom.append(boutonNom);
+  // Le nom proposé peut dépendre du sexe de la nouvelle personne.
+  identite.surSexe(() => {
+    poserNom(false);
+    o.surChoix?.();
+  });
 
   // La coche à droite de la ligne choisie est dessinée par le CSS (`.ligne-choix.choisie::after`).
   const ligne = (c: Personne, detail: string | undefined, inactive: boolean): HTMLElement =>
@@ -108,6 +121,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
           }
           dessinerListe();
           majBouton();
+          o.surChoix?.();
         },
       },
       ...contenuLigne(c, nomListe(c, lireReglages().tri), detail),
@@ -157,7 +171,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   const dessiner = () => {
     erreur.hidden = true;
     if (mode === 'nouvelle') {
-      zone.replaceChildren(...identite.noeuds);
+      zone.replaceChildren(...identite.noeuds, identite.noeudDeces);
       queueMicrotask(identite.viserPrenom);
     } else {
       dessinerListe();
@@ -178,6 +192,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
       );
     }
     majBouton();
+    o.surChoix?.();
   };
 
   const onglet = (valeur: Mode, libelle: string) =>
@@ -247,5 +262,12 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
       if (mode === 'existante') dessinerListe();
     },
     modifie: () => mode === 'nouvelle' && identite.modifie(),
+    identite,
+    mode: () => mode,
+    sexeChoisi: () => {
+      if (mode === 'nouvelle') return identite.sexe();
+      const [id] = [...choisies];
+      return choisies.size === 1 ? lireDonnees().personnes.find((x) => x.id === id)?.sexe : undefined;
+    },
   };
 }

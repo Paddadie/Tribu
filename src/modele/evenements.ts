@@ -1,7 +1,7 @@
 // Dates à venir de l'accueil et de l'agenda : anniversaires, unions (noces), fêtes du prénom, décès.
 // Fonctions pures : la date du jour est passée en paramètre.
 
-import { feteDuPrenom } from './fetes';
+import { feteDuPrenom, joursNommes, saintsDuCalendrier } from './fetes';
 import { MOIS, nomComplet } from './liste';
 import { enCouple, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE, personnesListees } from './modele';
 import { libelleAnniversaireUnion } from './noces';
@@ -96,6 +96,34 @@ export function evenementsAVenir(d: Donnees, aujourdhui: Date, horizon: number, 
 
   const nom = (e: Evenement) => e.personnes.map((p) => `${p.prenom} ${p.nom}`).join(' ');
   return trouves.sort((x, y) => x.dans - y.dans || ORDRE.indexOf(x.genre) - ORDRE.indexOf(y.genre) || nom(x).localeCompare(nom(y), 'fr'));
+}
+
+export interface FeteDuJour {
+  /** « Sainte Céline », ou une fête religieuse ou civile (« Toussaint », « Fête nationale »). */
+  nom: string;
+  type: 'saint' | 'religieuse' | 'civile';
+  /** Jour férié légal. */
+  ferie: boolean;
+  /** Proches qui fêtent leur fête ce jour-là (saints seulement). */
+  personnes: Personne[];
+}
+
+/**
+ * Fêtes du jour pour l'accueil : chaque saint du calendrier, même sans proche, avec en dessous les proches qui le portent
+ * (événements `evs`), puis les fêtes religieuses et civiles du jour (fériées ou non, Pâques et ses jours compris). Le 29 février
+ * est fêté le 28 les années non bissextiles, comme les fêtes des proches. Vide pour un jour sans saint ni fête.
+ */
+export function fetesDuJour(aujourdhui: Date, evs: Evenement[] = []): FeteDuJour[] {
+  const mois = aujourdhui.getMonth() + 1;
+  const jour = aujourdhui.getDate();
+  const saints = saintsDuCalendrier(mois, jour);
+  if (mois === 2 && jour === 28 && joursDuMois(aujourdhui.getFullYear(), 2) === 28) saints.push(...saintsDuCalendrier(2, 29));
+  const fetes: FeteDuJour[] = saints.map((nom) => ({ nom, type: 'saint', ferie: false, personnes: [] }));
+  for (const e of evs) {
+    if (e.genre !== 'fete' || e.dans !== 0) continue;
+    fetes.find((f) => f.nom === e.saint)?.personnes.push(...e.personnes);
+  }
+  return [...fetes, ...joursNommes(aujourdhui).map((j) => ({ ...j, personnes: [] }))];
 }
 
 function majuscule(texte: string): string {

@@ -198,6 +198,22 @@
   text-transform: uppercase;
 }
 
+.aujourdhui .ferie {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--sur-accent);
+  color: var(--accent);
+  font-size: var(--t1);
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+
+:root[data-theme='sombre'] .aujourdhui .ferie {
+  color: var(--accent-clair);
+  background: var(--encre);
+}
+
 .aujourdhui .carte {
   border: 0;
 }
@@ -216,6 +232,14 @@
   padding: 10px 10px 8px;
   color: inherit;
   text-decoration: none;
+}
+
+.aujourdhui .fete-proche {
+  padding: 4px 10px 4px 48px;
+}
+
+.aujourdhui .fete-proche .ligne-nom {
+  font-weight: 500;
 }
 
 .aujourdhui .fete .ligne-nom {

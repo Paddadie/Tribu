@@ -3,6 +3,7 @@ import {
   aDesLiens,
   ajouterFiliation,
   ajouterUnion,
+  creerGroupe,
   creerPersonne,
   donneesVides,
   enCouple,
@@ -181,6 +182,75 @@ describe('suppression d’une personne', () => {
 
   it('refuse un id inconnu', () => {
     expect(() => supprimerPersonne(donneesVides(), 'inconnu')).toThrow();
+  });
+
+  it('retire une union avec un ex ou un conjoint décédé, sans toucher à l’autre personne', () => {
+    const { d, ids } = avec('Ex', 'Moi', 'Veuve');
+    const [ex, moi, veuf] = ids;
+    let cur = ajouterUnion(d, ex, moi, false, 'separee').donnees;
+    cur = ajouterUnion(cur, veuf, moi).donnees;
+    const apres = supprimerPersonne(cur, moi);
+    expect(apres.unions).toHaveLength(0);
+    expect(apres.personnes.map((p) => p.id).sort()).toEqual([ex, veuf].sort());
+  });
+
+  it('retire les membres d’un groupe, et le groupe s’il n’en reste qu’un', () => {
+    const { d, ids } = avec('A', 'B', 'C');
+    const g1 = creerGroupe(d, ids, 'Trio');
+    const g2 = creerGroupe(g1.donnees, [ids[0], ids[1]], 'Duo');
+    const apres = supprimerPersonne(g2.donnees, ids[1]);
+    expect(apres.groupes).toHaveLength(1);
+    expect(apres.groupes[0].membres).toEqual([ids[0], ids[2]]);
+  });
+
+  it('famille recomposée : seuls les liens de la personne partent', () => {
+    const { d, ids } = avec('Papa', 'Maman', 'Beau-père', 'Fils', 'Demi-frère');
+    const [papa, maman, bp, fils, demi] = ids;
+    let cur = ajouterUnion(d, papa, maman, true, 'separee').donnees;
+    cur = ajouterUnion(cur, maman, bp).donnees;
+    cur = ajouterFiliation(cur, papa, fils, 'biologique').donnees;
+    cur = ajouterFiliation(cur, maman, fils, 'biologique').donnees;
+    cur = ajouterFiliation(cur, maman, demi, 'biologique').donnees;
+    cur = ajouterFiliation(cur, bp, demi, 'biologique').donnees;
+    const apres = supprimerPersonne(cur, maman);
+    expect(apres.personnes).toHaveLength(4);
+    expect(apres.unions).toHaveLength(0);
+    expect(apres.filiations.map((f) => [f.parent, f.enfant])).toEqual([
+      [papa, fils],
+      [bp, demi],
+    ]);
+  });
+
+  describe('parent « ? » enregistré', () => {
+    function avecParentSansNom(note = '') {
+      const { d, ids } = avec('Enfant', 'Parent');
+      const [enfant, parent] = ids;
+      const sans = creerPersonne(d, { prenom: 'Parent inconnu', nom: '', note });
+      const base = { ...sans.donnees, personnes: sans.donnees.personnes.map((p) => (p.id === sans.personne.id ? { ...p, sansNom: true as const } : p)) };
+      let cur = ajouterFiliation(base, parent, enfant, 'biologique').donnees;
+      cur = ajouterFiliation(cur, sans.personne.id, enfant, 'biologique').donnees;
+      return { cur, enfant, parent, sansNom: sans.personne.id };
+    }
+
+    it('disparaît quand l’enfant est supprimé et qu’il n’a plus rien', () => {
+      const { cur, enfant, parent, sansNom } = avecParentSansNom();
+      const apres = supprimerPersonne(cur, enfant);
+      expect(apres.personnes.map((p) => p.id)).toEqual([parent]);
+      expect(apres.filiations).toHaveLength(0);
+      expect(sansNom).toBeTruthy();
+    });
+
+    it('reste s’il garde un autre enfant', () => {
+      const { cur, enfant, sansNom } = avecParentSansNom();
+      const { donnees, personne: soeur } = creerPersonne(cur, { prenom: 'Soeur', nom: 'Test' });
+      const avecSoeur = ajouterFiliation(donnees, sansNom, soeur.id, 'biologique').donnees;
+      expect(supprimerPersonne(avecSoeur, enfant).personnes.map((p) => p.id)).toContain(sansNom);
+    });
+
+    it('reste s’il porte une note', () => {
+      const { cur, enfant, sansNom } = avecParentSansNom('Vu sur une photo');
+      expect(supprimerPersonne(cur, enfant).personnes.map((p) => p.id)).toContain(sansNom);
+    });
   });
 });
 

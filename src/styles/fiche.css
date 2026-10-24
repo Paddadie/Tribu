@@ -17,6 +17,43 @@
   color: var(--accent);
 }
 
+/* Barre de la fiche : Retour, identité, Modifier sur une ligne, fixe en haut au défilement.
+   Elle remonte sous la zone sûre du haut pour que le contenu ne passe pas derrière l'heure. */
+.barre-fiche {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 3;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 0;
+  margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 10px;
+  background: var(--fond);
+  border-bottom: 1px solid var(--bord);
+}
+
+.barre-fiche .bouton-icone {
+  flex: none;
+}
+
+.barre-fiche .identite {
+  flex: 1;
+  min-width: 0;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 0;
+}
+
+.barre-fiche .identite h1 {
+  font-size: var(--t4);
+}
+
+.barre-fiche .avatar-grand {
+  width: 56px;
+  height: 56px;
+  font-size: var(--t3);
+}
+
 .identite {
   display: grid;
   grid-template-columns: auto 1fr;

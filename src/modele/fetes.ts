@@ -380,3 +380,68 @@ export function feteDuPrenom(prenom: string): Fete | undefined {
   const premier = prenom.trim().split(/\s+/)[0];
   return premier ? index.get(simplifier(premier)) : undefined;
 }
+
+/** Saints du calendrier un jour donné (sans doublon, ordre du calendrier) ; vide pour un jour sans saint au calendrier. */
+export function saintsDuCalendrier(mois: number, jour: number): string[] {
+  const saints: string[] = [];
+  for (const { fete } of entreesCalendrier()) {
+    if (fete.mois === mois && fete.jour === jour && !saints.includes(fete.saint)) saints.push(fete.saint);
+  }
+  return saints;
+}
+
+export interface JourNomme {
+  nom: string;
+  type: 'religieuse' | 'civile';
+  /** Jour férié légal en France. */
+  ferie: boolean;
+}
+
+const JOURS_FIXES: Record<string, JourNomme> = {
+  '01-01': { nom: 'Jour de l’an', type: 'civile', ferie: true },
+  '05-01': { nom: 'Fête du Travail', type: 'civile', ferie: true },
+  '05-08': { nom: 'Victoire 1945', type: 'civile', ferie: true },
+  '07-14': { nom: 'Fête nationale', type: 'civile', ferie: true },
+  '08-15': { nom: 'Assomption', type: 'religieuse', ferie: true },
+  '11-01': { nom: 'Toussaint', type: 'religieuse', ferie: true },
+  '11-02': { nom: 'Commémoration des défunts', type: 'religieuse', ferie: false },
+  '11-11': { nom: 'Armistice 1918', type: 'civile', ferie: true },
+  '12-08': { nom: 'Immaculée Conception', type: 'religieuse', ferie: false },
+  '12-25': { nom: 'Noël', type: 'religieuse', ferie: true },
+};
+
+/** Dimanche de Pâques (calendrier grégorien, algorithme de Meeus/Jones/Butcher). */
+export function paques(annee: number): Date {
+  const a = annee % 19;
+  const b = Math.floor(annee / 100);
+  const c = annee % 100;
+  const g = Math.floor((b - Math.floor((b + 8) / 25) + 1) / 3);
+  const hh = (19 * a + b - Math.floor(b / 4) - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * (b % 4) + 2 * i - hh - k) % 7;
+  const m = Math.floor((a + 11 * hh + 22 * l) / 451);
+  const mois = Math.floor((hh + l - 7 * m + 114) / 31);
+  return new Date(annee, mois - 1, ((hh + l - 7 * m + 114) % 31) + 1);
+}
+
+/** Fêtes mobiles, en jours après Pâques. */
+const JOURS_MOBILES: [number, JourNomme][] = [
+  [0, { nom: 'Pâques', type: 'religieuse', ferie: false }],
+  [1, { nom: 'Lundi de Pâques', type: 'religieuse', ferie: true }],
+  [39, { nom: 'Ascension', type: 'religieuse', ferie: true }],
+  [49, { nom: 'Pentecôte', type: 'religieuse', ferie: false }],
+  [50, { nom: 'Lundi de Pentecôte', type: 'religieuse', ferie: true }],
+];
+
+/** Fêtes religieuses et civiles du jour (fériées ou non), en plus du saint : fixes puis mobiles. */
+export function joursNommes(date: Date): JourNomme[] {
+  const cle = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const trouves = JOURS_FIXES[cle] ? [JOURS_FIXES[cle]] : [];
+  const p = paques(date.getFullYear());
+  for (const [decalage, jour] of JOURS_MOBILES) {
+    const d = new Date(p.getFullYear(), p.getMonth(), p.getDate() + decalage);
+    if (d.getMonth() === date.getMonth() && d.getDate() === date.getDate()) trouves.push(jour);
+  }
+  return trouves;
+}

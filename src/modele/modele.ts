@@ -195,13 +195,36 @@ export function aDesLiens(d: Donnees, id: string): boolean {
 /** Retire la personne ainsi que toutes ses unions, filiations et appartenances à des groupes d'amis. */
 export function supprimerPersonne(d: Donnees, id: string): Donnees {
   exigerPersonne(d, id);
-  return retirerInconnusOrphelins({
+  const voisins = new Set([
+    ...d.unions.flatMap((u) => (u.personneA === id ? [u.personneB] : u.personneB === id ? [u.personneA] : [])),
+    ...d.filiations.flatMap((f) => (f.parent === id ? [f.enfant] : f.enfant === id ? [f.parent] : [])),
+  ]);
+  const reste = retirerInconnusOrphelins({
     ...d,
     personnes: d.personnes.filter((p) => p.id !== id),
     unions: d.unions.filter((u) => u.personneA !== id && u.personneB !== id),
     filiations: d.filiations.filter((f) => f.parent !== id && f.enfant !== id),
     groupes: sansPersonne(d.groupes, id),
   });
+  return retirerSansNomOrphelins(reste, voisins);
+}
+
+/**
+ * Un parent « ? » enregistré, lié à la personne supprimée, qui n'a plus aucun lien et aucune information saisie
+ * n'a plus de raison d'être : il est retiré. Avec une note, une date ou un sexe, il reste (Paul l'a renseigné).
+ */
+function retirerSansNomOrphelins(d: Donnees, candidats: Set<string>): Donnees {
+  const orphelin = (p: Personne) =>
+    p.sansNom === true &&
+    candidats.has(p.id) &&
+    !aDesLiens(d, p.id) &&
+    !p.note.trim() &&
+    !p.naissance &&
+    !p.deces &&
+    !p.decede &&
+    !p.sexe &&
+    !p.nomNaissance;
+  return d.personnes.some(orphelin) ? { ...d, personnes: d.personnes.filter((p) => !orphelin(p)) } : d;
 }
 
 /** Un parent inconnu n'a de sens que s'il relie au moins deux enfants : sinon, il est retiré avec ses liens. */

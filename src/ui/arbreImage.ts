@@ -1,9 +1,10 @@
 // Export de l'arbre global en image PNG (Réglages → Exporter l'arbre en image) : tout l'arbre est redessiné sur un
-// canvas, fond blanc, couleurs du thème clair, sans âge ni date. La géométrie vient de geometrieArbre.ts, la même
+// canvas, fond blanc, couleurs du thème clair, années de naissance et de décès sous le nom. La géométrie vient de geometrieArbre.ts, la même
 // que celle de l'écran ; seuls le pinceau et les couleurs sont propres à l'image.
 
 import type { Disposition } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
+import { annees } from '../modele/familleProche';
 import { couleurFamille, initiales } from '../modele/liste';
 import { estDecede } from '../modele/modele';
 import { estParentSansNom } from '../modele/parentSansNom';
@@ -169,7 +170,15 @@ function dessinerNoeud(
     ctx.fillStyle = COULEURS.encre;
     ctx.font = `13px ${POLICE}`;
     ctx.textBaseline = 'top';
-    lignesNom(ctx, p.prenom || p.nom, 104).forEach((l, i) => ctx.fillText(l, x, y + R + 8 + i * 16));
+    const lignes = lignesNom(ctx, p.prenom || p.nom, 104);
+    lignes.forEach((l, i) => ctx.fillText(l, x, y + R + 8 + i * 16));
+    // Années sous le nom : la place existe déjà (SOUS_NOM réserve une 3e ligne, comme à l'écran).
+    const an = annees(p);
+    if (an) {
+      ctx.fillStyle = COULEURS.secondaire;
+      ctx.font = `11px ${POLICE}`;
+      ctx.fillText(an, x, y + R + 8 + lignes.length * 16 + 1);
+    }
   }
 }
 

@@ -780,36 +780,49 @@ describe('thème', () => {
 });
 
 describe('navigation', () => {
-  it('liste → Anne → Chloé : Retour revient sur Anne, puis sur la liste à la même position', async () => {
-    const { donnees } = famille();
+  it('liste → Anne → Chloé : une seule fiche dans l’historique, Retour revient à la liste à la même position', async () => {
+    const { donnees, ids } = famille();
     await demarrer(donnees, '#/personnes');
     window.scrollTo(0, 300);
+    const avant = history.length;
     await toucher(trouver('a.ligne', 'Anne'));
     expect(window.scrollY).toBe(0);
     await toucher(trouver('a.ligne-lien', 'Chloé'));
     expect(titre()).toBe('Chloé Martin');
-    const entrees = history.length;
+    expect(location.hash).toBe(`#/personne/${ids.Chloé}`);
+    // Chloé a pris la place d'Anne : une seule entrée ajoutée.
+    expect(history.length).toBe(avant + 1);
 
-    await retour();
-    expect(titre()).toBe('Anne Martin');
     await retour();
     expect(titre()).toBe('Toutes les fiches');
     expect(window.scrollY).toBe(300);
-    // Retour recule dans l'historique au lieu d'y empiler la liste.
-    expect(history.length).toBe(entrees);
+    expect(history.length).toBe(avant + 1);
   });
 
-  it('deux touchers rapides sur Retour ne reculent que d’un écran', async () => {
+  it('une longue chaîne de fiches se quitte d’un seul Retour, ou d’un seul geste', async () => {
     const { donnees } = famille();
     await demarrer(donnees, '#/personnes');
     await toucher(trouver('a.ligne', 'Anne'));
     await toucher(trouver('a.ligne-lien', 'Chloé'));
+    await toucher(trouver('a.ligne-lien', 'Anne'));
+    expect(titre()).toBe('Anne Martin');
+
+    history.back();
+    await pause();
+    expect(titre()).toBe('Toutes les fiches');
+  });
+
+  it('deux touchers rapides sur Retour ne reculent que d’un écran', async () => {
+    const { donnees } = famille();
+    await demarrer(donnees, '#/');
+    await toucher(trouver('a.raccourci', 'Toutes les fiches'));
+    await toucher(trouver('a.ligne', 'Anne'));
 
     const bouton = ecran().querySelector<HTMLElement>('.barre a[aria-label="Retour"]')!;
     bouton.click();
     bouton.click();
     await pause();
-    expect(titre()).toBe('Anne Martin');
+    expect(titre()).toBe('Toutes les fiches');
   });
 
   it('appli ouverte sur une fiche : Retour ouvre l’accueil à sa place', async () => {
@@ -1009,10 +1022,25 @@ describe('mémo : décès, âge et anniversaires', () => {
 
   it('l’accueil n’a ni « Aujourd’hui » ni vignette quand rien n’approche, mais annonce la prochaine date', async () => {
     const { donnees } = avec({ prenom: 'Loin', naissance: dans(60, 40) }, { prenom: 'Sans' });
-    await demarrer(donnees);
+    await demarrer(donnees, '#/', { fetes: false });
     expect(ecran().querySelector('.aujourdhui')).toBeNull();
     expect(ecran().querySelector('.vignette')).toBeNull();
     expect(ecran().querySelector('.calme')!.textContent).toContain('Prochaine date');
+  });
+
+  it('l’accueil montre le saint du jour sans proche concerné, sauf si les fêtes sont désactivées', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 21, 12));
+    try {
+      const { donnees } = avec({ prenom: 'Sans' });
+      await demarrer(donnees);
+      expect(ecran().querySelector('.aujourdhui .fete .ligne-nom')!.textContent).toBe('Sainte Céline');
+      expect(ecran().querySelector('.aujourdhui .fete-proche')).toBeNull();
+      await demarrer(donnees, '#/', { fetes: false });
+      expect(ecran().querySelector('.aujourdhui')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('la fiche affiche l’âge d’une personne vivante, et décès puis « Morte à … » pour une décédée', async () => {
@@ -1061,7 +1089,7 @@ describe('mémo : décès, âge et anniversaires', () => {
     const { donnees, ids } = avec({ prenom: 'Anne' });
     await demarrer(donnees, `#/modifier/${ids.Anne}`);
     const bascule = ecran().querySelector<HTMLInputElement>('#decede')!;
-    const ligne = ecran().querySelector<HTMLElement>('.ligne-deces')!;
+    const ligne = ecran().querySelector<HTMLElement>('label[for=decede] .ligne-nom')!;
     const date = ecran().querySelector<HTMLElement>('#annee-deces')!.closest<HTMLElement>('[hidden], .champ')!;
     expect(bascule.checked).toBe(false);
     expect(ligne.textContent).toBe('Décédée');
