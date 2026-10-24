@@ -1,7 +1,7 @@
-// Âge, libellés de décès et prochains anniversaires. Fonctions pures : la date du jour est toujours passée en paramètre.
+// Âge et libellés de décès. Fonctions pures : la date du jour est toujours passée en paramètre.
 
-import { accorder, libelleNaissance, MOIS } from './liste';
-import { anneeDe, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
+import { accorder, libelleNaissance } from './liste';
+import { anneeDe, estDecede, joursDuMois, MOTIF_DATE } from './modele';
 import type { Personne } from './types';
 
 /** « 2026-10-19 », date locale. */
@@ -102,85 +102,4 @@ export function detailPersonne(p: Personne, aujourdhui: Date): string {
 export function detailProche(p: Personne, aujourdhui: Date, lien?: string): string {
   const detail = estDecede(p) ? detailPersonne(p, aujourdhui) : libelleAge(p, aujourdhui);
   return [lien, detail].filter(Boolean).join(' · ');
-}
-
-export interface Anniversaire {
-  personne: Personne;
-  /** Jours restants : 0 = aujourd'hui. */
-  dans: number;
-  /** Âge atteint ce jour-là ; undefined pour une naissance sans année. */
-  age?: number;
-  /** « 24 octobre ». */
-  date: string;
-}
-
-const MS_PAR_JOUR = 86_400_000;
-
-/**
- * Les `max` prochains anniversaires dans les `horizon` jours, aujourd'hui compris, du plus proche au plus lointain.
- * Il faut le jour et le mois de naissance (complète, ou sans année : alors sans âge) ; les personnes décédées sont ignorées.
- * Un 29 février tombe le 28 les années non bissextiles.
- */
-export function prochainsAnniversaires(personnes: Personne[], aujourdhui: Date, horizon = 30, max = 3): Anniversaire[] {
-  const base = Date.UTC(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
-  const trouves: Anniversaire[] = [];
-  for (const personne of personnes) {
-    if (estDecede(personne) || !personne.naissance) continue;
-    const complete = personne.naissance.match(MOTIF_DATE);
-    const sansAnnee = personne.naissance.match(MOTIF_SANS_ANNEE);
-    let naissance: number | undefined, mois: number, jour: number;
-    if (complete && complete[3] !== undefined) [naissance, mois, jour] = [Number(complete[1]), Number(complete[2]), Number(complete[3])];
-    else if (sansAnnee) [mois, jour] = [Number(sansAnnee[1]), Number(sansAnnee[2])];
-    else continue;
-    for (const annee of [aujourdhui.getFullYear(), aujourdhui.getFullYear() + 1]) {
-      const j = mois === 2 && jour === 29 ? Math.min(jour, joursDuMois(annee, 2)) : jour;
-      const dans = Math.round((Date.UTC(annee, mois - 1, j) - base) / MS_PAR_JOUR);
-      if (dans < 0) continue;
-      const age = naissance === undefined ? undefined : annee - naissance;
-      if (dans <= horizon && (age === undefined || age >= 1))
-        trouves.push({ personne, dans, ...(age === undefined ? {} : { age }), date: `${j === 1 ? '1er' : j} ${MOIS[mois - 1]}` });
-      break;
-    }
-  }
-  const nom = (p: Personne) => `${p.prenom} ${p.nom}`;
-  return trouves.sort((a, b) => a.dans - b.dans || nom(a.personne).localeCompare(nom(b.personne), 'fr')).slice(0, max);
-}
-
-export interface AnniversaireDeces {
-  personne: Personne;
-  /** 0 = aujourd'hui, 1 = demain. */
-  dans: number;
-  /** Années écoulées depuis le décès ce jour-là (au moins 1). */
-  annees: number;
-}
-
-/**
- * Anniversaires de décès d'aujourd'hui et de demain, aujourd'hui d'abord. Il faut une date de décès complète ;
- * un 29 février tombe le 28 les années non bissextiles.
- */
-export function anniversairesDeces(personnes: Personne[], aujourdhui: Date): AnniversaireDeces[] {
-  const base = Date.UTC(aujourdhui.getFullYear(), aujourdhui.getMonth(), aujourdhui.getDate());
-  const trouves: AnniversaireDeces[] = [];
-  for (const personne of personnes) {
-    const m = personne.deces?.match(MOTIF_DATE);
-    if (!m || m[3] === undefined) continue;
-    const [an, mois, jour] = [Number(m[1]), Number(m[2]), Number(m[3])];
-    for (const dans of [0, 1]) {
-      const cible = new Date(base + dans * MS_PAR_JOUR);
-      const annee = cible.getUTCFullYear();
-      const j = mois === 2 && jour === 29 ? joursDuMois(annee, 2) : jour;
-      if (cible.getUTCMonth() + 1 === mois && cible.getUTCDate() === j && annee - an >= 1) {
-        trouves.push({ personne, dans, annees: annee - an });
-      }
-    }
-  }
-  const nom = (p: Personne) => `${p.prenom} ${p.nom}`;
-  return trouves.sort((a, b) => a.dans - b.dans || nom(a.personne).localeCompare(nom(b.personne), 'fr'));
-}
-
-/** « Aujourd'hui », « Demain » ou « Dans 5 jours ». */
-export function libelleDelai(dans: number): string {
-  if (dans === 0) return 'Aujourd’hui';
-  if (dans === 1) return 'Demain';
-  return `Dans ${dans} jours`;
 }

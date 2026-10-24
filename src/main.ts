@@ -41,7 +41,7 @@ function vue(route: string): HTMLElement {
   // Données illisibles : cet écran remplace tous les autres jusqu'au choix de Paul.
   const brut = lireBrutIllisible();
   if (brut !== null) return ecranIllisible(brut, () => (route === "#/" ? afficher() : remplacer("#/")));
-  const [, section, id] = route.split("/");
+  const [, section, id] = route.split("?")[0].split("/");
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === "reglages") return ecranReglages(id);
   if (section === "arbre") {
@@ -50,7 +50,7 @@ function vue(route: string): HTMLElement {
     return ecranArbre(id === "familles" ? "familles" : undefined, focus);
   }
   if (section === "personnes") return ecranPersonnes();
-  if (section === "agenda") return ecranAgenda();
+  if (section === "agenda") return ecranAgenda(route.endsWith("?sans-fetes"));
   if (section === "verification") return ecranVerification();
   if (section === "groupes") return ecranGroupes();
   if (section === "groupe" && id === "nouveau") return ecranNouveauGroupe();

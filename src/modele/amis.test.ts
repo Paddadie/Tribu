@@ -13,7 +13,6 @@ import {
   renommerGroupe,
   retirerDuGroupe,
   separerUnion,
-  sontAmis,
   supprimerGroupe,
   supprimerPersonne,
 } from './modele';
@@ -99,12 +98,9 @@ const phrase = (x: Donnees, vers: string) => {
 const lib = (x: Donnees, vers: string) => etiquette(x, id.Mathis, id[vers]);
 
 describe('groupes d’amis', () => {
-  it('rendent amies, entre elles, toutes les personnes du groupe', () => {
+  it('enregistrent le groupe avec son nom nettoyé', () => {
     const x = creerGroupe(d, [id.Mathis, id.Julie, id.Sacha], ' Lycée ').donnees;
     expect(x.groupes[x.groupes.length - 1].nom).toBe('Lycée');
-    expect(sontAmis(x, id.Julie, id.Sacha)).toBe(true);
-    expect(sontAmis(x, id.Julie, id.Karim)).toBe(false);
-    expect(sontAmis(x, id.Julie, id.Julie)).toBe(false);
   });
 
   it('exigent deux personnes existantes et distinctes', () => {

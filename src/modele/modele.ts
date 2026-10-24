@@ -464,11 +464,6 @@ export function supprimerFiliation(d: Donnees, id: string): Donnees {
 
 // --- Groupes d'amis ------------------------------------------------------------
 
-/** Deux personnes sont-elles amies (dans un même groupe) ? */
-export function sontAmis(d: Donnees, idA: string, idB: string): boolean {
-  return idA !== idB && d.groupes.some((g) => g.membres.includes(idA) && g.membres.includes(idB));
-}
-
 /** Groupes dont la personne est membre. */
 export function groupesDe(d: Donnees, id: string): GroupeAmis[] {
   return d.groupes.filter((g) => g.membres.includes(id));

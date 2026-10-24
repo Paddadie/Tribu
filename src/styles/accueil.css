@@ -337,16 +337,6 @@
   font-size: var(--t1);
 }
 
-.vignette.fin {
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px dashed var(--trait);
-  color: var(--accent-texte);
-  font-size: var(--t2);
-  font-weight: var(--gras);
-}
-
 .calme {
   display: flex;
   align-items: center;
@@ -468,13 +458,110 @@
   font-size: var(--t2);
 }
 
+/* Toutes les fiches : barre d'icônes, cinq filtres visibles d'un coup, sans défilement. */
 .puces.puces-liste {
-  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  margin: 0;
+  padding: 4px;
+  overflow: visible;
+  background: var(--carte);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-l);
 }
 
-/* Les sous-filtres, sur leur propre rangée, défilent comme les filtres. */
-.puces-sous {
-  margin-top: 8px;
+.puce-icone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 60px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: var(--rayon-m);
+  background: none;
+  color: var(--secondaire);
+  font: inherit;
+  font-size: var(--t1);
+  line-height: 1.15;
+  text-align: center;
+}
+
+.puce-icone[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--sur-accent);
+  font-weight: var(--gras);
+}
+
+/* Sous-choix : cases à cocher (manques) ou à puce (groupe), deux par ligne. */
+.puces.puces-sous {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.case-choix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-s);
+  background: var(--carte);
+  color: var(--secondaire);
+  font: inherit;
+  font-size: var(--t2);
+  text-align: left;
+}
+
+.case-texte {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.case-boite {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--bord-champ);
+  border-radius: 6px;
+  color: transparent;
+}
+
+.case-boite.rond {
+  border-radius: 50%;
+}
+
+.case-choix[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  font-weight: var(--gras);
+}
+
+.case-choix[aria-pressed='true'] .case-boite {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--sur-accent);
+}
+
+.case-choix[aria-pressed='true'] .case-boite.rond::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sur-accent);
 }
 
 .puces[hidden] {
@@ -746,28 +833,25 @@
   color: var(--secondaire);
 }
 
-.ajout {
-  position: fixed;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(28px, env(safe-area-inset-bottom));
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--sur-accent);
-  display: flex;
+/* « Nouvelle fiche » en haut à droite de Toutes les fiches ; le titre passe à la ligne plutôt que d'être coupé. */
+.bouton-nouvelle {
+  flex: none;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 16px var(--ombre-bouton);
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  white-space: nowrap;
 }
 
-.ajout.etendu {
-  width: auto;
-  height: 56px;
-  gap: 8px;
-  padding: 0 20px 0 16px;
-  border-radius: var(--rayon-m);
-  font-weight: var(--gras);
+.entete-ligne h1 {
+  min-width: 0;
+  text-wrap: balance;
 }
 
 button.raccourci {

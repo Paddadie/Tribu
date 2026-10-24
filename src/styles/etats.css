@@ -13,7 +13,7 @@ summary {
 
 .bouton,
 .bouton-icone,
-.ajout,
+.bouton-nouvelle,
 .option,
 .bouton-nom,
 .bandeau-action {
@@ -24,7 +24,7 @@ summary {
 
 .bouton:active,
 .bouton-icone:active,
-.ajout:active,
+.bouton-nouvelle:active,
 .option:active,
 .bouton-nom:active,
 .bandeau-action:active {

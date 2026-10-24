@@ -405,8 +405,8 @@ describe('ajout d’un lien', () => {
 
     // Le parent inconnu reste invisible : la liste ne compte que les vraies personnes.
     await demarrer(d, '#/personnes');
-    expect(ecran().textContent).toContain('5 personnes');
     expect(ecran().querySelectorAll('a.ligne')).toHaveLength(5);
+    expect(trouver('a', 'Nouvelle fiche').getAttribute('href')).toBe('#/nouveau');
 
     // Un vrai parent ajouté à Hugo devient aussi celui de Denis.
     await demarrer(d, `#/parent/${enregistrees().personnes.find((p) => p.prenom === 'Hugo')!.id}`);
@@ -1361,6 +1361,23 @@ describe('accueil, agenda et dates', () => {
     await demarrer(agenda(), '#/agenda', { fetes: false });
     expect(puces()).not.toContain('Fêtes');
     expect(ecran().querySelector('.agenda')!.textContent).not.toContain(prenomFete);
+  });
+
+  it('« Tout voir » de l’accueil ouvre un agenda sans fêtes, même si le réglage est actif', async () => {
+    await demarrer(agenda());
+    const lien = ecran().querySelector<HTMLAnchorElement>('.bientot h2 a')!;
+    expect(lien.getAttribute('href')).toBe('#/agenda?sans-fetes');
+    expect(ecran().querySelector('.bientot a.vignette.fin')).toBeNull();
+
+    await demarrer(agenda(), '#/agenda?sans-fetes');
+    expect(titre()).toBe('Agenda');
+    expect(puces()).toEqual(['Tout', 'Anniversaires', 'Noces', 'Décès']);
+    expect(ecran().querySelector('.agenda')!.textContent).not.toContain(prenomFete);
+    expect(ecran().querySelectorAll('.agenda .ligne').length).toBeGreaterThan(0);
+
+    await demarrer(agenda(), '#/agenda');
+    expect(puces()).toContain('Fêtes');
+    expect(ecran().querySelector('.agenda')!.textContent).toContain(prenomFete);
   });
 
   it('le réglage « Fêtes du prénom » s’enregistre', async () => {

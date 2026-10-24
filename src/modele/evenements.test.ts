@@ -146,7 +146,10 @@ describe('fetesDuJour', () => {
   });
 
   it('donne le nom des fêtes civiles et religieuses, avec leur caractère férié', () => {
-    expect(fetesDuJour(new Date(2026, 0, 1))).toEqual([{ nom: 'Jour de l’an', type: 'civile', ferie: true, personnes: [] }]);
+    expect(fetesDuJour(new Date(2026, 0, 1))).toEqual([
+      { nom: 'Jour de l’an', type: 'civile', ferie: true, personnes: [] },
+      { nom: 'Sainte Marie, Mère de Dieu', type: 'religieuse', ferie: false, personnes: [] },
+    ]);
     expect(fetesDuJour(new Date(2026, 10, 1))[0]).toMatchObject({ nom: 'Toussaint', type: 'religieuse', ferie: true });
     expect(fetesDuJour(new Date(2026, 10, 2))).toEqual([{ nom: 'Commémoration des défunts', type: 'religieuse', ferie: false, personnes: [] }]);
     expect(fetesDuJour(new Date(2026, 11, 8))[0]).toMatchObject({ nom: 'Immaculée Conception', ferie: false });
@@ -170,6 +173,33 @@ describe('fetesDuJour', () => {
     expect(nomsFeries(new Date(2026, 4, 14))).toEqual([['Ascension', true]]);
     expect(nomsFeries(new Date(2026, 4, 24))).toEqual([['Pentecôte', false]]);
     expect(nomsFeries(new Date(2026, 4, 25))).toEqual([['Lundi de Pentecôte', true]]);
+  });
+
+  it('couvre le cycle liturgique catholique (Carême, Semaine sainte, Avent, Noël)', () => {
+    const religieuses = (d: Date) => fetesDuJour(d).filter((f) => f.type === 'religieuse').map((f) => f.nom);
+    expect(religieuses(new Date(2026, 1, 18))).toEqual(['Mercredi des Cendres']);
+    expect(religieuses(new Date(2026, 2, 29))).toEqual(['Dimanche des Rameaux']);
+    expect(religieuses(new Date(2026, 3, 2))).toEqual(['Jeudi saint']);
+    expect(religieuses(new Date(2026, 3, 3))).toEqual(['Vendredi saint']);
+    expect(religieuses(new Date(2026, 3, 4))).toEqual(['Samedi saint']);
+    expect(religieuses(new Date(2026, 3, 12))).toEqual(['Dimanche de la Divine Miséricorde']);
+    expect(religieuses(new Date(2026, 4, 31))).toEqual(['Visitation de la Vierge Marie', 'Sainte Trinité']);
+    expect(religieuses(new Date(2026, 5, 7))).toEqual(['Fête-Dieu (Saint-Sacrement)']);
+    expect(religieuses(new Date(2026, 5, 12))).toEqual(['Sacré-Cœur de Jésus']);
+    expect(religieuses(new Date(2026, 5, 13))).toEqual(['Cœur immaculé de Marie']);
+    expect(religieuses(new Date(2026, 0, 4))).toEqual(['Épiphanie']);
+    expect(religieuses(new Date(2026, 0, 11))).toEqual(['Baptême du Seigneur']);
+    expect(religieuses(new Date(2026, 10, 22))).toEqual(['Christ, Roi de l’univers']);
+    expect(religieuses(new Date(2026, 10, 29))).toEqual(['1er dimanche de l’Avent']);
+    expect(religieuses(new Date(2026, 11, 20))).toEqual(['4e dimanche de l’Avent']);
+    expect(religieuses(new Date(2026, 11, 27))).toEqual(['Sainte Famille']);
+  });
+
+  it('place les fêtes liturgiques mobiles selon l’année (Épiphanie le 8, Sainte Famille le 30)', () => {
+    const religieuses = (d: Date) => fetesDuJour(d).filter((f) => f.type === 'religieuse').map((f) => f.nom);
+    expect(religieuses(new Date(2023, 0, 8))).toEqual(['Épiphanie']);
+    expect(religieuses(new Date(2023, 0, 9))).toEqual(['Baptême du Seigneur']);
+    expect(religieuses(new Date(2022, 11, 30))).toEqual(['Sainte Famille']);
   });
 
   it('reste vide un jour sans saint ni fête', () => {

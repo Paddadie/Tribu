@@ -397,17 +397,28 @@ export interface JourNomme {
   ferie: boolean;
 }
 
-const JOURS_FIXES: Record<string, JourNomme> = {
-  '01-01': { nom: 'Jour de l’an', type: 'civile', ferie: true },
-  '05-01': { nom: 'Fête du Travail', type: 'civile', ferie: true },
-  '05-08': { nom: 'Victoire 1945', type: 'civile', ferie: true },
-  '07-14': { nom: 'Fête nationale', type: 'civile', ferie: true },
-  '08-15': { nom: 'Assomption', type: 'religieuse', ferie: true },
-  '11-01': { nom: 'Toussaint', type: 'religieuse', ferie: true },
-  '11-02': { nom: 'Commémoration des défunts', type: 'religieuse', ferie: false },
-  '11-11': { nom: 'Armistice 1918', type: 'civile', ferie: true },
-  '12-08': { nom: 'Immaculée Conception', type: 'religieuse', ferie: false },
-  '12-25': { nom: 'Noël', type: 'religieuse', ferie: true },
+const civ = (nom: string): JourNomme => ({ nom, type: 'civile', ferie: true });
+const rel = (nom: string, ferie = false): JourNomme => ({ nom, type: 'religieuse', ferie });
+
+const JOURS_FIXES: Record<string, JourNomme[]> = {
+  '01-01': [civ('Jour de l’an'), rel('Sainte Marie, Mère de Dieu')],
+  '02-02': [rel('Présentation du Seigneur (Chandeleur)')],
+  '03-25': [rel('Annonciation')],
+  '05-01': [civ('Fête du Travail')],
+  '05-08': [civ('Victoire 1945')],
+  '05-31': [rel('Visitation de la Vierge Marie')],
+  '07-14': [civ('Fête nationale')],
+  '08-06': [rel('Transfiguration du Seigneur')],
+  '08-15': [rel('Assomption', true)],
+  '09-08': [rel('Nativité de la Vierge Marie')],
+  '09-14': [rel('Croix glorieuse')],
+  '10-07': [rel('Notre-Dame du Rosaire')],
+  '11-01': [rel('Toussaint', true)],
+  '11-02': [rel('Commémoration des défunts')],
+  '11-09': [rel('Dédicace de la basilique du Latran')],
+  '11-11': [civ('Armistice 1918')],
+  '12-08': [rel('Immaculée Conception')],
+  '12-25': [rel('Noël', true)],
 };
 
 /** Dimanche de Pâques (calendrier grégorien, algorithme de Meeus/Jones/Butcher). */
@@ -427,21 +438,56 @@ export function paques(annee: number): Date {
 
 /** Fêtes mobiles, en jours après Pâques. */
 const JOURS_MOBILES: [number, JourNomme][] = [
-  [0, { nom: 'Pâques', type: 'religieuse', ferie: false }],
-  [1, { nom: 'Lundi de Pâques', type: 'religieuse', ferie: true }],
-  [39, { nom: 'Ascension', type: 'religieuse', ferie: true }],
-  [49, { nom: 'Pentecôte', type: 'religieuse', ferie: false }],
-  [50, { nom: 'Lundi de Pentecôte', type: 'religieuse', ferie: true }],
+  [-46, rel('Mercredi des Cendres')],
+  [-7, rel('Dimanche des Rameaux')],
+  [-3, rel('Jeudi saint')],
+  [-2, rel('Vendredi saint')],
+  [-1, rel('Samedi saint')],
+  [0, rel('Pâques')],
+  [1, rel('Lundi de Pâques', true)],
+  [7, rel('Dimanche de la Divine Miséricorde')],
+  [39, rel('Ascension', true)],
+  [49, rel('Pentecôte')],
+  [50, rel('Lundi de Pentecôte', true)],
+  [56, rel('Sainte Trinité')],
+  [63, rel('Fête-Dieu (Saint-Sacrement)')],
+  [68, rel('Sacré-Cœur de Jésus')],
+  [69, rel('Cœur immaculé de Marie')],
 ];
 
-/** Fêtes religieuses et civiles du jour (fériées ou non), en plus du saint : fixes puis mobiles. */
+const memeJour = (a: Date, b: Date) => a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/** Premier dimanche à partir du jour donné. */
+function dimancheDes(annee: number, mois: number, jour: number): Date {
+  const d = new Date(annee, mois - 1, jour);
+  return new Date(annee, mois - 1, jour + ((7 - d.getDay()) % 7));
+}
+
+/** Fêtes liturgiques mobiles qui ne dépendent pas de Pâques (usage français) : Épiphanie, Baptême, Sainte Famille, Christ Roi. */
+function joursMobilesHorsPaques(annee: number): [Date, JourNomme][] {
+  const epiphanie = dimancheDes(annee, 1, 2);
+  const bapteme = new Date(annee, 0, epiphanie.getDate() + (epiphanie.getDate() >= 7 ? 1 : 7));
+  const noel = new Date(annee, 11, 25);
+  const sainteFamille = noel.getDay() === 0 ? new Date(annee, 11, 30) : dimancheDes(annee, 12, 26);
+  const avent = dimancheDes(annee, 11, 27);
+  const christRoi = new Date(annee, 10, avent.getDate() - 7);
+  return [
+    [epiphanie, rel('Épiphanie')],
+    [bapteme, rel('Baptême du Seigneur')],
+    [sainteFamille, rel('Sainte Famille')],
+    [christRoi, rel('Christ, Roi de l’univers')],
+    ...[0, 1, 2, 3].map((i): [Date, JourNomme] => [new Date(annee, 10, avent.getDate() + 7 * i), rel(`${['1er', '2e', '3e', '4e'][i]} dimanche de l’Avent`)]),
+  ];
+}
+
+/** Fêtes religieuses (catholiques) et civiles du jour (fériées ou non), en plus du saint : fixes puis mobiles. */
 export function joursNommes(date: Date): JourNomme[] {
   const cle = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const trouves = JOURS_FIXES[cle] ? [JOURS_FIXES[cle]] : [];
+  const trouves = [...(JOURS_FIXES[cle] ?? [])];
   const p = paques(date.getFullYear());
   for (const [decalage, jour] of JOURS_MOBILES) {
-    const d = new Date(p.getFullYear(), p.getMonth(), p.getDate() + decalage);
-    if (d.getMonth() === date.getMonth() && d.getDate() === date.getDate()) trouves.push(jour);
+    if (memeJour(new Date(p.getFullYear(), p.getMonth(), p.getDate() + decalage), date)) trouves.push(jour);
   }
+  for (const [d, jour] of joursMobilesHorsPaques(date.getFullYear())) if (memeJour(d, date)) trouves.push(jour);
   return trouves;
 }

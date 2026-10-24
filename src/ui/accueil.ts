@@ -227,14 +227,13 @@ function blocBientot(d: Donnees, evs: Evenement[], aujourdhui: Date): HTMLElemen
   return h(
     'section',
     { class: 'bientot' },
-    h('h2', { class: 'titre-section titre-lien' }, 'Bientôt', h('a', { href: '#/agenda' }, 'Tout voir')),
+    h('h2', { class: 'titre-section titre-lien' }, 'Bientôt', h('a', { href: '#/agenda?sans-fetes' }, 'Tout voir')),
     montrees.length === 0
       ? calme(d, aujourdhui)
       : h(
           'div',
           { class: 'defile-bientot' },
           ...montrees.map((e) => vignette(e, aujourdhui)),
-          h('a', { class: 'vignette fin', href: '#/agenda' }, icone('agenda', 20), 'Tout voir'),
         ),
   );
 }
@@ -425,6 +424,5 @@ export function accueil(): HTMLElement {
       h('label', { class: 'champ-filtre champ-recherche' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Chercher quelqu’un'), champ, effacer),
     ),
     zone,
-    h('a', { class: 'ajout', href: '#/nouveau', 'aria-label': 'Ajouter une personne' }, icone('plus', 28)),
   );
 }

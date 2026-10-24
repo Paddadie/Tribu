@@ -50,9 +50,10 @@ function mois(evs: Evenement[], anneeCourante: number): HTMLElement[] {
   return groupes.map((g) => h('section', { class: 'groupe' }, h('h2', { class: 'titre-section' }, g.titre), h('div', { class: 'carte' }, ...g.evs.map(ligne))));
 }
 
-export function ecranAgenda(): HTMLElement {
+/** `sansFetes` : arrivée par « Tout voir » de l'accueil (`#/agenda?sans-fetes`), sans fêtes quel que soit le réglage. */
+export function ecranAgenda(sansFetes = false): HTMLElement {
   const aujourdhui = new Date();
-  const avecFetes = lireReglages().fetes;
+  const avecFetes = lireReglages().fetes && !sansFetes;
   if (!avecFetes && filtre === 'fete') filtre = 'tout';
   // 12 mois : jusqu'à la veille du même jour l'an prochain.
   const tous = evenementsAVenir(lireDonnees(), aujourdhui, 364, { fetes: avecFetes });

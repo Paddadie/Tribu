@@ -20,13 +20,12 @@ let puce: Filtre = 'tous';
 let groupeChoisi = '';
 const manquesChoisis = new Set<Manque>();
 
-const PUCES: { filtre: Filtre; libelle: string }[] = [
-  { filtre: 'tous', libelle: 'Toutes' },
-  { filtre: 'famille', libelle: 'Famille' },
-  { filtre: 'amis', libelle: 'Amis proches' },
-  { filtre: 'groupe', libelle: 'Groupe d’amis' },
-
-  { filtre: 'acompleter', libelle: 'À compléter' },
+const PUCES: { filtre: Filtre; libelle: string; icone: Parameters<typeof icone>[0] }[] = [
+  { filtre: 'tous', libelle: 'Toutes', icone: 'fiches' },
+  { filtre: 'famille', libelle: 'Famille', icone: 'arbre' },
+  { filtre: 'amis', libelle: 'Amis proches', icone: 'coeur' },
+  { filtre: 'groupe', libelle: 'Groupe d’amis', icone: 'ami' },
+  { filtre: 'acompleter', libelle: 'À compléter', icone: 'crayon' },
 ];
 
 function ligne(p: Personne, tri: Tri): HTMLElement {
@@ -97,30 +96,26 @@ function indexLettres(groupes: Groupe[], zoneListe: HTMLElement, entete: HTMLEle
 
 export function ecranPersonnes(): HTMLElement {
   const total = personnesListees(lireDonnees()).length;
-  const compteur = h('span', { class: 'secondaire' });
-  const titre = h(
-    'div',
-    { class: 'entete-ligne' },
+  const titre = (avecAjout: boolean) =>
     h(
       'div',
-      { class: 'entete-gauche' },
-      lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
-      h('h1', {}, 'Toutes les fiches'),
-    ),
-    compteur,
-  );
-  if (total === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, titre), accueilVide());
+      { class: 'entete-ligne' },
+      h(
+        'div',
+        { class: 'entete-gauche' },
+        lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
+        h('h1', {}, 'Toutes les fiches'),
+      ),
+      // Sans personne, l'écran vide propose déjà d'ajouter la première.
+      avecAjout && h('a', { class: 'bouton-nouvelle', href: '#/nouveau' }, icone('plus', 20), 'Nouvelle fiche'),
+    );
+  if (total === 0) return h('div', { class: 'ecran' }, h('header', { class: 'entete-accueil' }, titre(false)), accueilVide());
 
   const zoneListe = h('div', { class: 'liste' }, ...liste());
   // Pendant un filtrage, la liste est courte : l'index disparaît.
   const masquerIndex = () => (index.hidden = filtre.trim() !== '' || puce !== 'tous');
-  const afficherCompteur = () => {
-    const n = fichesFiltrees().length;
-    compteur.textContent = n === total ? `${total} ${total > 1 ? 'personnes' : 'personne'}` : `${n} sur ${total}`;
-  };
   const actualiser = () => {
     masquerIndex();
-    afficherCompteur();
     zoneListe.replaceChildren(...liste());
   };
 
@@ -136,8 +131,16 @@ export function ecranPersonnes(): HTMLElement {
   if ((puce === 'groupe' || puce === 'amis') && d.groupes.length === 0) puce = 'tous';
   const rangPuces = h('div', { class: 'puces puces-liste', role: 'group', 'aria-label': 'Filtrer les fiches' });
   const rangSous = h('div', { class: 'puces puces-liste puces-sous', role: 'group' });
-  const bouton = (libelle: string, actif: boolean, onclick: () => void) =>
-    h('button', { type: 'button', class: 'puce', 'aria-pressed': String(actif), onclick }, libelle);
+  const bouton = (x: (typeof PUCES)[number], actif: boolean, onclick: () => void) =>
+    h('button', { type: 'button', class: 'puce-icone', 'aria-pressed': String(actif), onclick }, icone(x.icone, 22), h('span', {}, x.libelle));
+  // Sous-choix : case à cocher (plusieurs manques) ou à puce (un seul groupe).
+  const caseChoix = (libelle: string, actif: boolean, rond: boolean, onclick: () => void) =>
+    h(
+      'button',
+      { type: 'button', class: 'case-choix', 'aria-pressed': String(actif), onclick },
+      h('span', { class: rond ? 'case-boite rond' : 'case-boite' }, rond ? null : icone('coche', 14)),
+      h('span', { class: 'case-texte' }, libelle),
+    );
   const dessinerPuces = () => {
     const dispo = PUCES.filter((x) =>
       x.filtre === 'famille'
@@ -150,7 +153,7 @@ export function ecranPersonnes(): HTMLElement {
     );
     rangPuces.replaceChildren(
       ...dispo.map((x) =>
-        bouton(x.libelle, puce === x.filtre, () => {
+        bouton(x, puce === x.filtre, () => {
           puce = x.filtre;
           if (puce === 'groupe' && !groupeChoisi) groupeChoisi = d.groupes[0]?.id ?? '';
           dessinerPuces();
@@ -164,7 +167,7 @@ export function ecranPersonnes(): HTMLElement {
     rangSous.replaceChildren(
       ...(puce === 'groupe'
         ? d.groupes.map((g) =>
-            bouton(nomGroupe(d, g), groupeChoisi === g.id, () => {
+            caseChoix(nomGroupe(d, g), groupeChoisi === g.id, true, () => {
               groupeChoisi = g.id;
               dessinerPuces();
               actualiser();
@@ -172,7 +175,7 @@ export function ecranPersonnes(): HTMLElement {
           )
         : puce === 'acompleter'
           ? manquesDispo.map((m) =>
-              bouton(m.libelle, manquesChoisis.has(m.manque), () => {
+              caseChoix(m.libelle, manquesChoisis.has(m.manque), false, () => {
                 if (!manquesChoisis.delete(m.manque)) manquesChoisis.add(m.manque);
                 dessinerPuces();
                 actualiser();
@@ -197,22 +200,13 @@ export function ecranPersonnes(): HTMLElement {
   const entete = h(
     'header',
     { class: 'entete-accueil' },
-    titre,
+    titre(true),
     h('label', { class: 'champ-filtre' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Filtrer par nom'), champ),
     rangPuces,
     rangSous,
   );
   const { index, bulle } = indexLettres(grouperParLettre(personnesListees(lireDonnees()), lireReglages().tri), zoneListe, entete);
-  afficherCompteur();
   masquerIndex();
 
-  return h(
-    'div',
-    { class: 'ecran' },
-    entete,
-    zoneListe,
-    index,
-    bulle,
-    h('a', { class: 'ajout etendu', href: '#/nouveau' }, icone('plus', 24), 'Nouvelle fiche'),
-  );
+  return h('div', { class: 'ecran' }, entete, zoneListe, index, bulle);
 }
