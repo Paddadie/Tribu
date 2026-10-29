@@ -13,7 +13,7 @@ import { changerAvecAnnulation } from './annulation';
 import { choisir } from './choisir';
 import { ouvrirChoixMoi } from './choixMoi';
 import { confirmer } from './confirmer';
-import { h, icone } from './dom';
+import { h, icone, type Enfant } from './dom';
 import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
 import { messageFusion, messageImport, pluriel } from './import';
@@ -35,6 +35,17 @@ function choix<T extends string>(nom: string, legende: string, options: [T, stri
   return h('fieldset', { class: 'champ' }, h('legend', {}, legende), h('div', { class: 'choix-groupe' }, ...boutons));
 }
 
+/** Interrupteur : titre et aide à gauche, case à cocher à droite. */
+function bascule(id: string, titre: string, aide: string, coche: boolean, changer: (coche: boolean) => void): HTMLElement {
+  const boite = h('input', { id, type: 'checkbox', class: 'bascule', checked: coche, onchange: () => changer(boite.checked) });
+  return h(
+    'label',
+    { class: 'interrupteur', for: id },
+    h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, titre), h('span', { class: 'secondaire' }, aide)),
+    boite,
+  );
+}
+
 export const ONGLETS_REGLAGES = [
   { id: 'general', libelle: 'Général', icone: 'reglages' },
   { id: 'exports', libelle: 'Exports', icone: 'haut' },
@@ -43,28 +54,19 @@ export const ONGLETS_REGLAGES = [
 ] as const;
 export type OngletReglages = (typeof ONGLETS_REGLAGES)[number]['id'];
 
-/** `onglet` : fin de l'adresse `#/reglages/<onglet>` ; un nom inconnu ouvre l'onglet Général. */
-export function ecranReglages(onglet?: string): HTMLElement {
-  const retour = '#/';
-  const reglages = lireReglages();
-  const actif: OngletReglages = ONGLETS_REGLAGES.find((o) => o.id === onglet)?.id ?? 'general';
+/** Contenu d'un panneau, et mise à jour de ce qui y dépend des données et des réglages. */
+interface Onglet {
+  contenu: Enfant[];
+  maj: () => void;
+}
 
-  const messageExport = h('p', { class: 'secondaire', role: 'status' });
-  const erreurImport = h('p', { class: 'erreur', role: 'alert', hidden: true });
-  const erreurEffacement = h('p', { class: 'erreur', role: 'alert', hidden: true });
-  const resumeExport = h('p', { class: 'secondaire' });
-  const dateExport = h('b', {});
-  const resumeAgenda = h('p', { class: 'secondaire' });
-  const messageAgenda = h('p', { class: 'secondaire', role: 'status' });
-  const boutonAgenda = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterAgenda() }, 'Exporter vers l’agenda');
-  const resumeImage = h('p', { class: 'secondaire' });
-  const messageImage = h('p', { class: 'secondaire', role: 'status' });
-  const boutonImage = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterImage() }, 'Exporter l’arbre en PNG');
-  const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
-  const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
+/** Général : ma fiche, groupes d'amis, affichage. */
+function ongletGeneral(): Onglet {
+  const reglages = lireReglages();
 
   // Ma fiche : une ligne qui ouvre la feuille de choix ; redessinée après un choix.
   const carteMoi = h('div', { class: 'carte' });
+  const aideMoi = h('p', { class: 'secondaire aide-section' });
   const dessinerMoi = () => {
     const moi = ficheMoi(lireReglages(), lireDonnees());
     carteMoi.replaceChildren(
@@ -83,13 +85,72 @@ export function ecranReglages(onglet?: string): HTMLElement {
       ? 'Chaque fiche affiche son lien avec toi : « ta cousine », « ton oncle par alliance ».'
       : 'Chaque fiche affichera son lien avec toi.';
   };
-  const aideMoi = h('p', { class: 'secondaire aide-section' });
 
-  /** Met à jour ce qui dépend des données et des réglages (après export, import, effacement, annulation). */
+  const contenu = [
+    h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Moi'), carteMoi, aideMoi),
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Amis'),
+      h(
+        'div',
+        { class: 'carte' },
+        h(
+          'a',
+          { class: 'ligne ligne-lien', href: '#/groupes' },
+          icone('ami', 24),
+          h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Groupes d’amis'), h('span', { class: 'secondaire' }, 'Noms et membres')),
+          icone('chevron', 20),
+        ),
+      ),
+    ),
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Affichage'),
+      h(
+        'div',
+        { class: 'carte bloc-reglages' },
+        choix<Tri>(
+          'tri',
+          'Trier la liste par',
+          [
+            ['prenom', 'Prénom'],
+            ['nom', 'Nom'],
+          ],
+          reglages.tri,
+          (tri) => modifierReglages({ tri }),
+        ),
+        choix<Theme>(
+          'theme',
+          'Thème',
+          [
+            ['auto', 'Auto'],
+            ['clair', 'Clair'],
+            ['sombre', 'Sombre'],
+          ],
+          reglages.theme,
+          (theme) => modifierReglages({ theme }),
+        ),
+        bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', reglages.fetes, (fetes) => modifierReglages({ fetes })),
+      ),
+    ),
+  ];
+  return { contenu, maj: dessinerMoi };
+}
+
+/** Exports : dates vers un agenda (.ics), arbre en image (PNG). `majTout` : après un changement de réglage. */
+function ongletExports(majTout: () => void): Onglet {
+  const reglages = lireReglages();
+  const resumeAgenda = h('p', { class: 'secondaire' });
+  const messageAgenda = h('p', { class: 'secondaire', role: 'status' });
+  const boutonAgenda = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterAgenda() }, 'Exporter vers l’agenda');
+  const resumeImage = h('p', { class: 'secondaire' });
+  const messageImage = h('p', { class: 'secondaire', role: 'status' });
+  const boutonImage = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterImage() }, 'Exporter l’arbre en PNG');
+
   const maj = () => {
     const n = personnesVisibles(lireDonnees()).length;
-    resumeExport.textContent = `Enregistre ${pluriel(n)} et leurs liens dans ${nomFichierExport(new Date())}.`;
-    dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
     const bilan = bilanAgenda(evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs }));
     const total = bilan.naissances + bilan.deces + bilan.unions + bilan.fetes;
     resumeAgenda.textContent =
@@ -103,23 +164,6 @@ export function ecranReglages(onglet?: string): HTMLElement {
       resumeImage.textContent = `${pluriel(n)} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
     } else resumeImage.textContent = 'Choisis ta fiche dans Réglages → Moi.';
     boutonImage.disabled = !moi;
-    boutonEffacer.disabled = n === 0;
-    aideEffacer.hidden = n > 0;
-    dessinerMoi();
-  };
-  maj();
-
-  const exporter = async () => {
-    try {
-      const issue = await exporterFichier(nomFichierExport(new Date()), exporterJson(lireDonnees()));
-      messageExport.textContent = MESSAGES_EXPORT[issue];
-      messageExport.className = issue === 'annule' ? 'secondaire' : 'succes';
-      if (issue !== 'annule') modifierReglages({ dernierExport: new Date().toISOString() });
-      maj();
-    } catch {
-      messageExport.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
-      messageExport.className = 'erreur';
-    }
   };
 
   const exporterAgenda = async () => {
@@ -150,6 +194,93 @@ export function ecranReglages(onglet?: string): HTMLElement {
     }
   };
 
+  const contenu = [
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Exports'),
+      h(
+        'div',
+        { class: 'carte bloc-reglages' },
+        h(
+          'div',
+          { class: 'reglage' },
+          h('h3', {}, 'Exporter les dates vers un agenda'),
+          h(
+            'p',
+            { class: 'secondaire' },
+            'Crée un fichier avec les anniversaires de naissance, les souvenirs de décès et les anniversaires d’union de tes proches. Chaque date revient chaque année.',
+          ),
+          bascule('fetes-ics', 'Inclure les fêtes', 'Une date par prénom au calendrier', reglages.fetesDansIcs, (fetesDansIcs) => {
+            modifierReglages({ fetesDansIcs });
+            majTout();
+          }),
+          resumeAgenda,
+          boutonAgenda,
+          messageAgenda,
+          h(
+            'details',
+            {},
+            h('summary', {}, 'Comment l’utiliser'),
+            h(
+              'ol',
+              { class: 'secondaire' },
+              h('li', {}, 'Crée un agenda dédié, nommé « Tribu », dans ton application d’agenda.'),
+              h('li', {}, 'Importe le fichier dans cet agenda, pas dans ton agenda principal.'),
+              h('li', {}, 'Règle les notifications de cet agenda : la veille et le jour même.'),
+              h('li', {}, 'Après des ajouts dans Tribu, exporte de nouveau et réimporte : les événements existants sont mis à jour, sans doublon.'),
+            ),
+          ),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'carte bloc-reglages' },
+        h(
+          'div',
+          { class: 'reglage' },
+          h('h3', {}, 'Exporter l’arbre en image'),
+          h(
+            'p',
+            { class: 'secondaire' },
+            'Dessine tout l’arbre global (famille et amis) dans une image PNG, avec les noms. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+          ),
+          resumeImage,
+          boutonImage,
+          messageImage,
+        ),
+      ),
+    ),
+  ];
+  return { contenu, maj };
+}
+
+/** Sauvegarde : export JSON, import fusionné (annulable). `majTout` : après un export ou un import. */
+function ongletSauvegarde(majTout: () => void): Onglet {
+  const messageExport = h('p', { class: 'secondaire', role: 'status' });
+  const erreurImport = h('p', { class: 'erreur', role: 'alert', hidden: true });
+  const resumeExport = h('p', { class: 'secondaire' });
+  const dateExport = h('b', {});
+
+  const maj = () => {
+    const n = personnesVisibles(lireDonnees()).length;
+    resumeExport.textContent = `Enregistre ${pluriel(n)} et leurs liens dans ${nomFichierExport(new Date())}.`;
+    dateExport.textContent = libelleDernierExport(lireReglages().dernierExport, new Date());
+  };
+
+  const exporter = async () => {
+    try {
+      const issue = await exporterFichier(nomFichierExport(new Date()), exporterJson(lireDonnees()));
+      messageExport.textContent = MESSAGES_EXPORT[issue];
+      messageExport.className = issue === 'annule' ? 'secondaire' : 'succes';
+      if (issue !== 'annule') modifierReglages({ dernierExport: new Date().toISOString() });
+      majTout();
+    } catch {
+      messageExport.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
+      messageExport.className = 'erreur';
+    }
+  };
+
   const fichier = h('input', { type: 'file', accept: 'application/json,.json', class: 'sr-only', tabindex: -1, 'aria-hidden': true });
   fichier.addEventListener('change', async () => {
     const choisi = fichier.files?.[0];
@@ -164,7 +295,7 @@ export function ecranReglages(onglet?: string): HTMLElement {
         const bilan = await fusionner(lireDonnees(), importees, (q) => choisir(q.texte, q.options));
         changerAvecAnnulation(() => bilan.donnees, messageFusion(bilan), 'Import annulé.');
       }
-      maj();
+      majTout();
     } catch (e) {
       if (e instanceof FusionAnnulee) return;
       erreurImport.textContent =
@@ -172,6 +303,55 @@ export function ecranReglages(onglet?: string): HTMLElement {
       erreurImport.hidden = false;
     }
   });
+
+  const contenu = [
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Sauvegarde'),
+      h(
+        'div',
+        { class: 'carte bloc-reglages' },
+        h(
+          'div',
+          { class: 'reglage' },
+          h('h3', {}, 'Exporter'),
+          h('p', { class: 'date-export' }, h('span', { class: 'secondaire' }, 'Dernier export'), dateExport),
+          resumeExport,
+          h('p', { class: 'secondaire' }, 'L’export contient tes notes en clair : garde le fichier pour toi.'),
+          h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporter() }, 'Exporter mes données'),
+          messageExport,
+        ),
+        h(
+          'div',
+          { class: 'reglage' },
+          h('h3', {}, 'Importer'),
+          h(
+            'p',
+            { class: 'secondaire' },
+            'Fusionne un fichier exporté avec les données de cet appareil. Rien n’est effacé ; en cas de conflit ou de doute, je te demande.',
+          ),
+          h('button', { type: 'button', class: 'bouton', onclick: () => fichier.click() }, 'Choisir un fichier…'),
+          fichier,
+          erreurImport,
+        ),
+      ),
+    ),
+  ];
+  return { contenu, maj };
+}
+
+/** Données : vérification, effacement (annulable), version. `majTout` : après un effacement. */
+function ongletDonnees(majTout: () => void): Onglet {
+  const erreurEffacement = h('p', { class: 'erreur', role: 'alert', hidden: true });
+  const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
+  const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
+
+  const maj = () => {
+    const n = personnesVisibles(lireDonnees()).length;
+    boutonEffacer.disabled = n === 0;
+    aideEffacer.hidden = n > 0;
+  };
 
   const effacer = async () => {
     const n = personnesVisibles(lireDonnees()).length;
@@ -181,28 +361,64 @@ export function ecranReglages(onglet?: string): HTMLElement {
     erreurEffacement.hidden = true;
     try {
       changerAvecAnnulation(() => donneesVides(), 'Données effacées.', 'Effacement annulé.');
-      maj();
+      majTout();
     } catch (e) {
       erreurEffacement.textContent = e instanceof Error ? e.message : 'Effacement impossible';
       erreurEffacement.hidden = false;
     }
   };
 
-  const bascule = (id: string, titre: string, aide: string, coche: boolean, changer: (coche: boolean) => void) => {
-    const boite = h('input', { id, type: 'checkbox', class: 'bascule', checked: coche, onchange: () => changer(boite.checked) });
-    return h(
-      'label',
-      { class: 'interrupteur', for: id },
-      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, titre), h('span', { class: 'secondaire' }, aide)),
-      boite,
-    );
-  };
-
   const date = new Date(__BUILD_DATE__).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
+  const contenu = [
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Données'),
+      h(
+        'div',
+        { class: 'carte' },
+        h(
+          'a',
+          { class: 'ligne ligne-lien', href: '#/verification' },
+          h(
+            'span',
+            { class: 'ligne-texte' },
+            h('span', { class: 'ligne-nom' }, 'Vérifier mes données'),
+            h('span', { class: 'secondaire' }, 'Doublons, fiches isolées, dates incohérentes'),
+          ),
+          icone('chevron', 20),
+        ),
+      ),
+      boutonEffacer,
+      aideEffacer,
+      erreurEffacement,
+    ),
+    h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),
+  ];
+  return { contenu, maj };
+}
+
+/** `onglet` : fin de l'adresse `#/reglages/<onglet>` ; un nom inconnu ouvre l'onglet Général. */
+export function ecranReglages(onglet?: string): HTMLElement {
+  const actif: OngletReglages = ONGLETS_REGLAGES.find((o) => o.id === onglet)?.id ?? 'general';
+
+  /** Met à jour ce qui dépend des données et des réglages (après export, import, effacement, annulation). */
+  const maj = () => {
+    for (const o of Object.values(contenus)) o.maj();
+  };
+  const contenus: Record<OngletReglages, Onglet> = {
+    general: ongletGeneral(),
+    exports: ongletExports(maj),
+    sauvegarde: ongletSauvegarde(maj),
+    donnees: ongletDonnees(maj),
+  };
+  maj();
+
   // Onglets : tous les panneaux restent dans la page (état et messages conservés), un seul est visible.
-  const panneau = (id: OngletReglages, ...enfants: Parameters<typeof h>[2][]) =>
-    h('div', { class: 'panneau', id: `panneau-${id}`, role: 'tabpanel', hidden: id !== actif }, ...enfants);
+  const panneaux = ONGLETS_REGLAGES.map((o) =>
+    h('div', { class: 'panneau', id: `panneau-${o.id}`, role: 'tabpanel', hidden: o.id !== actif }, ...contenus[o.id].contenu),
+  );
   const boutons = ONGLETS_REGLAGES.map((o) =>
     h(
       'button',
@@ -228,186 +444,5 @@ export function ecranReglages(onglet?: string): HTMLElement {
     remplacer(`#/reglages/${id}`, false);
   };
 
-  return h(
-    'div',
-    { class: 'ecran' },
-    barreEcran(retour, 'Réglages'),
-    h(
-      'div',
-      { class: 'contenu' },
-      onglets,
-      panneau(
-        'general',
-        h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Moi'), carteMoi, aideMoi),
-        h(
-          'section',
-          { class: 'groupe-reglages' },
-          h('h2', { class: 'titre-section' }, 'Amis'),
-          h(
-            'div',
-            { class: 'carte' },
-            h(
-              'a',
-              { class: 'ligne ligne-lien', href: '#/groupes' },
-              icone('ami', 24),
-              h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, 'Groupes d’amis'), h('span', { class: 'secondaire' }, 'Noms et membres')),
-              icone('chevron', 20),
-            ),
-          ),
-        ),
-        h(
-          'section',
-          { class: 'groupe-reglages' },
-          h('h2', { class: 'titre-section' }, 'Affichage'),
-          h(
-            'div',
-            { class: 'carte bloc-reglages' },
-            choix<Tri>(
-              'tri',
-              'Trier la liste par',
-              [
-                ['prenom', 'Prénom'],
-                ['nom', 'Nom'],
-              ],
-              reglages.tri,
-              (tri) => modifierReglages({ tri }),
-            ),
-            choix<Theme>(
-              'theme',
-              'Thème',
-              [
-                ['auto', 'Auto'],
-                ['clair', 'Clair'],
-                ['sombre', 'Sombre'],
-              ],
-              reglages.theme,
-              (theme) => modifierReglages({ theme }),
-            ),
-            bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', reglages.fetes, (fetes) => modifierReglages({ fetes })),
-          ),
-        ),
-      ),
-      panneau(
-        'exports',
-        h(
-          'section',
-          { class: 'groupe-reglages' },
-          h('h2', { class: 'titre-section' }, 'Exports'),
-          h(
-            'div',
-            { class: 'carte bloc-reglages' },
-            h(
-              'div',
-              { class: 'reglage' },
-              h('h3', {}, 'Exporter les dates vers un agenda'),
-              h(
-                'p',
-                { class: 'secondaire' },
-                'Crée un fichier avec les anniversaires de naissance, les souvenirs de décès et les anniversaires d’union de tes proches. Chaque date revient chaque année.',
-              ),
-              bascule('fetes-ics', 'Inclure les fêtes', 'Une date par prénom au calendrier', reglages.fetesDansIcs, (fetesDansIcs) => {
-                modifierReglages({ fetesDansIcs });
-                maj();
-              }),
-              resumeAgenda,
-              boutonAgenda,
-              messageAgenda,
-              h(
-                'details',
-                {},
-                h('summary', {}, 'Comment l’utiliser'),
-                h(
-                  'ol',
-                  { class: 'secondaire' },
-                  h('li', {}, 'Crée un agenda dédié, nommé « Tribu », dans ton application d’agenda.'),
-                  h('li', {}, 'Importe le fichier dans cet agenda, pas dans ton agenda principal.'),
-                  h('li', {}, 'Règle les notifications de cet agenda : la veille et le jour même.'),
-                  h('li', {}, 'Après des ajouts dans Tribu, exporte de nouveau et réimporte : les événements existants sont mis à jour, sans doublon.'),
-                ),
-              ),
-            ),
-          ),
-          h(
-            'div',
-            { class: 'carte bloc-reglages' },
-            h(
-              'div',
-              { class: 'reglage' },
-              h('h3', {}, 'Exporter l’arbre en image'),
-              h(
-                'p',
-                { class: 'secondaire' },
-                'Dessine tout l’arbre global (famille et amis) dans une image PNG, avec les noms. Elle ne dépend ni de ton zoom ni de ta position actuels.',
-              ),
-              resumeImage,
-              boutonImage,
-              messageImage,
-            ),
-          ),
-        ),
-      ),
-      panneau(
-        'sauvegarde',
-        h(
-          'section',
-          { class: 'groupe-reglages' },
-          h('h2', { class: 'titre-section' }, 'Sauvegarde'),
-          h(
-            'div',
-            { class: 'carte bloc-reglages' },
-            h(
-              'div',
-              { class: 'reglage' },
-              h('h3', {}, 'Exporter'),
-              h('p', { class: 'date-export' }, h('span', { class: 'secondaire' }, 'Dernier export'), dateExport),
-              resumeExport,
-              h('p', { class: 'secondaire' }, 'L’export contient tes notes en clair : garde le fichier pour toi.'),
-              h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporter() }, 'Exporter mes données'),
-              messageExport,
-            ),
-            h(
-              'div',
-              { class: 'reglage' },
-              h('h3', {}, 'Importer'),
-              h(
-                'p',
-                { class: 'secondaire' },
-                'Fusionne un fichier exporté avec les données de cet appareil. Rien n’est effacé ; en cas de conflit ou de doute, je te demande.',
-              ),
-              h('button', { type: 'button', class: 'bouton', onclick: () => fichier.click() }, 'Choisir un fichier…'),
-              fichier,
-              erreurImport,
-            ),
-          ),
-        ),
-      ),
-      panneau(
-        'donnees',
-        h(
-          'section',
-          { class: 'groupe-reglages' },
-          h('h2', { class: 'titre-section' }, 'Données'),
-          h(
-            'div',
-            { class: 'carte' },
-            h(
-              'a',
-              { class: 'ligne ligne-lien', href: '#/verification' },
-              h(
-                'span',
-                { class: 'ligne-texte' },
-                h('span', { class: 'ligne-nom' }, 'Vérifier mes données'),
-                h('span', { class: 'secondaire' }, 'Doublons, fiches isolées, dates incohérentes'),
-              ),
-              icone('chevron', 20),
-            ),
-          ),
-          boutonEffacer,
-          aideEffacer,
-          erreurEffacement,
-        ),
-        h('p', { class: 'version' }, `Tribu v${__APP_VERSION__} · build du ${date}`),
-      ),
-    ),
-  );
+  return h('div', { class: 'ecran' }, barreEcran('#/', 'Réglages'), h('div', { class: 'contenu' }, onglets, ...panneaux));
 }
