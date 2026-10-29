@@ -102,7 +102,9 @@
 
 .noeud .naissance {
   margin-top: -4px;
-  max-width: 100%;
+  /* Même largeur que le nom ; le retrait garde la pente de l'italique hors du rognage. */
+  max-width: 104px;
+  padding-inline: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: var(--t1);

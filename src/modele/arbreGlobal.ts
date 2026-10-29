@@ -5,7 +5,7 @@
 
 import { nomGroupe } from './deductions';
 import { couleurFamille } from './liste';
-import { avecParentsSansNom } from './parentSansNom';
+import { avecParentsSansNom, estParentSansNom } from './parentSansNom';
 import { disposerPartie, ECART_FAMILLES, lier, type Bloc, type Voisins } from './partie';
 import type { Donnees, Personne } from './types';
 
@@ -28,6 +28,8 @@ export interface PlaceArbre extends Point {
   bulle: boolean;
   /** Lignée (famille d'origine) dans l'arbre principal, numérotée de gauche à droite ; absente dans la bulle. */
   lignee?: number;
+  /** « née X » sous le nom : la personne est la seule de sa famille dans l'arbre (ni parent connu, ni frère ou sœur). */
+  naissance?: true;
 }
 
 /** Enfants d'une même paire de parents (ou d'un parent seul), reliés par un trait commun. */
@@ -382,10 +384,12 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
   if (idsBulle.length > 0) disposerBulle(gr, idsBulle, rep, pl, positions, blocDe);
 
   const deLignee = couleursParNom(personnes, positions, donnees);
+  const seule = seuleDeSaFamille(personnes, pl.tousParents);
   // Un parent inconnu occupe une place pour le calcul, mais n'est pas dessiné.
-  const places = d.personnes.flatMap((p) => {
+  const places = d.personnes.flatMap((p): PlaceArbre[] => {
     const pos = positions.get(p.id);
-    return pos && !p.inconnu ? [{ personne: p, x: pos.x, y: pos.y, bulle: ensBulle.has(p.id), lignee: deLignee.get(p.id) }] : [];
+    if (!pos || p.inconnu) return [];
+    return [{ personne: p, x: pos.x, y: pos.y, bulle: ensBulle.has(p.id), lignee: deLignee.get(p.id), ...(seule(p.id) ? { naissance: true as const } : {}) }];
   });
   const dansBulle = (id: string) => ensBulle.has(id) && positions.has(id);
   return {
@@ -430,6 +434,20 @@ function resserrer(positions: Map<string, Point>, familles: string[][]) {
 }
 
 /**
+ * Seule de sa famille dans l'arbre : aucun parent connu (un parent inconnu ou « ? » ne compte pas) et aucun frère ou
+ * sœur. Sinon une étiquette « Famille X » nomme déjà sa famille, et « née X » sous son nom serait de trop.
+ */
+function seuleDeSaFamille(personnes: Map<string, Personne>, tousParents: Map<string, string[]>): (id: string) => boolean {
+  const enfants = new Map<string, number>();
+  for (const ps of tousParents.values()) for (const x of ps) enfants.set(x, (enfants.get(x) ?? 0) + 1);
+  return (id) =>
+    (tousParents.get(id) ?? []).every((x) => {
+      const p = personnes.get(x);
+      return !!p && (!!p.inconnu || estParentSansNom(p)) && enfants.get(x) === 1;
+    });
+}
+
+/**
  * Un nom de famille par lignée : au-dessus de chaque bloc (couple ou personne) sans parent dans l'arbre, et
  * au-dessus de chaque conjoint venu d'ailleurs (sans parent dans l'arbre) dont le nom diffère.
  */
@@ -451,10 +469,11 @@ function etiquettes(
     const membres = bloc.membres.map((id) => personnes.get(id)!).filter((p) => !p.inconnu && positions.has(p.id));
     if (membres.length === 0) continue;
     // Un conjoint qui porte déjà le nom de l'autre (nom d'usage) n'a pas d'étiquette : celle de la lignée suffit.
+    // La lignée se lit au nom de naissance : une épouse qui porte le nom de son mari ne rend pas son étiquette inutile.
     const nomsDeLaLignee = new Set(
       membres
         .filter((p) => !sansParent(p.id))
-        .map((p) => p.nom.trim())
+        .map((p) => (p.nomNaissance || p.nom).trim())
         .filter(Boolean),
     );
     const libres = membres.filter((p) => sansParent(p.id) && !nomsDeLaLignee.has(p.nom.trim()) && aUneSuite(p.id));
@@ -483,15 +502,17 @@ function etiquettes(
     });
     entrees.sort((u, v) => u.x - v.x);
     // Deux noms au-dessus d'un même couple : calés de part et d'autre de son milieu, quelle que soit leur longueur.
+    // Deux personnes éloignées dans une chaîne ont chacune leur nom centré au-dessus d'elles.
+    const rang = new Map(bloc.membres.map((id, i) => [id, i]));
+    const voisins = entrees.length === 2 && entrees[0].ps.some((p) => entrees[1].ps.some((q) => Math.abs(rang.get(p.id)! - rang.get(q.id)!) === 1));
     const milieu = (entrees[0].x + entrees[entrees.length - 1].x) / 2;
     entrees.forEach((e, i) => {
-      const bout = entrees.length > 1 && (i === 0 || i === entrees.length - 1);
       res.push({
-        x: bout ? milieu + (i === 0 ? -0.08 : 0.08) : e.x,
+        x: voisins ? milieu + (i === 0 ? -0.08 : 0.08) : e.x,
         y: positions.get(e.ps[0].id)!.y,
         lignee: couleur.get(e.ps[0].id),
         texte: `Famille ${e.nom}`,
-        ...(bout ? { ancre: i === 0 ? ('fin' as const) : ('debut' as const) } : {}),
+        ...(voisins ? { ancre: i === 0 ? ('fin' as const) : ('debut' as const) } : {}),
       });
     });
   }

@@ -26,12 +26,12 @@ const SEUILS: Record<
     croisements: number;
   }
 > = {
-  dupontel: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 14.5, ecartMoyen: 0.01, coudes: 11, petitsCoudes: 0, croisements: 0 },
-  'martinez-vasseur': { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 14.57, ecartMoyen: 0.08, coudes: 18, petitsCoudes: 4, croisements: 0 },
-  lambert: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 7.63, ecartMoyen: 0.28, coudes: 5, petitsCoudes: 1, croisements: 1 },
+  dupontel: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 14.51, ecartMoyen: 0.01, coudes: 11, petitsCoudes: 0, croisements: 0 },
+  'martinez-vasseur': { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 14.66, ecartMoyen: 0.05, coudes: 17, petitsCoudes: 1, croisements: 0 },
+  lambert: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 7.63, ecartMoyen: 0.28, coudes: 5, petitsCoudes: 0, croisements: 1 },
   rochefort: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 10.85, ecartMoyen: 0.53, coudes: 9, petitsCoudes: 1, croisements: 0 },
-  extremes: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 19, ecartMoyen: 0.74, coudes: 15, petitsCoudes: 1, croisements: 1 },
-  fixture: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 46.16, ecartMoyen: 0.05, coudes: 46, petitsCoudes: 1, croisements: 0 },
+  extremes: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 19, ecartMoyen: 0.19, coudes: 14, petitsCoudes: 0, croisements: 1 },
+  fixture: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 46.16, ecartMoyen: 0.06, coudes: 46, petitsCoudes: 4, croisements: 0 },
 };
 
 describe.each(cas)('arbre principal : $nom', ({ nom, d, moi }) => {

@@ -20,6 +20,10 @@ const POIDS_SANS_LIEN = 0.5;
 /** Essais d'élargissement des chaînes (ex – personne – conjoint) ; un écart qui change de moins de `SEUIL_ECART` est gardé. */
 const ESSAIS_CHAINES = 3;
 const SEUIL_ECART = 0.01;
+/** Étape 7 : fratries centrées exactement sous leurs parents (trois enfants au plus), en quelques passes au plus. */
+const MAX_FRATRIE_CENTREE = 3;
+const TOURS_PETITES_FRATRIES = 6;
+const SEUIL_CENTRAGE = 1e-6;
 /** Tolérance des comparaisons de scores et de décalages. */
 const EPSILON = 1e-9;
 
@@ -303,17 +307,25 @@ export class Lignes {
       });
       cle.set(b, moyenne(reps) ?? b.gauche + this.largeur(b) / 2);
     }
-    // À égalité (frères et sœurs sous les mêmes parents), l'aîné à gauche.
+    // À égalité (frères et sœurs sous les mêmes parents), l'ordre de leurs enfants, sans quoi les traits se croisent ;
+    // sinon l'aîné à gauche.
     const aine = (b: Bloc) => b.membres.find((m) => this.liens.parents(m).length > 0) ?? b.membres[0];
-    ligne.sort((a, b) => cle.get(a)! - cle.get(b)! || (versHaut ? comparerParNaissance(this.p(aine(a)), this.p(aine(b))) : 0));
+    const enfants = (b: Bloc) => moyenne(b.membres.flatMap((m) => this.liens.enfants(m).map((e) => this.x(e))));
+    const parEnfants = (a: Bloc, b: Bloc) => {
+      const [ea, eb] = [enfants(a), enfants(b)];
+      return ea === undefined || eb === undefined ? 0 : ea - eb;
+    };
+    ligne.sort((a, b) => cle.get(a)! - cle.get(b)! || (versHaut ? parEnfants(a, b) || comparerParNaissance(this.p(aine(a)), this.p(aine(b))) : 0));
     // Les frères et sœurs (un parent en commun) restent côte à côte : un bloc sans lien ne s'intercale pas entre eux.
+    // De proche en proche : une chaîne qui porte deux fratries amène aussi les frères et sœurs de l'autre conjoint.
     const groupes: Bloc[] = [];
     for (const b of ligne) {
       if (groupes.includes(b)) continue;
-      groupes.push(b);
-      const mien = this.parentsDuBloc(b);
-      if (mien.size === 0) continue;
-      for (const autre of ligne) if (!groupes.includes(autre) && [...this.parentsDuBloc(autre)].some((x) => mien.has(x))) groupes.push(autre);
+      for (let i = groupes.push(b) - 1; i < groupes.length; i++) {
+        const mien = this.parentsDuBloc(groupes[i]);
+        if (mien.size === 0) continue;
+        for (const autre of ligne) if (!groupes.includes(autre) && [...this.parentsDuBloc(autre)].some((x) => mien.has(x))) groupes.push(autre);
+      }
     }
     ligne.splice(0, ligne.length, ...groupes);
     this.tasser(ligne);
@@ -398,10 +410,20 @@ export class Lignes {
   /** Déplace un bloc ; ses voisins de ligne ne sont poussés que si leur marge est épuisée. */
   private glisser(b: Bloc, voulu: number): void {
     const ligne = this.lignes.get(b.g)!;
-    const pas = this.pasDe(ligne);
     const i = ligne.indexOf(b);
-    b.gauche = voulu;
-    for (let k = i + 1; k < ligne.length && ligne[k].gauche < ligne[k - 1].gauche + pas[k - 1]; k++) ligne[k].gauche = ligne[k - 1].gauche + pas[k - 1];
+    this.pousser(ligne, i, i, voulu - b.gauche);
+  }
+
+  /** Décale les blocs i à j de la ligne ; leurs voisins ne sont poussés que si leur marge est épuisée. */
+  /** Déplace les blocs i à j et, d'un seul tenant, tout ce qui est de leur côté sur la ligne (à gauche s'ils vont à gauche). */
+  private deporter(ligne: Bloc[], i: number, j: number, delta: number): void {
+    for (let k = delta < 0 ? 0 : i; k <= (delta < 0 ? j : ligne.length - 1); k++) ligne[k].gauche += delta;
+  }
+
+  private pousser(ligne: Bloc[], i: number, j: number, delta: number): void {
+    const pas = this.pasDe(ligne);
+    for (let k = i; k <= j; k++) ligne[k].gauche += delta;
+    for (let k = j + 1; k < ligne.length && ligne[k].gauche < ligne[k - 1].gauche + pas[k - 1]; k++) ligne[k].gauche = ligne[k - 1].gauche + pas[k - 1];
     for (let k = i - 1; k >= 0 && ligne[k].gauche > ligne[k + 1].gauche - pas[k]; k--) ligne[k].gauche = ligne[k + 1].gauche - pas[k];
   }
 
@@ -430,6 +452,17 @@ export class Lignes {
     return Math.abs(bp.membres.indexOf(u) - bp.membres.indexOf(v)) === 1 ? clePaire(u, v) : undefined;
   }
 
+  /** Enfants de chaque couple voisin (dans un même bloc) d'une ligne, par clé du couple. */
+  private fratries(ligne: Bloc[]): Map<string, string[]> {
+    const fratries = new Map<string, string[]>();
+    for (const b of ligne)
+      for (const m of b.membres) {
+        const cle = this.coupleDe(m);
+        if (cle) fratries.set(cle, [...(fratries.get(cle) ?? []), m]);
+      }
+    return fratries;
+  }
+
   /** Décale les blocs i à j de la ligne vers `voulu`, sans dépasser la place libre de part et d'autre ; rend le décalage fait. */
   private decaler(ligne: Bloc[], i: number, j: number, voulu: number): number {
     const pas = this.pasDe(ligne);
@@ -449,13 +482,7 @@ export class Lignes {
   centrerFratries(): void {
     for (const g of this.gens) {
       const ligne = this.lignes.get(g)!;
-      const fratries = new Map<string, string[]>();
-      for (const b of ligne)
-        for (const m of b.membres) {
-          const cle = this.coupleDe(m);
-          if (cle) fratries.set(cle, [...(fratries.get(cle) ?? []), m]);
-        }
-      for (const [cle, enfs] of fratries) {
+      for (const [cle, enfs] of this.fratries(ligne)) {
         const blocs = [...new Set(enfs.map((e) => this.blocDe.get(e)!))];
         if (blocs.some((b) => b.membres.some((m) => this.coupleDe(m) !== undefined && this.coupleDe(m) !== cle))) continue;
         const rangs = blocs.map((b) => ligne.indexOf(b)).sort((a, b) => a - b);
@@ -479,6 +506,107 @@ export class Lignes {
       }
     }
   }
+
+  /** Fratrie dont les blocs se suivent sur la ligne : ses blocs i à j et l'écart entre le milieu des parents et le sien. */
+  private fratrieSuivie(ligne: Bloc[], enfs: string[]): { i: number; j: number; blocs: Bloc[]; delta: number } | undefined {
+    const blocs = [...new Set(enfs.map((e) => this.blocDe.get(e)!))];
+    const rangs = blocs.map((b) => ligne.indexOf(b)).sort((a, b) => a - b);
+    const [i, j] = [rangs[0], rangs[rangs.length - 1]];
+    if (j - i + 1 !== blocs.length) return undefined;
+    const [u, v] = this.liens.parents(enfs[0]);
+    const xs = enfs.map((e) => this.x(e));
+    return { i, j, blocs, delta: (this.x(u) + this.x(v)) / 2 - (Math.min(...xs) + Math.max(...xs)) / 2 };
+  }
+
+  /**
+   * Après un déplacement sur la ligne `depuis`, les fratries des lignes du dessous suivent leurs parents (sauf celles
+   * du bloc `sauf`, qu'on déplace pour les centrer) : elles gardent l'écart qu'elles avaient.
+   */
+  private entrainer(depuis: number, sauf: Bloc | undefined, xAvant: Map<string, number>): void {
+    const avant = (id: string) => xAvant.get(id) ?? this.x(id);
+    for (const g of [...this.lignes.keys()].filter((g) => g > depuis).sort((a, b) => a - b)) {
+      const ligne = this.lignes.get(g)!;
+      for (let passe = 0, pousse = true; pousse && passe < 4; passe++) {
+        pousse = false;
+        for (const [cle, enfs] of this.fratries(ligne)) {
+          if (sauf?.membres.includes(this.liens.parents(enfs[0])[0])) continue;
+          const f = this.fratrieSuivie(ligne, enfs);
+          if (!f || f.blocs.some((b) => b.membres.some((m) => this.coupleDe(m) !== undefined && this.coupleDe(m) !== cle))) continue;
+          const [u, v] = this.liens.parents(enfs[0]);
+          const xs = enfs.map(avant);
+          const ecart = f.delta - ((avant(u) + avant(v)) / 2 - (Math.min(...xs) + Math.max(...xs)) / 2);
+          if (Math.abs(ecart) < SEUIL_CENTRAGE) continue;
+          this.pousser(ligne, f.i, f.j, ecart);
+          pousse = true;
+        }
+      }
+    }
+  }
+
+  /** Bilan du centrage : somme des écarts des fratries de trois enfants au plus, puis celle des plus grandes. */
+  private bilanCentrage(): [number, number] {
+    let [petites, grandes] = [0, 0];
+    for (const ligne of this.lignes.values())
+      for (const enfs of this.fratries(ligne).values()) {
+        const f = this.fratrieSuivie(ligne, enfs);
+        if (!f) continue;
+        if (enfs.length <= MAX_FRATRIE_CENTREE) petites += Math.abs(f.delta);
+        else grandes += Math.abs(f.delta);
+      }
+    return [petites, grandes];
+  }
+
+  /**
+   * Étape 7. Une fratrie de trois enfants au plus, d'un couple voisin dans un bloc, se met exactement sous le milieu
+   * de ses parents, quitte à élargir l'arbre : ses voisins de ligne s'écartent. Si un de ses blocs tient aussi à une
+   * autre fratrie (mariage entre deux fratries), ce bloc reste et l'enfant du bout opposé s'écarte d'autant qu'il
+   * faut ; à défaut, le bloc des parents se déplace au-dessus d'eux. Les fratries du dessous suivent leurs parents.
+   * Un essai n'est gardé que s'il réduit la somme des écarts de ces petites fratries (à somme égale, celle des
+   * grandes) : quand deux fratries se disputent la place (un trait qui en croise un autre), l'arbre reste tel quel.
+   */
+  centrerPetitesFratries(): void {
+    let bilan = this.bilanCentrage();
+    for (let tour = 0; tour < TOURS_PETITES_FRATRIES && bilan[0] >= SEUIL_CENTRAGE; tour++) {
+      let bouge = false;
+      for (const g of this.gens) {
+        const ligne = this.lignes.get(g)!;
+        for (const [cle, enfs] of this.fratries(ligne)) {
+          if (enfs.length > MAX_FRATRIE_CENTREE) continue;
+          const f = this.fratrieSuivie(ligne, enfs);
+          if (!f || Math.abs(f.delta) < SEUIL_CENTRAGE) continue;
+          const { i, j, delta } = f;
+          const tenu = (b: Bloc) => b.membres.some((m) => this.coupleDe(m) !== undefined && this.coupleDe(m) !== cle);
+          // Le bout qui s'écarte : celui de droite pour aller à droite, celui de gauche pour aller à gauche.
+          const bout = delta > 0 ? j : i;
+          const bp = this.blocDe.get(this.liens.parents(enfs[0])[0])!;
+          const haut = this.lignes.get(bp.g)!;
+          const kp = haut.indexOf(bp);
+          // Chaque déplacement s'essaie d'un seul tenant (tout le côté de la ligne), puis en poussant les seuls voisins.
+          const facons = (l: Bloc[], a: number, b: number, d: number) => [() => this.deporter(l, a, b, d), () => this.pousser(l, a, b, d)];
+          const tenue = f.blocs.some(tenu);
+          const essais: { depuis: number; bouger: () => void; parents?: Bloc }[] = [
+            ...(tenue ? [] : facons(ligne, i, j, delta)).map((bouger) => ({ depuis: g, bouger })),
+            ...(tenue && i !== j && !tenu(ligne[bout]) ? facons(ligne, bout, bout, 2 * delta) : []).map((bouger) => ({ depuis: g, bouger })),
+            ...facons(haut, kp, kp, -delta).map((bouger) => ({ depuis: bp.g, bouger, parents: bp })),
+          ];
+          for (const { depuis, bouger, parents } of essais) {
+            const avant = new Map([...this.lignes.values()].flat().map((b) => [b, b.gauche]));
+            const xAvant = new Map([...avant.keys()].flatMap((b) => b.membres.map((m) => [m, this.x(m)])));
+            bouger();
+            this.entrainer(depuis, parents, xAvant);
+            const apres = this.bilanCentrage();
+            if (apres[0] < bilan[0] - SEUIL_CENTRAGE || (apres[0] < bilan[0] + SEUIL_CENTRAGE && apres[1] < bilan[1] - SEUIL_CENTRAGE)) {
+              bilan = apres;
+              bouge = true;
+              break;
+            }
+            avant.forEach((x, b) => (b.gauche = x));
+          }
+        }
+      }
+      if (!bouge) return;
+    }
+  }
 }
 
 /** Place une partie : blocs, générations, ordre dans chaque ligne, abscisses, puis centrages. */
@@ -496,5 +624,6 @@ export function disposerPartie(
   lignes.placerAbscisses();
   lignes.centrerEnfantsUniques();
   lignes.centrerFratries();
+  lignes.centrerPetitesFratries();
   return { positions: lignes.positions(partie.ids), blocs: lignes.blocDe };
 }

@@ -19,8 +19,8 @@ function atelier() {
       d = v;
     },
     id,
-    pers: (prenom: string, sexe: Sexe | undefined, annee: string) => {
-      const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: annee });
+    pers: (prenom: string, sexe: Sexe | undefined, annee: string, noms: { nom?: string; nomNaissance?: string } = {}) => {
+      const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: annee, ...noms });
       d = r.donnees;
       id[prenom] = r.personne.id;
     },
@@ -627,6 +627,18 @@ function decalagesFratries(disp: Disposition): number[] {
     });
 }
 
+/** Fratries d'un couple décentrées de plus d'un centième de place, nommées par leurs prénoms. */
+function fratriesDecentrees(disp: Disposition): string[] {
+  const prenom = new Map(disp.places.map((p) => [p.personne.id, p.personne.prenom]));
+  return disp.branches
+    .filter((b) => b.origines.length === 1 && b.origines[0].parent === undefined)
+    .flatMap((b) => {
+      const xs = b.enfants.map((e) => e.x);
+      const ecart = b.origines[0].x - (Math.min(...xs) + Math.max(...xs)) / 2;
+      return Math.abs(ecart) < 0.01 ? [] : [`${b.enfants.map((e) => prenom.get(e.id)).join(', ')} : ${ecart.toFixed(2)}`];
+    });
+}
+
 describe('disposerArbre : centrage des enfants (UX-20)', () => {
   it('centre sous leurs parents les fratries libres de la maquette A', () => {
     const a = maquette();
@@ -725,5 +737,243 @@ describe('disposerArbre : fratries collées (V4, point 13)', () => {
     const ecart = Math.abs(Math.min(...claire.enfants.map((e) => e.x)) - Math.max(...anatole.enfants.map((e) => e.x)));
     expect(ecart).toBeLessThan(2);
     expect(anatole.bus).not.toBe(claire.bus);
+  });
+});
+
+describe('disposerArbre : noms de famille et « née X » (défauts relevés sur un arbre réel, octobre 2026)', () => {
+  /**
+   * Gaston Castel ∞ Mireille Castel → Maëlys (née Castel, épouse Varlov), Yann, Rémi.
+   * Igor Varlov (sans parents) ∞ Maëlys → Zoé ; Yann ∞ Nadia (née Ferrand, sans parents) → Nora ;
+   * Rémi ∞ Odette (née Garnier), sœur de Solène par un parent inconnu.
+   */
+  function castel() {
+    const a = atelier();
+    a.pers('Gaston', 'M', '1930', { nom: 'Castel' });
+    a.pers('Mireille', 'F', '1932', { nom: 'Castel' });
+    a.pers('Maëlys', 'F', '1960', { nom: 'Varlov', nomNaissance: 'Castel' });
+    a.pers('Yann', 'M', '1962', { nom: 'Castel' });
+    a.pers('Rémi', 'M', '1964', { nom: 'Castel' });
+    a.pers('Igor', 'M', '1958', { nom: 'Varlov' });
+    a.pers('Nadia', 'F', '1963', { nom: 'Castel', nomNaissance: 'Ferrand' });
+    a.pers('Odette', 'F', '1965', { nom: 'Castel', nomNaissance: 'Garnier' });
+    a.pers('Solène', 'F', '1967', { nom: 'Garnier' });
+    a.pers('Zoé', 'F', '1990', { nom: 'Varlov' });
+    a.pers('Nora', 'F', '1992', { nom: 'Castel' });
+    a.union('Gaston', 'Mireille');
+    for (const e of ['Maëlys', 'Yann', 'Rémi']) a.enfant(e, ['Gaston', 'Mireille']);
+    a.union('Igor', 'Maëlys');
+    a.union('Yann', 'Nadia');
+    a.union('Rémi', 'Odette');
+    a.enfant('Zoé', ['Igor', 'Maëlys']);
+    a.enfant('Nora', ['Yann', 'Nadia']);
+    a.d = ajouterFrereSansParent(a.d, a.id.Odette, a.id.Solène);
+    return a;
+  }
+
+  it('nomme le mari sans parents d’une épouse qui porte son nom mais a ses parents dans l’arbre', () => {
+    const a = castel();
+    const disp = disposerArbre(a.d, a.id.Zoé);
+    const igor = pos(disp, a.id.Igor);
+    const varlov = disp.etiquettes.filter((e) => e.texte === 'Famille Varlov');
+    expect(varlov).toHaveLength(1);
+    expect(varlov[0]).toMatchObject({ x: igor.x, y: igor.y });
+    // L'épouse sans parents qui porte le nom de la lignée de son mari n'a toujours pas d'étiquette.
+    expect(disp.etiquettes.filter((e) => e.texte === 'Famille Castel').map((e) => e.y)).toEqual([pos(disp, a.id.Gaston).y]);
+  });
+
+  it('« née X » seulement pour la seule de sa famille : ni parent connu, ni frère ou sœur', () => {
+    const a = castel();
+    const disp = disposerArbre(a.d, a.id.Zoé);
+    const naissance = (prenom: string) => disp.places.find((pl) => pl.personne.id === a.id[prenom])!.naissance;
+    expect(naissance('Nadia')).toBe(true);
+    expect(naissance('Maëlys')).toBeUndefined();
+    expect(naissance('Odette')).toBeUndefined();
+    expect(disp.etiquettes.some((e) => e.fratrie && e.texte === 'Famille Garnier')).toBe(true);
+  });
+
+  it('centre chaque nom sur sa personne quand les deux personnes ne sont pas voisines dans la chaîne', () => {
+    // Odile Ravel – Bruno Morel – Inès (née Castel) – Hugo Delmas – Tess : seuls Odile et Hugo n'ont pas de parents.
+    const a = atelier();
+    a.pers('Roger', 'M', '1930', { nom: 'Morel' });
+    a.pers('Jeanne', 'F', '1932', { nom: 'Morel' });
+    a.pers('Gilles', 'M', '1931', { nom: 'Castel' });
+    a.pers('Rose', 'F', '1933', { nom: 'Castel' });
+    a.pers('Odile', 'F', '1955', { nom: 'Ravel' });
+    a.pers('Bruno', 'M', '1956', { nom: 'Morel' });
+    a.pers('Inès', 'F', '1958', { nom: 'Morel', nomNaissance: 'Castel' });
+    a.pers('Hugo', 'M', '1957', { nom: 'Delmas' });
+    a.pers('Tess', 'F', '1960', { nom: '' });
+    for (const [e, n] of [
+      ['Ulysse', 'Morel'],
+      ['Noé', 'Morel'],
+      ['Noam', 'Delmas'],
+      ['Gus', 'Delmas'],
+    ])
+      a.pers(e, undefined, '1985', { nom: n });
+    a.union('Roger', 'Jeanne');
+    a.union('Gilles', 'Rose');
+    a.enfant('Bruno', ['Roger', 'Jeanne']);
+    a.enfant('Inès', ['Gilles', 'Rose']);
+    a.enfant('Ulysse', ['Odile', 'Bruno']);
+    a.union('Bruno', 'Inès', true);
+    a.enfant('Noé', ['Bruno', 'Inès']);
+    a.enfant('Noam', ['Inès', 'Hugo']);
+    a.enfant('Gus', ['Inès', 'Hugo']);
+    const disp = disposerArbre(a.d, a.id.Noé);
+    verifierInvariants(a.d, disp, a.id.Noé);
+    for (const [texte, prenom] of [
+      ['Famille Ravel', 'Odile'],
+      ['Famille Delmas', 'Hugo'],
+    ]) {
+      const e = disp.etiquettes.find((x) => x.texte === texte);
+      expect(e, texte).toMatchObject({ x: pos(disp, a.id[prenom]).x, y: pos(disp, a.id[prenom]).y });
+      expect(e!.ancre, texte).toBeUndefined();
+    }
+  });
+});
+
+describe('disposerArbre : fratrie tenue par une chaîne (défaut relevé sur un arbre réel, octobre 2026)', () => {
+  /**
+   * Arnaud ∞ Berthe → Gilles (l’aîné), Fabien. Fabien ∞ Lise → Denis (ex Odette, ∞ Ysaline).
+   * Roger ∞ Jeanne → Ferdinand, Léandre, Bruno. Gilles ∞ Rose → Inès, Rémi (∞ Mireille), Flore.
+   * Bruno ∞ Inès → Noé (Moi) : la chaîne Bruno – Inès porte deux fratries. Les parents du cousin Denis tombent
+   * entre Gilles et Roger : trié par ses parents, Denis passait entre Bruno et ses frères.
+   */
+  it('garde ensemble les frères et sœurs d’un aîné pris dans la chaîne d’une autre fratrie ; le cousin reste dehors', () => {
+    const a = atelier();
+    for (const [p, s, n] of [
+      ['Arnaud', 'M', '1900'],
+      ['Berthe', 'F', '1902'],
+      ['Fabien', 'M', '1928'],
+      ['Lise', 'F', '1927'],
+      ['Gilles', 'M', '1925'],
+      ['Rose', 'F', '1930'],
+      ['Roger', 'M', '1926'],
+      ['Jeanne', 'F', '1929'],
+      ['Ferdinand', 'M', '1950'],
+      ['Léandre', 'M', '1952'],
+      ['Bruno', 'M', '1954'],
+      ['Inès', 'F', '1955'],
+      ['Rémi', 'M', '1957'],
+      ['Mireille', 'F', '1958'],
+      ['Flore', 'F', '1960'],
+      ['Denis', 'M', '1953'],
+      ['Odette', 'F', '1954'],
+      ['Ysaline', 'F', '1956'],
+      ['Noé', 'M', '1985'],
+    ] as const)
+      a.pers(p, s, n);
+    a.union('Arnaud', 'Berthe');
+    for (const e of ['Fabien', 'Gilles']) a.enfant(e, ['Arnaud', 'Berthe']);
+    a.union('Fabien', 'Lise');
+    a.enfant('Denis', ['Fabien', 'Lise']);
+    a.union('Denis', 'Odette', true);
+    a.union('Denis', 'Ysaline');
+    a.union('Roger', 'Jeanne');
+    for (const e of ['Ferdinand', 'Léandre', 'Bruno']) a.enfant(e, ['Roger', 'Jeanne']);
+    a.union('Gilles', 'Rose');
+    for (const e of ['Inès', 'Rémi', 'Flore']) a.enfant(e, ['Gilles', 'Rose']);
+    a.union('Rémi', 'Mireille');
+    a.union('Bruno', 'Inès');
+    a.enfant('Noé', ['Bruno', 'Inès']);
+    const disp = disposerArbre(a.d, a.id.Noé);
+    verifierInvariants(a.d, disp, a.id.Noé);
+    const x = (prenom: string) => pos(disp, a.id[prenom]).x;
+    for (const fratrie of [
+      ['Inès', 'Rémi', 'Flore'],
+      ['Bruno', 'Ferdinand', 'Léandre'],
+    ]) {
+      const xs = fratrie.map(x);
+      for (const cousin of ['Denis', 'Odette', 'Ysaline']) {
+        expect(x(cousin) < Math.min(...xs) || x(cousin) > Math.max(...xs), `${cousin} hors de ${fratrie[0]}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('disposerArbre : fratries de trois enfants au plus, toujours centrées (défaut relevé sur un arbre réel, octobre 2026)', () => {
+  /**
+   * Chaîne Odile – Bruno – Inès – Hugo – Tess : Ulysse et Lina (Odile – Bruno), Noé (Bruno – Inès, Moi),
+   * Noam, Gus et Élie mariés (Inès – Hugo). Bruno a deux frères, Inès un frère et une sœur.
+   */
+  it('centre chaque fratrie d’une longue chaîne sous son couple, quitte à élargir l’arbre', () => {
+    const a = atelier();
+    for (const [p, s, n] of [
+      ['Roger', 'M', '1926'],
+      ['Jeanne', 'F', '1929'],
+      ['Armel', 'M', '1950'],
+      ['Gaspard', 'M', '1952'],
+      ['Bruno', 'M', '1954'],
+      ['Gilles', 'M', '1925'],
+      ['Rose', 'F', '1930'],
+      ['Inès', 'F', '1955'],
+      ['Rémi', 'M', '1957'],
+      ['Flore', 'F', '1960'],
+      ['Odile', 'F', '1953'],
+      ['Hugo', 'M', '1952'],
+      ['Tess', 'F', '1960'],
+      ['Ulysse', 'M', '1978'],
+      ['Lina', 'F', '1980'],
+      ['Noé', 'M', '1985'],
+      ['Noam', 'M', '1988'],
+      ['Gus', 'M', '1990'],
+      ['Élie', 'M', '1992'],
+      ['Zoé', 'F', '1989'],
+      ['Ana', 'F', '1991'],
+      ['Maud', 'F', '1993'],
+    ] as const)
+      a.pers(p, s, n);
+    a.union('Roger', 'Jeanne');
+    for (const e of ['Armel', 'Gaspard', 'Bruno']) a.enfant(e, ['Roger', 'Jeanne']);
+    a.union('Gilles', 'Rose');
+    for (const e of ['Inès', 'Rémi', 'Flore']) a.enfant(e, ['Gilles', 'Rose']);
+    a.union('Odile', 'Bruno', true);
+    a.union('Inès', 'Hugo', true);
+    a.union('Bruno', 'Inès');
+    a.union('Hugo', 'Tess');
+    for (const e of ['Ulysse', 'Lina']) a.enfant(e, ['Odile', 'Bruno']);
+    a.enfant('Noé', ['Bruno', 'Inès']);
+    for (const [e, c] of [
+      ['Noam', 'Zoé'],
+      ['Gus', 'Ana'],
+      ['Élie', 'Maud'],
+    ]) {
+      a.enfant(e, ['Inès', 'Hugo']);
+      a.union(e, c);
+    }
+    const disp = disposerArbre(a.d, a.id.Noé);
+    verifierInvariants(a.d, disp, a.id.Noé);
+    expect(fratriesDecentrees(disp)).toEqual([]);
+  });
+
+  /**
+   * Anselme ∞ Perrine (séparés) → Ombeline, Blanche ; Anselme a un frère, Octave, par un parent inconnu.
+   * Achille, seul parent connu, → Gaétan, Marius ; Achille a un frère, Timéo. Gaétan ∞ Ombeline (séparés) → Noé (Moi).
+   */
+  it('centre deux sœurs sous leurs parents quand l’aînée tient à la fratrie de son mari', () => {
+    const a = atelier();
+    for (const [p, s, n] of [
+      ['Anselme', 'M', '1880'],
+      ['Perrine', 'F', '1882'],
+      ['Octave', 'M', '1884'],
+      ['Ombeline', 'F', '1905'],
+      ['Blanche', 'F', '1908'],
+      ['Achille', 'M', '1875'],
+      ['Timéo', 'M', '1878'],
+      ['Gaétan', 'M', '1900'],
+      ['Marius', 'M', '1898'],
+      ['Noé', 'M', '1930'],
+    ] as const)
+      a.pers(p, s, n);
+    a.union('Anselme', 'Perrine', true);
+    for (const e of ['Ombeline', 'Blanche']) a.enfant(e, ['Anselme', 'Perrine']);
+    a.d = ajouterFrereSansParent(a.d, a.id.Octave, a.id.Anselme);
+    for (const e of ['Marius', 'Gaétan']) a.enfant(e, ['Achille']);
+    a.d = ajouterFrereSansParent(a.d, a.id.Timéo, a.id.Achille);
+    a.union('Gaétan', 'Ombeline', true);
+    a.enfant('Noé', ['Gaétan', 'Ombeline']);
+    const disp = disposerArbre(a.d, a.id.Noé);
+    verifierInvariants(a.d, disp, a.id.Noé);
+    expect(fratriesDecentrees(disp)).toEqual([]);
   });
 });

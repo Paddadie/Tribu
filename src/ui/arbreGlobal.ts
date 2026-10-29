@@ -164,7 +164,7 @@ class Carte {
 
     const noeuds = disp.places.map((pl) => {
       const c = this.centres.get(pl.personne.id)!;
-      const n = noeud(pl.personne, moi.id, c.x, c.y, R, { annee: true, naissance: true, larg: LARG });
+      const n = noeud(pl.personne, moi.id, c.x, c.y, R, { annee: true, naissance: pl.naissance, larg: LARG });
       n.dataset.id = pl.personne.id;
       n.setAttribute('draggable', 'false');
       if (pl.personne.id === moi.id) n.classList.add('moi');

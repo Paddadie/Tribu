@@ -28,7 +28,7 @@ interface OptionsNoeud {
   annee?: boolean;
   /** Case « + Parent » : lien vers l'ajout d'un parent à cette personne. */
   manque?: string;
-  /** « née Kervadec » sous le nom quand le nom de naissance diffère (arbre principal, V4 point 17). */
+  /** « née Kervadec » sous le nom quand le nom de naissance diffère (arbre principal : seule de sa famille, `PlaceArbre.naissance`). */
   naissance?: boolean;
 }
 

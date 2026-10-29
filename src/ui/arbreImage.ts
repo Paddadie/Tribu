@@ -133,6 +133,7 @@ function dessinerNoeud(
   couleur: string | undefined,
   moi: boolean,
   anneau: string | undefined,
+  avecNaissance: boolean,
 ): void {
   const decede = estDecede(p);
   const sansNom = estParentSansNom(p);
@@ -177,7 +178,7 @@ function dessinerNoeud(
     lignes.forEach((l, i) => ctx.fillText(l, x, y + R + 8 + i * 16));
     // « née X » puis les années sous le nom : la place existe déjà (SOUS_NOM la réserve, comme à l'écran).
     let bas = y + R + 8 + lignes.length * 16 + 1;
-    const naissance = mentionNaissance(p);
+    const naissance = avecNaissance ? mentionNaissance(p) : undefined;
     ctx.fillStyle = COULEURS.secondaire;
     if (naissance) {
       ctx.font = `italic 11px ${POLICE}`;
@@ -277,7 +278,7 @@ export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition,
     const k = pl.lignee !== undefined ? pl.lignee : anneaux.has(pl.personne.id) ? undefined : couleurFamille(pl.personne, d);
     const couleur =
       pl.lignee !== undefined ? pastel(pl.lignee) : anneaux.has(pl.personne.id) ? anneaux.get(pl.personne.id) : k !== undefined ? pastel(k) : undefined;
-    dessinerNoeud(ctx, pl.personne, c.x, c.y, couleur, pl.personne.id === moi.id, anneaux.get(pl.personne.id));
+    dessinerNoeud(ctx, pl.personne, c.x, c.y, couleur, pl.personne.id === moi.id, anneaux.get(pl.personne.id), pl.naissance === true);
   }
 }
 
