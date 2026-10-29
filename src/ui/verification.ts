@@ -5,9 +5,9 @@ import { verifier } from '../modele/verification';
 import type { Personne } from '../modele/types';
 import { nomComplet } from '../modele/liste';
 import { h, icone } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees } from './etat';
 import { contenuLigne } from './lignePersonne';
-import { lienRetour } from './navigation';
 
 const ligne = (p: Personne, detail?: string) =>
   h('a', { class: 'ligne', href: `#/personne/${p.id}` }, ...contenuLigne(p, nomComplet(p), detail), icone('chevron', 18));
@@ -26,12 +26,7 @@ export function ecranVerification(): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour('#/reglages', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, 'Vérifier mes données'),
-    ),
+    barreEcran('#/reglages', 'Vérifier mes données'),
     h(
       'div',
       { class: 'contenu' },

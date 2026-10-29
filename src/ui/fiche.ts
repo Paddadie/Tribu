@@ -43,9 +43,10 @@ import { aDuMonde, familleProche } from '../modele/familleProche';
 import { dessinChemin, dessinFoyer } from './arbre';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
+import { boutonRetour } from './ecran';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { avatarPersonne, contenuLigne } from './lignePersonne';
-import { lienRetour, remplacer } from './navigation';
+import { remplacer } from './navigation';
 import { eclairer } from './surbrillance';
 
 /** Ligne touchable vers la fiche d'une personne, avec une étiquette et un crayon vers l'écran de gestion du lien. */
@@ -315,7 +316,7 @@ export function fiche(p: Personne): HTMLElement {
     h(
       'div',
       { class: 'barre barre-fiche' },
-      lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
+      boutonRetour('#/'),
       h(
         'div',
         { class: 'identite' },

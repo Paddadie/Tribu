@@ -11,10 +11,10 @@ import { ficheMoi } from '../modele/reglages';
 import type { Donnees, Personne } from '../modele/types';
 import { noeud } from './arbre';
 import { h, icone, SVG } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
 import { calculerCadres, hautEtiquette, LARG, positions, R, SOUS_NOM, traitsArbre, zoneBulle, type Cadre } from './geometrieArbre';
-import { lienRetour } from './navigation';
 
 const ECHELLE_MIN = 0.2;
 const ECHELLE_MAX = 3;
@@ -100,13 +100,8 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d);
   const loupe = h('button', { type: 'button', class: 'bouton-icone', 'aria-label': 'Chercher une personne' }, icone('recherche', 24));
-  const barre = h(
-    'div',
-    { class: 'barre' },
-    lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
-    h('h1', { class: 'titre-formulaire' }, 'Arbre'),
-    moi && loupe,
-  );
+  const barre = barreEcran('#/', 'Arbre');
+  if (moi) barre.append(loupe);
   if (!moi) {
     return h(
       'div',

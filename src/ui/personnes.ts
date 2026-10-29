@@ -9,9 +9,9 @@ import { personnesListees } from '../modele/modele';
 import { ficheMoi } from '../modele/reglages';
 import { accueilVide } from './accueil';
 import { h, icone } from './dom';
+import { boutonRetour } from './ecran';
 import { lireDonnees, lireReglages } from './etat';
 import { contenuLigne } from './lignePersonne';
-import { lienRetour } from './navigation';
 
 // Le filtre survit à l'aller-retour liste → fiche → liste.
 let filtre = '';
@@ -100,12 +100,7 @@ export function ecranPersonnes(): HTMLElement {
     h(
       'div',
       { class: 'entete-ligne' },
-      h(
-        'div',
-        { class: 'entete-gauche' },
-        lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
-        h('h1', {}, 'Toutes les fiches'),
-      ),
+      h('div', { class: 'entete-gauche' }, boutonRetour('#/'), h('h1', {}, 'Toutes les fiches')),
       // Sans personne, l'écran vide propose déjà d'ajouter la première.
       avecAjout && h('a', { class: 'bouton-nouvelle', href: '#/nouveau' }, icone('plus', 20), 'Nouvelle fiche'),
     );

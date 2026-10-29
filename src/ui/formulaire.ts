@@ -8,7 +8,8 @@ import { creerPersonne, definirMariageParents, modifierPersonne, personnesVisibl
 import type { Personne } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
 import { accepterHomonyme, champsIdentite } from './champsPersonne';
-import { h, icone } from './dom';
+import { h } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, modifierDonnees } from './etat';
 import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
 
@@ -75,12 +76,7 @@ export function formulaire(existante: Personne | undefined, saisie = ''): HTMLEl
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, existante ? `Modifier ${existante.prenom || existante.nom}`.trim() : 'Nouvelle personne'),
-    ),
+    barreEcran(retour, existante ? `Modifier ${existante.prenom || existante.nom}`.trim() : 'Nouvelle personne', 'Annuler'),
     h(
       'form',
       { class: 'contenu', onsubmit: enregistrer, novalidate: true },

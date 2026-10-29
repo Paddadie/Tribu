@@ -7,8 +7,9 @@ import { unirParents } from '../modele/modele';
 import { familleDuInconnu, remplacerParent } from '../modele/parentSansNom';
 import { suggestionsParentInconnu } from '../modele/saisie';
 import type { Donnees } from '../modele/types';
-import { h, icone } from './dom';
-import { apresAjout, garderSaisie, lienRetour } from './navigation';
+import { h } from './dom';
+import { barreEcran } from './ecran';
+import { apresAjout, garderSaisie } from './navigation';
 import { selecteurPersonne, type Selecteur } from './selecteurPersonne';
 import { choixUnionParents } from './unionParents';
 
@@ -49,12 +50,7 @@ export function quiParent(idInconnu: string, d: Donnees): HTMLElement | undefine
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, 'Qui est ce parent ?'),
-    ),
+    barreEcran(retour, 'Qui est ce parent ?', 'Annuler'),
     h(
       'div',
       { class: 'contenu' },

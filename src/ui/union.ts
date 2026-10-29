@@ -20,10 +20,11 @@ import type { Personne, Union } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
 import { champDate } from './champsPersonne';
 import { confirmer } from './confirmer';
-import { h, icone } from './dom';
+import { h } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, modifierDonnees } from './etat';
 import { signaler } from './surbrillance';
-import { lienRetour, remplacer, revenir } from './navigation';
+import { remplacer, revenir } from './navigation';
 import { champLieuUnion, choixNomApres, defautNomApres, type Membre } from './nomApresMariage';
 
 /**
@@ -136,12 +137,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, separee ? 'Ex-conjoint' : 'Union'),
-    ),
+    barreEcran(retour, separee ? 'Ex-conjoint' : 'Union', 'Annuler'),
     h(
       'div',
       { class: 'contenu' },

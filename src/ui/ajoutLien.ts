@@ -13,9 +13,10 @@ import { accorder, avecDe, enumerer, nomComplet, prenomOuNom } from '../modele/l
 import { ajouterFiliations, ajouterFrereSansParent, fratriePresumee, unirParents } from '../modele/modele';
 import { autresParents, nomsEnfant, nomsFratrie, nomsParent, suggestions } from '../modele/saisie';
 import type { Donnees, Personne, TypeFiliation } from '../modele/types';
-import { h, icone } from './dom';
+import { h } from './dom';
+import { barreEcran } from './ecran';
 import { avatarPersonne } from './lignePersonne';
-import { apresAjout, garderSaisie, lienRetour } from './navigation';
+import { apresAjout, garderSaisie } from './navigation';
 import { selecteurPersonne, type Selecteur } from './selecteurPersonne';
 import { choixUnionParents } from './unionParents';
 
@@ -195,12 +196,7 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, textes.titre),
-    ),
+    barreEcran(retour, textes.titre, 'Annuler'),
     h(
       'div',
       { class: 'contenu' },

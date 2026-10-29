@@ -8,8 +8,9 @@ import { ajouterAuGroupe, creerGroupe, groupesDe } from '../modele/modele';
 import { ficheMoi } from '../modele/reglages';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { h, icone } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
-import { garderSaisie, lienRetour, revenir } from './navigation';
+import { garderSaisie, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
 import { signaler } from './surbrillance';
 
@@ -110,12 +111,7 @@ export function ajoutAmi(p: Personne): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, `Ami ${avecDe(prenomOuNom(p))}`),
-    ),
+    barreEcran(retour, `Ami ${avecDe(prenomOuNom(p))}`, 'Annuler'),
     h(
       'div',
       { class: 'contenu' },

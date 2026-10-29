@@ -4,8 +4,8 @@
 import { detailEvenement, evenementsAVenir, jourCourt, libelleAnnees, nomEvenement, type Evenement, type GenreEvenement } from '../modele/evenements';
 import { majuscule, MOIS } from '../modele/liste';
 import { h, icone } from './dom';
+import { boutonRetour } from './ecran';
 import { lireDonnees, lireReglages } from './etat';
-import { lienRetour } from './navigation';
 
 type Filtre = 'tout' | GenreEvenement;
 
@@ -84,11 +84,7 @@ export function ecranAgenda(sansFetes = false): HTMLElement {
     h(
       'header',
       { class: 'entete-accueil' },
-      h(
-        'div',
-        { class: 'entete-ligne' },
-        h('div', { class: 'entete-gauche' }, lienRetour('#/', { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)), h('h1', {}, 'Agenda')),
-      ),
+      h('div', { class: 'entete-ligne' }, h('div', { class: 'entete-gauche' }, boutonRetour('#/'), h('h1', {}, 'Agenda'))),
       h('div', { class: 'puces', role: 'group', 'aria-label': 'Filtrer' }, ...puces),
     ),
     h('div', { class: 'contenu' }, zone, h('a', { class: 'lien-ics', href: '#/reglages' }, icone('agenda'), 'Ajouter à l’agenda du téléphone')),

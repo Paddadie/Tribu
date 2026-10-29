@@ -9,22 +9,14 @@ import type { Donnees, GroupeAmis, Personne } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { contenuLigne } from './lignePersonne';
-import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
+import { garderSaisie, remplacer, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
 import { pluriel } from './import';
 
 const membresDe = (d: Donnees, g: GroupeAmis): Personne[] => d.personnes.filter((p) => g.membres.includes(p.id)).sort(comparateur(lireReglages().tri));
-
-function barre(retour: string, titre: string): HTMLElement {
-  return h(
-    'div',
-    { class: 'barre' },
-    lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
-    h('h1', { class: 'titre-formulaire' }, titre),
-  );
-}
 
 /** Liste des groupes, avec « Nouveau groupe ». */
 export function ecranGroupes(): HTMLElement {
@@ -42,7 +34,7 @@ export function ecranGroupes(): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    barre('#/reglages', 'Groupes d’amis'),
+    barreEcran('#/reglages', 'Groupes d’amis'),
     h(
       'div',
       { class: 'contenu' },
@@ -133,7 +125,7 @@ export function ecranNouveauGroupe(): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    barre('#/groupes', 'Nouveau groupe'),
+    barreEcran('#/groupes', 'Nouveau groupe'),
     h(
       'div',
       { class: 'contenu' },
@@ -206,7 +198,7 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    barre(retour, nomGroupe(d, g)),
+    barreEcran(retour, nomGroupe(d, g)),
     h(
       'div',
       { class: 'contenu' },
@@ -257,7 +249,7 @@ export function ecranAjoutMembre(g: GroupeAmis): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    barre(retour, `Ajouter à « ${nomGroupe(d, g)} »`),
+    barreEcran(retour, `Ajouter à « ${nomGroupe(d, g)} »`),
     h('div', { class: 'contenu' }, selecteur.onglets, selecteur.zone, selecteur.erreur, selecteur.valider),
   );
 }

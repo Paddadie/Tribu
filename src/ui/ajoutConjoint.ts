@@ -8,10 +8,11 @@ import { appliquerNomApres } from '../modele/nomApres';
 import { nomsConjointSelonEnfants, suggestions } from '../modele/saisie';
 import type { Personne } from '../modele/types';
 import { champDate } from './champsPersonne';
-import { h, icone } from './dom';
+import { h } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees } from './etat';
 import { avatarPersonne } from './lignePersonne';
-import { apresAjout, garderSaisie, lienRetour } from './navigation';
+import { apresAjout, garderSaisie } from './navigation';
 import { champLieuUnion, choixNomApres, defautNomApres, type Membre } from './nomApresMariage';
 import { selecteurPersonne, type Selecteur } from './selecteurPersonne';
 
@@ -91,12 +92,7 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, `${ex ? 'Ex' : 'Conjoint'} ${avecDe(prenomOuNom(p))}`),
-    ),
+    barreEcran(retour, `${ex ? 'Ex' : 'Conjoint'} ${avecDe(prenomOuNom(p))}`, 'Annuler'),
     h(
       'div',
       { class: 'contenu' },

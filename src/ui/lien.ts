@@ -5,10 +5,11 @@ import { nomComplet } from '../modele/liste';
 import { modifierFiliation, supprimerFiliation } from '../modele/modele';
 import type { Personne, TypeFiliation } from '../modele/types';
 import { changerAvecAnnulation } from './annulation';
-import { h, icone } from './dom';
+import { h } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, modifierDonnees } from './etat';
 import { signaler } from './surbrillance';
-import { lienRetour, remplacer, revenir } from './navigation';
+import { remplacer, revenir } from './navigation';
 
 export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
   const retour = `#/personne/${depuis.id}`;
@@ -60,12 +61,7 @@ export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, 'Lien parent-enfant'),
-    ),
+    barreEcran(retour, 'Lien parent-enfant', 'Annuler'),
     h(
       'div',
       { class: 'contenu' },

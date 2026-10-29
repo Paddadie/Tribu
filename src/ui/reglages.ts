@@ -14,10 +14,11 @@ import { choisir } from './choisir';
 import { ouvrirChoixMoi } from './choixMoi';
 import { confirmer } from './confirmer';
 import { h, icone } from './dom';
+import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages, modifierReglages } from './etat';
 import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
-import { lienRetour, remplacer } from './navigation';
+import { remplacer } from './navigation';
 import { arbrePng, dimensionsArbre, NOM_FICHIER_ARBRE } from './arbreImage';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
@@ -230,12 +231,7 @@ export function ecranReglages(onglet?: string): HTMLElement {
   return h(
     'div',
     { class: 'ecran' },
-    h(
-      'div',
-      { class: 'barre' },
-      lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, 'Réglages'),
-    ),
+    barreEcran(retour, 'Réglages'),
     h(
       'div',
       { class: 'contenu' },
