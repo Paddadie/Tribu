@@ -169,7 +169,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
       h(
         'fieldset',
         { class: 'champ' },
-        h('legend', {}, 'Date de naissance (le mois seul n’est pas accepté)'),
+        h('legend', {}, 'Date de naissance'),
         naissance.groupe,
       ),
       h('div', { class: 'champ' }, h('label', { for: 'lieu-naissance' }, 'Lieu de naissance'), lieuNaissance, lieux),
