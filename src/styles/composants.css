@@ -1,0 +1,281 @@
+/* ——— Éléments partagés : lignes de lien et d’union, sections repliables, sélection, interrupteurs, feuille du bas ——— */
+
+/* ——— Conjoint et union ——— */
+
+.ligne-union {
+  padding-right: 4px;
+}
+
+/* Crayon d'un lien : action secondaire, en gris ; la couleur va au contenu. */
+.ligne-union > .bouton-icone {
+  color: var(--secondaire);
+}
+
+/* Section repliable (famille élargie nombreuse) : le titre ouvre et ferme. */
+.repli > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.repli > summary::-webkit-details-marker {
+  display: none;
+}
+
+.repli > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-right: 2px solid var(--secondaire);
+  border-bottom: 2px solid var(--secondaire);
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+}
+
+.repli[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.ligne-lien {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Fiche : un bloc par groupe d'amis (nom qui ouvre le groupe, croix pour le quitter, puis les autres membres). */
+.groupe-amis + .groupe-amis {
+  border-top: 1px solid var(--bord);
+}
+
+.groupe-amis-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 0 16px;
+}
+
+.groupe-amis-nom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  color: var(--accent-texte);
+  text-decoration: none;
+}
+
+.etiquette {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: var(--rayon-s);
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t1);
+  font-weight: var(--gras);
+}
+
+.zone-conjoint {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.champ-filtre-forme {
+  margin: 0;
+}
+
+.ligne-choix {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ligne-choix:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Deux styles de sélection : « clair » (choix et lignes de liste, comme .choix) et « plein » (onglets, puces de filtre). */
+.ligne-choix.choisie {
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+/* Coche de la personne choisie, avec un léger rebond à l'apparition. */
+.ligne-choix.choisie::after {
+  content: '';
+  flex-shrink: 0;
+  width: 16px;
+  height: 8px;
+  margin-left: auto;
+  border-left: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  transform: translateY(-2px) rotate(-45deg);
+  animation: coche 200ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes coche {
+  from {
+    transform: translateY(-2px) rotate(-45deg) scale(0);
+  }
+}
+
+.interrupteur {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+/* Dans un bloc de réglages : sans carte propre, ni marge en plus. */
+.bloc-reglages .interrupteur {
+  display: flex;
+  min-height: 0;
+  padding: 0;
+}
+
+.bascule {
+  appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 50px;
+  height: 30px;
+  margin: 0;
+  border-radius: var(--rayon-m);
+  background: var(--bord-champ);
+  cursor: pointer;
+}
+
+.bascule::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+
+.bascule:checked {
+  background: var(--accent);
+}
+
+.bascule:checked::after {
+  left: 23px;
+}
+
+.bascule:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Ligne « Décédé » du formulaire : intitulé de champ, petit interrupteur à droite. */
+.champ .ligne-deces {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.ligne-deces .bascule {
+  width: 40px;
+  height: 24px;
+  border-radius: var(--rayon-s);
+}
+
+.ligne-deces .bascule::after {
+  width: 18px;
+  height: 18px;
+}
+
+.ligne-deces .bascule:checked::after {
+  left: 19px;
+}
+
+.resume-union {
+  font-size: var(--t3);
+  font-weight: var(--gras);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* ——— Parents, enfants et feuille « Ajouter un proche » ——— */
+
+.etiquette-adoptif {
+  background: transparent;
+  border: 1px solid var(--bord-champ);
+  color: var(--secondaire);
+}
+
+.feuille {
+  position: fixed;
+  inset: auto 0 0;
+  width: min(600px, 100%);
+  max-width: none;
+  margin: 0 auto;
+  padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: var(--rayon-l) var(--rayon-l) 0 0;
+  background: var(--carte);
+  color: var(--encre);
+  font: inherit;
+}
+
+.feuille[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feuille::backdrop {
+  background: var(--voile);
+}
+
+.feuille-titre {
+  padding: 4px 4px 2px;
+  font-size: var(--t4);
+  font-weight: var(--gras);
+  letter-spacing: -0.01em;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 60px;
+  padding: 8px 16px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-m);
+}
+
+.option.inactive {
+  opacity: 0.5;
+}
+
+.pastille {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

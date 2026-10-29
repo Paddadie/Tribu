@@ -1,0 +1,79 @@
+/* ——— Bandeau temporaire (« Annuler ») ——— */
+
+.bandeau {
+  position: fixed;
+  z-index: 2;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  max-width: 568px;
+  margin: 0 auto;
+  min-height: 56px;
+  padding: 8px 8px 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--rayon-m);
+  background: var(--encre);
+  color: var(--fond);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  box-shadow: 0 6px 16px var(--ombre-bouton);
+}
+
+.bandeau-action {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--rayon-s);
+  background: transparent;
+  font: inherit;
+  color: var(--accent-clair);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* ——— Données illisibles ——— */
+
+.illisible {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 56px 24px 28px;
+}
+
+.pictogramme {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--erreur-fond);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illisible h1 {
+  font-size: var(--t4);
+  font-weight: var(--gras);
+  letter-spacing: -0.02em;
+}
+
+.illisible > p:not(.version) {
+  font-size: var(--t3);
+  line-height: 1.45;
+}
+
+.illisible-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.illisible .version {
+  padding: 0;
+}

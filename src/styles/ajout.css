@@ -1,0 +1,156 @@
+/* ——— Écrans d'ajout : cases, nom proposé, suggestions ——— */
+
+.champ .case,
+.case {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 16px;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.case + .case {
+  border-top: 1px solid var(--bord);
+}
+
+.boite {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  /* Case ronde dessinée à la main : la coche apparaît avec un léger rebond (ANIM-04). */
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--bord-champ);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.boite::after {
+  content: '';
+  width: 11px;
+  height: 6px;
+  border-left: 2.5px solid var(--sur-accent);
+  border-bottom: 2.5px solid var(--sur-accent);
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.boite:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.boite:checked::after {
+  transform: translateY(-1px) rotate(-45deg) scale(1);
+}
+
+.aide {
+  padding: 0 4px;
+  font-size: var(--t2);
+  color: var(--secondaire);
+}
+
+.bouton-nom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  color: var(--accent-texte);
+  cursor: pointer;
+}
+
+.bouton-nom[hidden] {
+  display: none;
+}
+
+/* Nom après le mariage : options à cases rondes, nom composé déplié sous la sienne. */
+.nom-apres .case[hidden],
+.nom-compose[hidden],
+.avertissement[hidden] {
+  display: none;
+}
+
+.nom-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 14px 56px;
+}
+
+/* Conséquence d'un choix à connaître avant d'enregistrer (union en cours qui passera en « séparés »). */
+.avertissement {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--rayon-s);
+  background: var(--avert-fond);
+  color: var(--avert-texte);
+  font-size: var(--t2);
+}
+
+/* Erreur + bouton de validation des écrans d'ajout : visibles sans défiler la liste. */
+.pied-collant {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 -20px -40px;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--fond) 14px);
+}
+
+.liste-choix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Lien avec « Moi » sous le nom, sur la fiche. */
+.lien-moi {
+  padding: 4px 16px;
+  border-radius: var(--rayon-m);
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-size: var(--t2);
+  font-weight: var(--gras);
+}
+
+/* Section MOI des réglages et feuille de choix de ma fiche. */
+.action-ligne {
+  flex-shrink: 0;
+  font-size: var(--t3);
+  font-weight: var(--gras);
+  color: var(--accent);
+}
+
+.avatar-vide {
+  background: transparent;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+}
+
+.aide-section {
+  margin: 8px 4px 0;
+}
+
+.feuille-liste {
+  max-height: 45dvh;
+  overflow-y: auto;
+}

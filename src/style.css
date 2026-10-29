@@ -2,6 +2,11 @@
 @import './styles/base.css';
 @import './styles/accueil.css';
 @import './styles/fiche.css';
+@import './styles/reglages.css';
+@import './styles/messages.css';
+@import './styles/composants.css';
+@import './styles/ajout.css';
+@import './styles/dessins.css';
 @import './styles/arbre.css';
 @import './styles/etats.css';
 @import './styles/animations.css';

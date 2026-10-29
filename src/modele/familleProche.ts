@@ -158,7 +158,7 @@ const RG = 26;
 /** Largeur moyenne d'un caractère du nom (12 px demi-gras), estimée large ; × 14/12 pour la personne. */
 export const CHASSE_NOM = 6.6;
 const CHASSE_AN = 7.6;
-/** Un mot plus long que la case l'élargit jusque-là (fiche.css, `.noeud .nom`). */
+/** Un mot plus long que la case l'élargit jusque-là (dessins.css, `.noeud .nom`). */
 const NOM_MAX = 104;
 /** Réserve de largeur par couloir quand une rangée se replie. */
 const COULOIR = 34;
