@@ -2,6 +2,7 @@
 // « Qui est ce parent ? ») : en couple, mariés ou séparés. « Séparés » d'office si l'un des deux est déjà en couple ;
 // sinon « En couple ». Un avertissement nomme les unions en cours qui passeraient en « séparés » (`unirParents`).
 
+import { prenomOuNom } from '../modele/liste';
 import { enCouple, unionEntre, unionsQuiSeSepareraient, type ChoixUnion } from '../modele/modele';
 import type { Donnees, Personne } from '../modele/types';
 import { h } from './dom';
@@ -13,8 +14,6 @@ export interface ChoixUnionParents {
   /** Choix coché ; `undefined` si les deux sont déjà unis (aucune union à ajouter). */
   choix: () => ChoixUnion | undefined;
 }
-
-const appel = (p: Personne) => p.prenom || p.nom;
 
 /** `autre()` : id du second parent, ou un id absent des données pour une personne pas encore créée. */
 export function choixUnionParents(d: Donnees, connu: Personne, autre: () => string): ChoixUnionParents {
@@ -37,14 +36,14 @@ export function choixUnionParents(d: Donnees, connu: Personne, autre: () => stri
   const noeud = h(
     'fieldset',
     { class: 'champ' },
-    h('legend', {}, `Union avec ${appel(connu)}`),
+    h('legend', {}, `Union avec ${prenomOuNom(connu)}`),
     h('div', { class: 'choix-groupe' }, radios.couple.noeud, radios.marie.noeud, radios.separee.noeud),
     avertissement,
   );
 
   const nom = (id: string) => {
     const x = d.personnes.find((q) => q.id === id);
-    return x ? appel(x) : '';
+    return x ? prenomOuNom(x) : '';
   };
 
   const maj = () => {

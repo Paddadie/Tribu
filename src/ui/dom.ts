@@ -29,6 +29,9 @@ export function h<K extends keyof HTMLElementTagNameMap>(balise: K, attributs: A
   return el;
 }
 
+/** Espace de noms des éléments SVG (`createElementNS`). */
+export const SVG = 'http://www.w3.org/2000/svg';
+
 /** Icônes (tracés SVG statiques, couleur héritée du texte). */
 const TRACES = {
   recherche: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
@@ -61,7 +64,7 @@ const TRACES = {
 } as const;
 
 export function icone(nom: keyof typeof TRACES, taille = 20): SVGSVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const svg = document.createElementNS(SVG, 'svg');
   svg.setAttribute('width', String(taille));
   svg.setAttribute('height', String(taille));
   svg.setAttribute('viewBox', '0 0 24 24');

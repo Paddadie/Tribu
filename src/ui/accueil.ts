@@ -15,7 +15,7 @@ import {
   type Evenement,
   type FeteDuJour,
 } from '../modele/evenements';
-import { comparateur, filtrerParNom, libelleDeces, MOIS, nomComplet } from '../modele/liste';
+import { comparateur, filtrerParNom, libelleDeces, majuscule, MOIS, nomComplet } from '../modele/liste';
 import { estDecede, personnesListees, personnesVisibles } from '../modele/modele';
 import { etiquette, lienAvecMoi } from '../modele/parente';
 import { ficheMoi } from '../modele/reglages';
@@ -44,7 +44,6 @@ const HORIZON = 30;
 const HORIZON_FETES = 7;
 const MAX_RESULTATS = 30;
 
-const majuscule = (t: string) => t.charAt(0).toLocaleUpperCase('fr') + t.slice(1);
 const minuscule = (t: string) => t.charAt(0).toLocaleLowerCase('fr') + t.slice(1);
 const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? plusieurs : un}`;
 

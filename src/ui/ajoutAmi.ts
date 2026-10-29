@@ -3,7 +3,7 @@
 // - Sinon : en haut les groupes à rejoindre, en dessous les personnes pour former un nouveau groupe.
 
 import { nomGroupe, raisonGroupe } from '../modele/deductions';
-import { avecDe } from '../modele/liste';
+import { avecDe, prenomOuNom } from '../modele/liste';
 import { ajouterAuGroupe, creerGroupe, groupesDe } from '../modele/modele';
 import { ficheMoi } from '../modele/reglages';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
@@ -13,11 +13,9 @@ import { garderSaisie, lienRetour, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
 import { signaler } from './surbrillance';
 
-const appel = (p: Personne) => p.prenom || p.nom;
-
 /** « Karim, Mathis, Julie » : les membres d'un groupe, sans la personne éventuelle `sauf`. */
 function resume(d: Donnees, g: GroupeAmis, sauf?: string): string {
-  const noms = d.personnes.filter((p) => g.membres.includes(p.id) && p.id !== sauf).map(appel);
+  const noms = d.personnes.filter((p) => g.membres.includes(p.id) && p.id !== sauf).map(prenomOuNom);
   return noms.length > 3 ? `${noms.slice(0, 3).join(', ')}… (${noms.length})` : noms.join(', ');
 }
 
@@ -95,7 +93,7 @@ export function ajoutAmi(p: Personne): HTMLElement {
     ? h(
         'p',
         { class: 'secondaire' },
-        `${appel(p)} est dans « ${nomGroupe(depart, groupe)} » (${resume(depart, groupe, p.id)}). Les amis ajoutés rejoignent ce groupe.`,
+        `${prenomOuNom(p)} est dans « ${nomGroupe(depart, groupe)} » (${resume(depart, groupe, p.id)}). Les amis ajoutés rejoignent ce groupe.`,
       )
     : null;
 
@@ -106,7 +104,7 @@ export function ajoutAmi(p: Personne): HTMLElement {
         { class: 'champ' },
         h('label', { for: 'nom-groupe' }, 'Nom du nouveau groupe'),
         nomChamp,
-        moi ? h('p', { class: 'secondaire' }, `${appel(moi)} fera aussi partie du groupe, comme de tous tes groupes.`) : null,
+        moi ? h('p', { class: 'secondaire' }, `${prenomOuNom(moi)} fera aussi partie du groupe, comme de tous tes groupes.`) : null,
       );
 
   return h(
@@ -116,7 +114,7 @@ export function ajoutAmi(p: Personne): HTMLElement {
       'div',
       { class: 'barre' },
       lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, `Ami ${avecDe(appel(p))}`),
+      h('h1', { class: 'titre-formulaire' }, `Ami ${avecDe(prenomOuNom(p))}`),
     ),
     h(
       'div',

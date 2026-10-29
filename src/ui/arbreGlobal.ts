@@ -10,13 +10,12 @@ import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Donnees, Personne } from '../modele/types';
 import { noeud } from './arbre';
-import { h, icone } from './dom';
+import { h, icone, SVG } from './dom';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
 import { calculerCadres, hautEtiquette, LARG, positions, R, SOUS_NOM, traitsArbre, zoneBulle, type Cadre } from './geometrieArbre';
 import { lienRetour } from './navigation';
 
-const SVG = 'http://www.w3.org/2000/svg';
 const ECHELLE_MIN = 0.2;
 const ECHELLE_MAX = 3;
 /** En dessous de cette échelle, les noms s'effacent : il ne reste que les pastilles. */

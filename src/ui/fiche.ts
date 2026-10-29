@@ -29,7 +29,9 @@ import {
   libelleMarie,
   libelleNaissance,
   libelleUnion,
+  majuscule,
   nomComplet,
+  prenomOuNom,
 } from '../modele/liste';
 import { aDesLiens, enCouple, estDecede, groupesDe, retirerDuGroupe, supprimerPersonne } from '../modele/modele';
 import { etiquette as etiquetteMoi, libelleRelation, optionsLien } from '../modele/parente';
@@ -102,8 +104,6 @@ function sectionRepliable(titre: string, ...lignes: HTMLElement[]): HTMLElement 
   return h('details', { class: 'repli' }, h('summary', { class: 'titre-section' }, `${titre} (${lignes.length})`), h('div', { class: 'carte' }, ...lignes));
 }
 
-const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
-
 /** Lien de la fiche avec ma fiche, sans possessif (« Cousine », « Toi », « Compagne de Karim ») ; rien si « Moi » n'est pas choisi ou sans lien nommé. */
 function lienMoi(p: Personne): string | undefined {
   const moi = ficheMoi(lireReglages(), lireDonnees());
@@ -134,7 +134,7 @@ function sectionAmis(p: Personne, erreur: HTMLElement): HTMLElement | null {
   const quitter = (g: GroupeAmis) => {
     try {
       const nom = nomGroupe(d, g);
-      changerAvecAnnulation((x) => retirerDuGroupe(x, g.id, p.id), `${p.prenom || p.nom} a quitté « ${nom} ».`, 'Groupe rétabli.');
+      changerAvecAnnulation((x) => retirerDuGroupe(x, g.id, p.id), `${prenomOuNom(p)} a quitté « ${nom} ».`, 'Groupe rétabli.');
     } catch (e) {
       erreur.textContent = e instanceof Error ? e.message : 'Retrait impossible';
       erreur.hidden = false;
@@ -266,7 +266,7 @@ function ouvrirChoixProche(p: Personne): void {
   const dialogue = h(
     'dialog',
     { class: 'feuille', 'aria-label': 'Ajouter un proche', oncancel: fermer },
-    h('h2', { class: 'feuille-titre' }, `Qui ajouter pour ${p.prenom || p.nom} ?`),
+    h('h2', { class: 'feuille-titre' }, `Qui ajouter pour ${prenomOuNom(p)} ?`),
     option('Un conjoint', aConjoint ? 'Un seul conjoint à la fois' : 'Déjà dans la liste ou nouveau', 'coeur', `#/conjoint/${p.id}`, aConjoint),
     option('Un ex', 'Une union terminée, même en couple aujourd’hui', 'coeurBrise', `#/ex/${p.id}`),
     option('Un parent', 'Biologique ou adoptif', 'haut', `#/parent/${p.id}`),

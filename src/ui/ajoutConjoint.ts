@@ -2,7 +2,7 @@
 // Une personne n'a qu'un conjoint à la fois ; les personnes déjà en couple ne sont pas choisissables.
 // Mode « ex » : union déjà terminée, ajoutable même si l'un ou l'autre est en couple.
 
-import { avecDe, nomComplet } from '../modele/liste';
+import { avecDe, nomComplet, prenomOuNom } from '../modele/liste';
 import { ajouterUnion, enCouple, modifierLieuUnion } from '../modele/modele';
 import { appliquerNomApres } from '../modele/nomApres';
 import { nomsConjointSelonEnfants, suggestions } from '../modele/saisie';
@@ -95,7 +95,7 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
       'div',
       { class: 'barre' },
       lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Annuler' }, icone('retour', 26)),
-      h('h1', { class: 'titre-formulaire' }, `${ex ? 'Ex' : 'Conjoint'} ${avecDe(p.prenom || p.nom)}`),
+      h('h1', { class: 'titre-formulaire' }, `${ex ? 'Ex' : 'Conjoint'} ${avecDe(prenomOuNom(p))}`),
     ),
     h(
       'div',

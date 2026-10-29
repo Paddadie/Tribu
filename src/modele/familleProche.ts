@@ -6,6 +6,7 @@
 // avec les siens. Unités : pixels ; x, y = centre de l'avatar.
 
 import { conjoint, fratrie, liensEnfants, liensParents, relation } from './deductions';
+import { prenomOuNom } from './liste';
 import { anneeDe, estDecede, estInconnu } from './modele';
 import { estParentSansNom } from './parentSansNom';
 import type { Donnees, Personne, StatutUnion } from './types';
@@ -208,7 +209,7 @@ function creerNoeud(f: FamilleProche, id: string): NoeudFoyer {
   const ici = id === f.centre;
   const sansNom = estParentSansNom(p);
   const an = sansNom ? '' : annees(p);
-  const nom = sansNom ? '' : id === f.moi ? 'Toi' : p.prenom || p.nom;
+  const nom = sansNom ? '' : id === f.moi ? 'Toi' : prenomOuNom(p);
   const chasse = ici ? (CHASSE_NOM * 14) / 12 : CHASSE_NOM;
   const plusLong = Math.max(0, ...nom.split(/(?<=[-\s])/).map((m) => m.trim().length * chasse));
   const largeur = Math.ceil(Math.max(ici ? BOITE_ICI : BOITE, Math.min(NOM_MAX, plusLong), an.length * CHASSE_AN));

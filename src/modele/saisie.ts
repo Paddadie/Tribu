@@ -2,7 +2,7 @@
 // personnes suggérées en tête des listes de choix. Fonctions pures.
 
 import { conjoint, conjointsDefunts, exConjoints } from './deductions';
-import { accorder, avecDe, comparateur, memeNom } from './liste';
+import { accorder, avecDe, comparateur, memeNom, prenomOuNom } from './liste';
 import { anneeDe, enCouple } from './modele';
 import type { Donnees, Personne, Sexe, Union } from './types';
 
@@ -81,7 +81,7 @@ export function autresParents(d: Donnees, id: string): AutreParent[] {
     const enfant = d.personnes.find((p) => p.id === f.enfant);
     for (const g of d.filiations.filter((x) => x.enfant === f.enfant && x.parent !== id)) {
       const autre = d.personnes.find((p) => p.id === g.parent);
-      if (autre && enfant) ajouter(autre, `${accorder(autre.sexe, 'Père', 'Mère', 'Parent')} ${avecDe(appel(enfant))}`);
+      if (autre && enfant) ajouter(autre, `${accorder(autre.sexe, 'Père', 'Mère', 'Parent')} ${avecDe(prenomOuNom(enfant))}`);
     }
   }
   return resultat;
@@ -97,7 +97,7 @@ export function suggestionsParentInconnu(d: Donnees, parents: Personne[], enfant
   for (const pa of parents) {
     for (const a of autresParents(d, pa.id)) {
       if (exclus.has(a.personne.id) || vues.has(a.personne.id)) continue;
-      const detail = a.union ? `${a.detail.split(' · ')[0]} ${avecDe(appel(pa))}` : a.detail;
+      const detail = a.union ? `${a.detail.split(' · ')[0]} ${avecDe(prenomOuNom(pa))}` : a.detail;
       vues.set(a.personne.id, { personne: a.personne, detail });
     }
   }
@@ -135,8 +135,6 @@ export interface Suggestion {
   detail: string;
 }
 
-const appel = (p: Personne) => p.prenom || p.nom;
-
 /** Au moins un nom en commun, nom actuel ou nom de naissance : un lien de famille possible. */
 const partageNom = (a: Personne, b: Personne) => [a.nom, a.nomNaissance ?? ''].some((x) => [b.nom, b.nomNaissance ?? ''].some((y) => memeNom(x, y)));
 
@@ -160,16 +158,17 @@ export function suggestions(d: Donnees, id: string, role: RoleSuggere): Suggesti
     const miens = parentsDe(id);
     for (const pa of miens) {
       const c = conjoint(d, pa);
-      if (c && !miens.includes(c.personne.id)) proposer(c.personne.id, `Conjoint ${avecDe(appel(personne(pa) as Personne))}`);
+      if (c && !miens.includes(c.personne.id)) proposer(c.personne.id, `Conjoint ${avecDe(prenomOuNom(personne(pa) as Personne))}`);
     }
   } else if (role === 'enfant') {
     const c = conjoint(d, id);
     const miens = enfantsDe(id);
-    if (c) for (const e of enfantsDe(c.personne.id)) if (!miens.includes(e)) proposer(e, `Enfant ${avecDe(appel(c.personne))}`);
-    for (const ex of exConjoints(d, id)) for (const e of enfantsDe(ex.personne.id)) if (!miens.includes(e)) proposer(e, `Enfant ${avecDe(appel(ex.personne))}`);
+    if (c) for (const e of enfantsDe(c.personne.id)) if (!miens.includes(e)) proposer(e, `Enfant ${avecDe(prenomOuNom(c.personne))}`);
+    for (const ex of exConjoints(d, id))
+      for (const e of enfantsDe(ex.personne.id)) if (!miens.includes(e)) proposer(e, `Enfant ${avecDe(prenomOuNom(ex.personne))}`);
   } else if (!enCouple(d, id)) {
     for (const e of enfantsDe(id)) {
-      for (const pa of parentsDe(e)) if (pa !== id && !enCouple(d, pa)) proposer(pa, `Parent ${avecDe(appel(personne(e) as Personne))}`);
+      for (const pa of parentsDe(e)) if (pa !== id && !enCouple(d, pa)) proposer(pa, `Parent ${avecDe(prenomOuNom(personne(e) as Personne))}`);
     }
   }
 

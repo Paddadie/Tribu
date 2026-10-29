@@ -2,7 +2,7 @@
 // Fonctions pures : la date du jour est passée en paramètre.
 
 import { feteDuPrenom, joursNommes, saintsDuCalendrier } from './fetes';
-import { MOIS, nomComplet } from './liste';
+import { majuscule, MOIS, nomComplet } from './liste';
 import { enCouple, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE, personnesListees } from './modele';
 import { libelleAnniversaireUnion } from './noces';
 import type { Donnees, Personne } from './types';
@@ -125,10 +125,6 @@ export function fetesDuJour(aujourdhui: Date, evs: Evenement[] = []): FeteDuJour
     fetes.find((f) => f.nom === e.saint)?.personnes.push(...e.personnes);
   }
   return [...fetes, ...joursNommes(aujourdhui).map((j) => ({ ...j, personnes: [] }))];
-}
-
-function majuscule(texte: string): string {
-  return texte.charAt(0).toLocaleUpperCase('fr') + texte.slice(1);
 }
 
 /** Ligne de type des vignettes : « Anniversaire », « Noces d’étain », « 10 ans ensemble », « Mariage », « Fête », « Décès ». */

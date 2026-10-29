@@ -5,16 +5,14 @@
 import type { Etape } from '../modele/deductions';
 import { annees, disposerFoyer, type FamilleProche, type StyleTrait } from '../modele/familleProche';
 import { estDecede } from '../modele/modele';
-import { mentionNaissance } from '../modele/liste';
+import { mentionNaissance, prenomOuNom } from '../modele/liste';
 import { motsChemin } from '../modele/parente';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
-import { h } from './dom';
+import { h, SVG } from './dom';
 import { LIGNE_EN_PLUS } from './geometrieArbre';
 import { avatarPersonne } from './lignePersonne';
 import { faireApparaitre } from './surbrillance';
-
-const SVG = 'http://www.w3.org/2000/svg';
 
 interface Trait {
   d: string;
@@ -51,7 +49,7 @@ export function noeud(p: Personne | undefined, moi: string | undefined, x: numbe
   const an = o.annee && annees(p);
   const contenu = [
     avatar,
-    sansNom ? undefined : p.id === moi ? h('span', { class: 'nom toi' }, 'Toi') : h('span', { class: 'nom' }, p.prenom || p.nom),
+    sansNom ? undefined : p.id === moi ? h('span', { class: 'nom toi' }, 'Toi') : h('span', { class: 'nom' }, prenomOuNom(p)),
     o.naissance && !sansNom && mentionNaissance(p) && h('span', { class: 'naissance' }, mentionNaissance(p)),
     an && h('span', { class: 'an' }, an),
   ];

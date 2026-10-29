@@ -2,7 +2,7 @@
 // confirmation si une fiche porte déjà ce prénom et ce nom. Modification : annulable par le bandeau.
 // Retour avec une saisie en cours demande confirmation.
 
-import { avecDe, nomComplet } from '../modele/liste';
+import { avecDe, majuscule, nomComplet } from '../modele/liste';
 import { autreParent } from '../modele/deductions';
 import { creerPersonne, definirMariageParents, modifierPersonne, personnesVisibles } from '../modele/modele';
 import type { Personne } from '../modele/types';
@@ -18,7 +18,6 @@ import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
  */
 export function formulaire(existante: Personne | undefined, saisie = ''): HTMLElement {
   const [prenomSaisi = '', ...nomSaisi] = saisie.trim().split(/\s+/);
-  const majuscule = (t: string) => t.charAt(0).toLocaleUpperCase('fr') + t.slice(1);
   const identite = champsIdentite(existante, true, 'M', majuscule(nomSaisi.join(' ')), majuscule(prenomSaisi));
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
 

@@ -9,7 +9,7 @@
 // Les personnes déjà liées ne sont pas choisissables. Après une création, la fiche de la nouvelle personne s'ouvre.
 
 import { fratrie, liensParents } from '../modele/deductions';
-import { accorder, avecDe, enumerer, nomComplet } from '../modele/liste';
+import { accorder, avecDe, enumerer, nomComplet, prenomOuNom } from '../modele/liste';
 import { ajouterFiliations, ajouterFrereSansParent, fratriePresumee, unirParents } from '../modele/modele';
 import { autresParents, nomsEnfant, nomsFratrie, nomsParent, suggestions } from '../modele/saisie';
 import type { Donnees, Personne, TypeFiliation } from '../modele/types';
@@ -26,8 +26,6 @@ const TEXTES = {
   enfant: { titre: 'Ajouter un enfant', valider: 'Ajouter cet enfant', origine: 'Origine de l’enfant' },
   frere: { titre: 'Ajouter un frère ou une sœur', valider: 'Ajouter à la fratrie', origine: 'Origine du frère ou de la sœur' },
 } as const;
-
-const appel = (p: Personne) => p.prenom || p.nom;
 
 /** Case (ou bouton radio) en carte : libellé et précision. */
 function caseACocher(
@@ -88,10 +86,10 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
   );
   const dessinerFreres = () => {
     const presumes = role === 'parent' ? fratriePresumee(d, p.id, type) : [];
-    const seul = parentActuel ? ` · même seul parent connu, ${appel(parentActuel)}` : '';
+    const seul = parentActuel ? ` · même seul parent connu, ${prenomOuNom(parentActuel)}` : '';
     casesFreres = presumes.map((f) => ({
       f,
-      ...caseACocher(nomComplet(f), `${accorder(f.sexe, 'Frère', 'Sœur', 'Frère ou sœur')} ${avecDe(appel(p))}${seul}`, () => undefined),
+      ...caseACocher(nomComplet(f), `${accorder(f.sexe, 'Frère', 'Sœur', 'Frère ou sœur')} ${avecDe(prenomOuNom(p))}${seul}`, () => undefined),
     }));
     carteFreres.replaceChildren(...casesFreres.map((c) => c.noeud));
     blocFreres.hidden = casesFreres.length === 0;
@@ -113,11 +111,11 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
     const estParent = (parent: string, enfant: string) => x.filiations.some((f) => f.parent === parent && f.enfant === enfant);
     if (role === 'parent') return estParent(c.id, p.id) ? 'Déjà parent' : undefined;
     if (role === 'enfant') return estParent(p.id, c.id) ? 'Déjà enfant' : undefined;
-    if (estParent(c.id, p.id)) return `Parent ${avecDe(appel(p))}`;
-    if (estParent(p.id, c.id)) return `Enfant ${avecDe(appel(p))}`;
+    if (estParent(c.id, p.id)) return `Parent ${avecDe(prenomOuNom(p))}`;
+    if (estParent(p.id, c.id)) return `Enfant ${avecDe(prenomOuNom(p))}`;
     if (sansParentConnu && fratrie(x, p.id).freresSoeurs.some((f) => f.id === c.id)) return 'Déjà frère ou sœur';
     const coches = parentsCoches();
-    if (coches.length > 0 && coches.every((pa) => estParent(pa.id, c.id))) return `Déjà enfant ${avecDe(enumerer(coches.map(appel)))}`;
+    if (coches.length > 0 && coches.every((pa) => estParent(pa.id, c.id))) return `Déjà enfant ${avecDe(enumerer(coches.map(prenomOuNom)))}`;
     return undefined;
   };
 

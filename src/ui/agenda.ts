@@ -2,7 +2,7 @@
 // du téléphone (écran Réglages).
 
 import { detailEvenement, evenementsAVenir, jourCourt, libelleAnnees, nomEvenement, type Evenement, type GenreEvenement } from '../modele/evenements';
-import { MOIS } from '../modele/liste';
+import { majuscule, MOIS } from '../modele/liste';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
 import { lienRetour } from './navigation';
@@ -19,8 +19,6 @@ const FILTRES: { filtre: Filtre; libelle: string }[] = [
 
 // Le filtre survit à l'aller-retour agenda → fiche → agenda.
 let filtre: Filtre = 'tout';
-
-const majuscule = (t: string) => t.charAt(0).toLocaleUpperCase('fr') + t.slice(1);
 
 function ligne(e: Evenement): HTMLElement {
   const ans = e.annees ? libelleAnnees(e.annees) : '';

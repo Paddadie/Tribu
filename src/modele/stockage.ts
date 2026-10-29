@@ -1,7 +1,7 @@
 // Persistance dans localStorage (une seule clé, JSON) et export/import de
 // fichier JSON. Le `Storage` est injecté pour pouvoir tester sans navigateur.
 
-import { migrer } from './migration';
+import { estObjet, migrer } from './migration';
 import { conjointEnTrop, donneesVides, estDateSansAnneeValide, estDateValide, MAX_PARENTS_PAR_TYPE } from './modele';
 import type { Donnees, Filiation, Personne, Union } from './types';
 
@@ -12,10 +12,6 @@ export const CLE_SECOURS = 'tribu:secours';
 export const CLE_AVANT_V6 = 'tribu:donnees:v5';
 
 type Magasin = Pick<Storage, 'getItem' | 'setItem'>;
-
-function estObjet(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
 
 /** Vrai si quelqu'un est son propre ancêtre (parcours en profondeur du graphe parent → enfant). */
 function aBoucleDeFiliation(filiations: Filiation[]): boolean {

@@ -2,7 +2,7 @@
 // (nom, membres, ajout d'un membre, suppression). Tous les membres d'un groupe sont amis entre eux.
 
 import { nomGroupe, raisonGroupe } from '../modele/deductions';
-import { comparateur, filtrerParNom, nomListe } from '../modele/liste';
+import { comparateur, filtrerParNom, nomListe, prenomOuNom } from '../modele/liste';
 import { ajouterAuGroupe, creerGroupe, groupesDe, personnesListees, renommerGroupe, retirerDuGroupe, supprimerGroupe } from '../modele/modele';
 import { ficheMoi } from '../modele/reglages';
 import type { Donnees, GroupeAmis, Personne } from '../modele/types';
@@ -13,9 +13,7 @@ import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { contenuLigne } from './lignePersonne';
 import { garderSaisie, lienRetour, remplacer, revenir } from './navigation';
 import { selecteurPersonne } from './selecteurPersonne';
-
-const appel = (p: Personne) => p.prenom || p.nom;
-const pluriel = (n: number) => `${n} personne${n > 1 ? 's' : ''}`;
+import { pluriel } from './import';
 
 const membresDe = (d: Donnees, g: GroupeAmis): Personne[] => d.personnes.filter((p) => g.membres.includes(p.id)).sort(comparateur(lireReglages().tri));
 
@@ -182,7 +180,7 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
       const dernier = g.membres.length <= 2;
       changerAvecAnnulation(
         (x) => retirerDuGroupe(x, g.id, p.id),
-        dernier ? `${appel(p)} a quitté le groupe, qui est supprimé.` : `${appel(p)} a quitté « ${nomGroupe(d, g)} ».`,
+        dernier ? `${prenomOuNom(p)} a quitté le groupe, qui est supprimé.` : `${prenomOuNom(p)} a quitté « ${nomGroupe(d, g)} ».`,
         'Groupe rétabli.',
       );
     } catch (e) {
@@ -229,7 +227,7 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
             h('a', { class: 'ligne-lien', href: `#/personne/${p.id}` }, ...contenuLigne(p)),
             h(
               'button',
-              { type: 'button', class: 'bouton-icone', 'aria-label': `Retirer ${appel(p)} du groupe`, onclick: () => retirer(p) },
+              { type: 'button', class: 'bouton-icone', 'aria-label': `Retirer ${prenomOuNom(p)} du groupe`, onclick: () => retirer(p) },
               icone('croix', 20),
             ),
           ),

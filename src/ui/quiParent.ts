@@ -2,17 +2,15 @@
 // créée ici. Elle devient parent de tous les enfants du « ? » (`remplacerParent`) ; avec un seul parent connu, les
 // deux sont reliés par une union (en couple, mariés ou séparés). La fiche de la personne s'ouvre ensuite.
 
-import { enumerer, nomComplet } from '../modele/liste';
+import { enumerer, nomComplet, prenomOuNom } from '../modele/liste';
 import { unirParents } from '../modele/modele';
 import { familleDuInconnu, remplacerParent } from '../modele/parentSansNom';
 import { suggestionsParentInconnu } from '../modele/saisie';
-import type { Donnees, Personne } from '../modele/types';
+import type { Donnees } from '../modele/types';
 import { h, icone } from './dom';
 import { apresAjout, garderSaisie, lienRetour } from './navigation';
 import { selecteurPersonne, type Selecteur } from './selecteurPersonne';
 import { choixUnionParents } from './unionParents';
-
-const appel = (p: Personne) => p.prenom || p.nom;
 
 /** `undefined` si ce « ? » n'a plus d'enfant (déjà remplacé). */
 export function quiParent(idInconnu: string, d: Donnees): HTMLElement | undefined {
@@ -30,7 +28,7 @@ export function quiParent(idInconnu: string, d: Donnees): HTMLElement | undefine
   selecteur = selecteurPersonne({
     modeInitial: 'existante',
     libelleOrigine: 'Origine du parent',
-    libelleValider: (c) => (c ? `C’est ${appel(c)}` : 'Choisis une personne'),
+    libelleValider: (c) => (c ? `C’est ${prenomOuNom(c)}` : 'Choisis une personne'),
     sexeParDefaut: parents.length === 1 && parents[0].sexe ? (parents[0].sexe === 'F' ? 'M' : 'F') : undefined,
     suggestions: (x) => suggestionsParentInconnu(x, parents, enfants),
     indisponible: (_x, c) => (enfants.some((e) => e.id === c.id) ? 'Enfant de ce parent' : parents.some((pa) => pa.id === c.id) ? 'Déjà parent' : undefined),
@@ -46,7 +44,7 @@ export function quiParent(idInconnu: string, d: Donnees): HTMLElement | undefine
   const choix = selecteur;
   garderSaisie(choix.modifie);
 
-  const deEnfants = enumerer(enfants.map(appel));
+  const deEnfants = enumerer(enfants.map(prenomOuNom));
   const deParents = parents.length > 0 ? [', ', enfants.length > 1 ? 'enfants de ' : 'enfant de ', h('b', {}, enumerer(parents.map(nomComplet)))] : [];
   return h(
     'div',

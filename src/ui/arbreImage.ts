@@ -5,7 +5,7 @@
 import type { Disposition } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { annees } from '../modele/familleProche';
-import { couleurFamille, initiales, mentionNaissance } from '../modele/liste';
+import { couleurFamille, initiales, mentionNaissance, prenomOuNom } from '../modele/liste';
 import { estDecede } from '../modele/modele';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
@@ -173,7 +173,7 @@ function dessinerNoeud(
     ctx.fillStyle = COULEURS.encre;
     ctx.font = `13px ${POLICE}`;
     ctx.textBaseline = 'top';
-    const lignes = lignesNom(ctx, p.prenom || p.nom, 104);
+    const lignes = lignesNom(ctx, prenomOuNom(p), 104);
     lignes.forEach((l, i) => ctx.fillText(l, x, y + R + 8 + i * 16));
     // « née X » puis les années sous le nom : la place existe déjà (SOUS_NOM la réserve, comme à l'écran).
     let bas = y + R + 8 + lignes.length * 16 + 1;

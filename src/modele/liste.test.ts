@@ -20,6 +20,8 @@ import {
   couleursProches,
   mentionNaissance,
   NB_COULEURS,
+  majuscule,
+  prenomOuNom,
 } from './liste';
 import { creerPersonne, donneesVides } from './modele';
 import type { Donnees, Personne } from './types';
@@ -62,6 +64,18 @@ describe('nomComplet et initiales', () => {
     expect(initiales(p('marie', 'girard'))).toBe('MG');
     expect(initiales(p('Élodie', ''))).toBe('É');
     expect(initiales(p('', ''))).toBe('?');
+  });
+  it('appelle par le prénom, ou par le nom à défaut', () => {
+    expect(prenomOuNom(p('Marie', 'Girard'))).toBe('Marie');
+    expect(prenomOuNom(p('', 'Girard'))).toBe('Girard');
+  });
+});
+
+describe('majuscule', () => {
+  it('met une capitale à la première lettre seulement', () => {
+    expect(majuscule('cousine de Marie')).toBe('Cousine de Marie');
+    expect(majuscule('élodie')).toBe('Élodie');
+    expect(majuscule('')).toBe('');
   });
 });
 

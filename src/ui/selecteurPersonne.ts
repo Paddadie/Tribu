@@ -4,7 +4,7 @@
 // bouton de validation et erreur. La création éventuelle et le lien sont enregistrés
 // ensemble, en une seule modification.
 
-import { avecDe, comparateur, filtrerParNom, nomListe } from '../modele/liste';
+import { avecDe, comparateur, filtrerParNom, nomListe, prenomOuNom } from '../modele/liste';
 import { creerPersonne, personnesVisibles } from '../modele/modele';
 import type { NomPropose, Suggestion } from '../modele/saisie';
 import type { Donnees, Personne, Sexe } from '../modele/types';
@@ -67,8 +67,6 @@ export interface Selecteur {
   choisie: () => Personne | undefined;
 }
 
-const appel = (p: Personne) => p.prenom || p.nom;
-
 export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   let mode: Mode = o.modeInitial ?? 'nouvelle';
   /** Personnes existantes cochées (une seule hors choix multiple). */
@@ -95,7 +93,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     }
     const suivant = noms[(rangNom + 1) % noms.length];
     boutonNom.hidden = noms.length < 2;
-    if (suivant) boutonNom.replaceChildren(icone('echange', 16), `Prendre ${suivant.nom}, le nom ${avecDe(appel(suivant.de))}`);
+    if (suivant) boutonNom.replaceChildren(icone('echange', 16), `Prendre ${suivant.nom}, le nom ${avecDe(prenomOuNom(suivant.de))}`);
   };
   boutonNom.addEventListener('click', () => {
     rangNom += 1;

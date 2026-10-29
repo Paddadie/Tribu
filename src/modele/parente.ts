@@ -4,7 +4,7 @@
 
 import { agePersonne } from './age';
 import { amis, chemin, conjoint, exConjoints, liensParents, relation, sontFiances, type Etape, type Relation, type Sang } from './deductions';
-import { accorder, avecDe } from './liste';
+import { accorder, avecDe, majuscule, prenomOuNom } from './liste';
 import type { Donnees, Personne, Sexe } from './types';
 
 /** Âge à partir duquel un partenaire non marié est « compagne » ou « compagnon » plutôt que « copine » ou « copain ». */
@@ -112,9 +112,8 @@ export function libelleRelation(r: Relation, sexe: Sexe | undefined, o?: Options
  */
 export function optionsLien(d: Donnees, r: Relation, personne: Personne, aujourdhui = new Date()): OptionsLien {
   const partenaire = r.type === 'alliance' && r.cote === 'sien' && r.marie === false && collateral(r.base) ? conjoint(d, personne.id)?.personne : undefined;
-  return { jeune: estJeune(personne, aujourdhui), partenaire: partenaire && nomUsuel(partenaire) };
+  return { jeune: estJeune(personne, aujourdhui), partenaire: partenaire && prenomOuNom(partenaire) };
 }
-const nomUsuel = (p: Personne) => p.prenom || p.nom;
 
 /** « ta » devient « ton » devant une voyelle : « ton arrière-grand-mère ». */
 const determinant = (nom: string, feminin: boolean) => (feminin && !/^[aeéèêiîoôu]/i.test(nom) ? 'ta' : 'ton');
@@ -166,13 +165,12 @@ function lienEx(d: Donnees, moi: string, vers: string): { avec: string; court: s
       : [];
   });
   const plusProche = proches.sort((a, b) => a.distance - b.distance)[0];
-  return plusProche && { avec: `l’ex de ${avecPossessif(plusProche.f, plusProche.proche.sexe)}`, court: `Ex ${avecDe(nomUsuel(plusProche.proche))}` };
+  return plusProche && { avec: `l’ex de ${avecPossessif(plusProche.f, plusProche.proche.sexe)}`, court: `Ex ${avecDe(prenomOuNom(plusProche.proche))}` };
 }
 
 // --- Étiquettes courtes et chemin depuis « Moi » (FEAT-09) --------------------
 
-const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
-const appel = (e: Etape) => nomUsuel(e.personne);
+const appel = (e: Etape) => prenomOuNom(e.personne);
 
 /** Ce qu'est la personne de l'étape pour la précédente : « mère », « époux », « amie », « enfant » sans sexe connu. */
 function nomPas(e: Etape, aujourdhui: Date): string {
@@ -209,13 +207,13 @@ function detourParUnAmi(d: Donnees, moi: string, cible: Personne, aujourdhui: Da
   const parConjoint = autres.find((a) => conjoint(d, a.id)?.personne.id === cible.id);
   if (parConjoint) {
     const union = conjoint(d, parConjoint.id)!.union;
-    return `${majuscule(nomPas({ personne: cible, par: 'conjoint', marie: union.marie, fiance: sontFiances(union, aujourdhui) }, aujourdhui))} ${avecDe(nomUsuel(parConjoint))}`;
+    return `${majuscule(nomPas({ personne: cible, par: 'conjoint', marie: union.marie, fiance: sontFiances(union, aujourdhui) }, aujourdhui))} ${avecDe(prenomOuNom(parConjoint))}`;
   }
   for (const a of autres) {
     const r = relation(d, a.id, cible.id);
     if (!r || (r.type === 'alliance' && r.cote === 'sien' && r.marie === false && collateral(r.base))) continue;
     const libelle = libelleRelation(r, cible.sexe, { jeune: estJeune(cible, aujourdhui) });
-    if (libelle) return `${majuscule(libelle)} ${avecDe(nomUsuel(a))}`;
+    if (libelle) return `${majuscule(libelle)} ${avecDe(prenomOuNom(a))}`;
   }
   return undefined;
 }

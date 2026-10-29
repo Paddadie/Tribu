@@ -2,7 +2,7 @@
 // recalcule depuis les données.
 
 import { estDansLeFutur } from './age';
-import { comparateur } from './liste';
+import { comparateur, prenomOuNom } from './liste';
 import { anneeDe, estDecede, estInconnu, groupesDe, groupesDeLaFamille } from './modele';
 import { estParentSansNom } from './parentSansNom';
 import type { Donnees, Filiation, GroupeAmis, Personne, Union } from './types';
@@ -346,7 +346,7 @@ export function nomGroupe(d: Donnees, g: GroupeAmis): string {
   const prenoms = d.personnes
     .filter((p) => g.membres.includes(p.id))
     .sort(parPrenom)
-    .map((p) => p.prenom || p.nom);
+    .map(prenomOuNom);
   return `Groupe de ${prenoms.slice(0, 3).join(', ')}${prenoms.length > 3 ? '…' : ''}`;
 }
 

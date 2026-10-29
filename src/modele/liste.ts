@@ -14,6 +14,16 @@ export function nomComplet(p: Pick<Personne, 'prenom' | 'nom'>): string {
   return [p.prenom, p.nom].filter(Boolean).join(' ');
 }
 
+/** Le prénom, ou le nom à défaut : comme on appelle la personne (« Karim »). */
+export function prenomOuNom(p: Pick<Personne, 'prenom' | 'nom'>): string {
+  return p.prenom || p.nom;
+}
+
+/** Première lettre en capitale : « Cousine », « Mardi 3 mars ». */
+export function majuscule(texte: string): string {
+  return texte.charAt(0).toLocaleUpperCase('fr') + texte.slice(1);
+}
+
 /** « Marc », « Marc et Claire », « Marc, Claire et Jean ». */
 export function enumerer(noms: string[]): string {
   return noms.length < 2 ? (noms[0] ?? '') : `${noms.slice(0, -1).join(', ')} et ${noms.at(-1)}`;
