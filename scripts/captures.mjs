@@ -10,6 +10,10 @@
 //
 // npm run captures -- --maquettes <dossier-html> <dossier-sortie>
 // Chaque page HTML du dossier (maquettes statiques), en 360 de large, clair et sombre.
+//
+// npm run captures -- --familles <dossier-familles> <dossier-sortie> [préfixe-de-fichier…]
+// Familles fictives écrites par `npm run familles` : écrans clés de chaque famille (Moi de la famille) en
+// téléphone, tablette et ordinateur, clair et sombre. Données fictives : la sortie peut aller dans captures/.
 import { spawn, execSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,13 +21,15 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);
-const mode = args[0] === '--famille-proche' ? 'famille-proche' : args[0] === '--maquettes' ? 'maquettes' : 'ecrans';
+const MODES = { '--famille-proche': 'famille-proche', '--maquettes': 'maquettes', '--familles': 'familles' };
+const mode = MODES[args[0]] ?? 'ecrans';
 const [exportPath, sortie, moiArg] = mode === 'ecrans' ? args : mode === 'famille-proche' ? [undefined, args[1]] : [args[1], args[2]];
-const prefixes = mode === 'famille-proche' ? args.slice(2) : [];
+const prefixes = mode === 'famille-proche' ? args.slice(2) : mode === 'familles' ? args.slice(3) : [];
 if (!sortie || (mode !== 'famille-proche' && !exportPath)) {
   console.error('Usage : npm run captures -- <export.json> <dossier-sortie> [id-de-Moi]');
   console.error('        npm run captures -- --famille-proche <dossier-sortie> [préfixe-de-cas…]');
   console.error('        npm run captures -- --maquettes <dossier-html> <dossier-sortie>');
+  console.error('        npm run captures -- --familles <dossier-familles> <dossier-sortie> [préfixe-de-fichier…]');
   process.exit(1);
 }
 
@@ -44,6 +50,13 @@ const VIEWPORTS = [
   [390, 844],
 ];
 const FIXTURES = resolve('tests/fixtures/famille-proche');
+
+/** Appareils du mode « familles » : téléphone, tablette, ordinateur (sans émulation tactile). */
+const APPAREILS = [
+  { nom: 'telephone', largeur: 390, hauteur: 844, mobile: true },
+  { nom: 'tablette', largeur: 820, hauteur: 1180, mobile: true },
+  { nom: 'ordinateur', largeur: 1440, hauteur: 900, mobile: false },
+];
 
 /**
  * Géométrie réelle de la carte « Famille proche », relative à la carte : nœuds (avatar, nom, années), visibilité
@@ -161,8 +174,8 @@ try {
   await pause(1500);
 
   async function capture(nom, route, theme, script = '', hauteur = 844, o = {}) {
-    const { largeur = 390, json = donnees, moi = MOI, mesure = false } = o;
-    await cdp('Emulation.setDeviceMetricsOverride', { width: largeur, height: hauteur, deviceScaleFactor: 2, mobile: true });
+    const { largeur = 390, json = donnees, moi = MOI, mesure = false, mobile = true } = o;
+    await cdp('Emulation.setDeviceMetricsOverride', { width: largeur, height: hauteur, deviceScaleFactor: 2, mobile });
     await evaluer(`localStorage.setItem('tribu:donnees', ${JSON.stringify(json)});
       localStorage.setItem('tribu:reglages', JSON.stringify({ tri: 'prenom', theme: '${theme}', dernierExport: null, moi: '${moi}' }));`);
     await cdp('Page.navigate', { url: BASE + route });
@@ -199,6 +212,24 @@ try {
         }
     }
     writeFileSync(join(dossier, 'mesures.json'), JSON.stringify(mesures, null, 1));
+  } else if (mode === 'familles') {
+    const source = resolve(exportPath);
+    const familles = JSON.parse(readFileSync(join(source, 'familles.json'), 'utf-8')).filter(
+      (f) => prefixes.length === 0 || prefixes.some((p) => f.fichier.startsWith(p)),
+    );
+    for (const f of familles) {
+      const json = readFileSync(join(source, f.fichier), 'utf-8');
+      const fam = f.fichier.replace('.json', '');
+      for (const { nom, largeur, hauteur, mobile } of APPAREILS)
+        for (const theme of ['clair', 'sombre']) {
+          const o = { largeur, json, moi: f.moi, mobile };
+          await capture(`${fam}-${nom}-01-accueil`, '#/', theme, '', hauteur, o);
+          await capture(`${fam}-${nom}-02-fiche`, `#/personne/${f.moi}`, theme, '', Math.max(hauteur, 1600), o);
+          await capture(`${fam}-${nom}-03-personnes`, '#/personnes', theme, '', hauteur, o);
+          await capture(`${fam}-${nom}-04-arbre-toi`, '#/arbre', theme, '', hauteur, o);
+          await capture(`${fam}-${nom}-05-arbre-tout`, '#/arbre', theme, clic('Tout'), hauteur, o);
+        }
+    }
   } else if (mode === 'maquettes') {
     const source = resolve(exportPath);
     for (const fichier of readdirSync(source).filter((f) => f.endsWith('.html'))) {

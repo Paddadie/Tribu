@@ -2,7 +2,7 @@
 
 But : mémo familial perso, téléphone d’abord puis tablette et ordinateur (VIS-03) (fiches, unions et ex, parents/enfants, fratrie déduite, groupes d'amis, arbre global). Données v4 en localStorage (`tribu:donnees`, `tribu:reglages`), export JSON.
 Pile : TypeScript sans framework, Vite, vite-plugin-pwa, Vitest (happy-dom pour les écrans), GitHub Pages sous `/Tribu/`.
-Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run format:check`, `npm run captures -- <export.json> <dossier> [id-de-Moi]` (Edge headless + dev sur 5199, export et sortie hors dépôt), `npm run anonymiser -- <export.json> "<Prénom Nom de Moi>"` (réécrit la fixture).
+Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run format:check`, `npm run captures -- <export.json> <dossier> [id-de-Moi]` (Edge headless + dev sur 5199, export et sortie hors dépôt), `npm run anonymiser -- <export.json> "<Prénom Nom de Moi>"` (réécrit la fixture), `npm run familles -- <dossier>` (familles fictives + familles.json) puis `npm run captures -- --familles <dossier> captures/<nom>` (3 appareils).
 
 ## Carte du code
 - src/modele/types.ts : `Personne`, `Union`, `Filiation`, `GroupeAmis`, `Donnees`. migration.ts : `migrer()` v1 → v4.
@@ -16,6 +16,7 @@ Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run
 - src/ui/accueil.ts (salutation, recherche, Aujourd'hui, Bientôt, souvenir, raccourcis), personnes.ts (`#/personnes`, liste + index), agenda.ts (`#/agenda`).
 - src/ui/ : fiche.ts, arbre.ts (`dessinFoyer` = rendu seul, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts. src/main.ts : routes et View Transition.
 - src/style.css : jetons en tête ; blocs « Dessins de la fiche », « Arbre global », « États communs », « Animations » en fin.
+- src/modele/test/ (lot 0 de V4) : familles.ts (générateur à graine, `famillesDeReference`), invariants.ts (`verifierInvariants`), outils.ts (`jouer`, `finsSelonLOrdre`, `canonique`), disposition.ts (`fautesDisposition`, `metriques`) ; scenarios.test.ts (L1 à L5), sequences.test.ts ; seuils de l'arbre dans src/modele/arbreGlobal.invariants.test.ts.
 - Tests : `*.test.ts` à côté du code ; src/parcours.test.ts = écrans sous happy-dom (`demarrer(donnees, route, reglages?)`).
 
 ## Pièges

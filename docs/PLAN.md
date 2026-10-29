@@ -497,7 +497,7 @@ Une table de référence couvre chaque catégorie, et chaque écart trouvé est 
 L'ordre suit ta demande : 0, 1, 2, 3, 4, 5. En option, le lot 5, qui est indépendant, pourrait passer juste après le lot 0 pour un gain visible rapide. Chaque lot se termine par `npm test`, `tsc` et `npm run build` au vert, et par des captures avant / après pour tout ce qui se voit.
 
 **Suivi** (une session par lot ; le lot 4 peut en demander deux : 13 à 15, puis 16 et 17) :
-- [ ] Lot 0 — outillage de test (le `.gitignore` est déjà fait)
+- [x] Lot 0 — outillage de test (29/10) : src/modele/test/ (générateur, invariants, scénarios, séquences, mesures de disposition), arbreGlobal.invariants.test.ts (seuils d'aujourd'hui), `npm run familles`, `npm run captures -- --familles`
 - [ ] Lot 1 — modèle et liaison
 - [ ] Lot 2 — écrans de saisie (maquette d'abord)
 - [ ] Lot 3 — nommage

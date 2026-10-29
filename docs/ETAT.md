@@ -1,15 +1,14 @@
 # État en cours
 
-**Non commité** (à commiter par Paul) : plan V4 (docs/PLAN.md § V4, DECISIONS.md du 29/10), `.gitignore` des exports, règle d'anonymisation (context.md). Dernier commit : aa8546e. Tests, `tsc` et build verts au 29/10.
+**Non commité** (à commiter par Paul) : lot 0 de V4. Dernier commit : c1e18f1. Tests, `tsc` et build verts au 29/10.
 
 ## Plan V4 : liaison, nommage, arbre (19 points)
 - Plan détaillé, lots et suivi : docs/PLAN.md, section « V4 » (ne lire que l'architecture, le lot en cours, ses points, la stratégie de test et les décisions).
-- Questions tranchées le 29/10 : DECISIONS.md et fin de la section V4.
-- Ordre : lot 0 (outillage de test fictif), 1 (modèle), 2 (écrans), 3 (nommage), 4 (arbre), 5 (retouches). Lots 2, 4 et 5 : maquette publiée et validée avant le code.
-- Données de test : toutes fictives (générateur maison à graine). Export réel : structures seulement (voir context.md, Pièges).
-- « Prend le nom » : sonde du 29/10, les 5 chemins depuis la fiche du mari marchent ; seul trou, l'union déjà mariée (point 2).
+- Questions tranchées le 29/10 et décisions du lot 0 : DECISIONS.md. Ordre : lot 0 (fait), 1, 2, 3, 4, 5 ; lots 2, 4 et 5 : maquette validée avant le code.
+- Données de test : toutes fictives (src/modele/test/, 5 familles à graine, `npm run familles`, `npm run captures -- --familles`). Export réel : structures seulement (context.md, Pièges).
+- Pour le lot 1 : `it.fails` L2 (second parent, point 6), `it.todo` L3 (`remplacerParent`) et L5 (`reprendreNomDeNaissance`) à passer au vert. « Prend le nom » : sonde du 29/10, seul trou l'union déjà mariée (point 2). Lot 4 : point 13 = « fratries collées », seuils de l'arbre à ne faire que baisser.
 
-**Prochaine étape** : lot 0, dès le feu vert de Paul.
+**Prochaine étape** : lot 1 (modèle et liaison), dès le feu vert de Paul.
 
 ## Reste à faire (audit UX/UI, hors V4)
 - D, non fait : pile d'avatars « Neveux et nièces » / « Belle-famille » ; âge sous les nœuds ; astuce de l'arbre avec « Compris » ; zoom en un bloc.

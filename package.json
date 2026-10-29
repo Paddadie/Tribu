@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "format:check": "prettier --check .",
     "captures": "node scripts/captures.mjs",
+    "familles": "node scripts/familles.mjs",
     "anonymiser": "node scripts/anonymiser.mjs"
   },
   "devDependencies": {

@@ -186,6 +186,11 @@ V1 : moi seul. Partage avec des proches : plus tard.
 - Un enfant qui n'a qu'un parent voit un « ? » gris à côté de lui dans l'arbre global, relié en pointillés gris ; le toucher l'enregistre comme « Parent inconnu » et ouvre sa fiche (note, décès, union, nom). Sa fiche montre l'autre parent en pointillés avec la fratrie, la case « Marié(e) avec X » à la modification et le « Lien avec toi ».
 - Tant qu'il n'a pas de nom, il n'apparaît ni à l'accueil (recherche, dates, compteurs), ni dans Toutes les fiches, ni dans le choix de « Moi », ni parmi les personnes à ajouter à un groupe : on l'ouvre depuis la fiche d'un proche ou l'arbre global. Une fois nommé, il redevient une personne ordinaire. Il reste dans « Vérifier mes données » et dans les choix de lien.
 
+## Données de test (développement)
+- Aucun changement de comportement de l'appli au lot 0 de V4.
+- `npm run familles -- <dossier>` écrit cinq familles fictives (Dupontel, Martinez-Vasseur, Lambert, Rochefort, Extrêmes), identiques à chaque fois, importables dans l'appli, et leur index `familles.json` (fichier, nom, Moi).
+- `npm run captures -- --familles <dossier> <sortie> [préfixe…]` capture accueil, fiche de Moi, Toutes les fiches, arbre « Toi » et « Tout » en téléphone (390), tablette (820) et ordinateur (1440), clair et sombre.
+
 ## Hors V1 (plus tard)
 - Photos.
 - Partage avec des proches.
