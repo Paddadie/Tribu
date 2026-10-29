@@ -11,7 +11,6 @@ import {
   definirMariageParents,
   donneesVides,
   modifierPersonne,
-  prendreLeNom,
   quiPeutReprendreSonNom,
   reprendreNomDeNaissance,
   separerUnion,
@@ -247,11 +246,5 @@ describe('L5 : mariage, divorce, remariage', () => {
     expect(nomDe(reprise).nom).toBe('Martinez');
     expect(nomDe(reprise).nomNaissance).toBeUndefined();
     expect(nomDe(jouer(reprise, [unir(romain, lucia, true)]))).toMatchObject({ nom: 'Garnier', nomNaissance: 'Martinez' });
-  });
-
-  it('mariage saisi sans la case, puis « prend le nom » : même état qu’avec la case', () => {
-    const sansCase: Etape = (x) => ajouterUnion(x, hubert, lucia, true, 'actuelle', undefined, false).donnees;
-    const fin = jouer(d, [sansCase, (x) => prendreLeNom(x, x.unions[0].id)]);
-    expect(canonique(fin)).toEqual(canonique(jouer(d, [unir(hubert, lucia, true)])));
   });
 });

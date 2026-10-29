@@ -7,7 +7,6 @@ import {
   evenementsAVenir,
   nomEvenement,
   pastilleJour,
-  quandCourt,
   fetesDuJour,
   titreEvenement,
   type Evenement,
@@ -236,11 +235,6 @@ describe('libellés', () => {
     const evs = evenementsAVenir(d, AUJOURDHUI, 30);
     expect(evs.map(detailEvenement)).toEqual(['anniversaire', 'fête · Sainte Céline', 'décès en 2015', '51 ans de mariage']);
     expect(depuisUnion(evs[3])).toBe('mariés le 25 octobre 1975');
-  });
-
-  it('date une vignette, avec le mois s’il change', () => {
-    expect(quandCourt({ annee: 2026, mois: 10, jour: 23 }, AUJOURDHUI)).toBe('ven. 23');
-    expect(quandCourt({ annee: 2026, mois: 11, jour: 1 }, AUJOURDHUI)).toBe('dim. 1er nov.');
   });
 
   it('met une pastille de date : le jour de la semaine, ou le mois s’il change', () => {

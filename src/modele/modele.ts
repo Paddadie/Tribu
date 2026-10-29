@@ -335,24 +335,6 @@ function prendreNomDuConjoint(d: Donnees, union: Union): Donnees {
 }
 
 /**
- * Épouse d'un mariage actuel femme-homme qui ne porte pas encore le nom de son mari (mariage saisi sans la case, ou
- * importé) : c'est à elle que « Elle prend le nom de X » s'adresse. `undefined` si personne ne changerait de nom.
- */
-export function epouseSansLeNom(d: Donnees, idUnion: string): Personne | undefined {
-  const u = exigerUnion(d, idUnion);
-  if (!u.marie || u.statut !== 'actuelle') return undefined;
-  const apres = prendreNomDuConjoint(d, u);
-  return apres.personnes.find((p) => (p.id === u.personneA || p.id === u.personneB) && p !== d.personnes.find((x) => x.id === p.id));
-}
-
-/** L'épouse d'un mariage actuel prend le nom de son mari ; son nom actuel passe en nom de jeune fille s'il est libre. */
-export function prendreLeNom(d: Donnees, idUnion: string): Donnees {
-  const u = exigerUnion(d, idUnion);
-  if (!u.marie || u.statut !== 'actuelle') throw new Error('Seul un mariage actuel fait prendre le nom');
-  return prendreNomDuConjoint(d, u);
-}
-
-/**
  * Les personnes de l'union qui portent encore le nom de l'autre (ou le nom composé du couple) et ont un nom de naissance :
  * à la séparation, à la suppression de l'union ou au passage à « non marié », l'écran leur propose de le reprendre (sans l'imposer).
  */

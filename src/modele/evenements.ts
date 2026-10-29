@@ -199,9 +199,3 @@ export function pastilleJour(e: Pick<Evenement, 'annee' | 'mois' | 'jour'>, aujo
   const haut = memeMois ? jourCourt(e) : MOIS_COURTS[e.mois - 1];
   return { haut: haut.replace('.', ''), jour: e.jour === 1 ? '1er' : String(e.jour) };
 }
-
-/** Vignette : « ven. 24 » dans le mois en cours, « sam. 1er nov. » au-delà. */
-export function quandCourt(e: Pick<Evenement, 'annee' | 'mois' | 'jour'>, aujourdhui: Date): string {
-  const jour = `${jourCourt(e)} ${e.jour === 1 ? '1er' : e.jour}`;
-  return e.mois === aujourdhui.getMonth() + 1 && e.annee === aujourdhui.getFullYear() ? jour : `${jour} ${MOIS_COURTS[e.mois - 1]}`;
-}

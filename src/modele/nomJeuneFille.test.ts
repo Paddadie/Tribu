@@ -3,10 +3,8 @@ import {
   ajouterUnion,
   creerPersonne,
   donneesVides,
-  epouseSansLeNom,
   modifierPersonne,
   modifierUnion,
-  prendreLeNom,
   quiPeutReprendreSonNom,
   reprendreNomDeNaissance,
   separerUnion,
@@ -87,17 +85,6 @@ describe('nom de jeune fille', () => {
     const b = creerPersonne(a.donnees, { prenom: 'B', nom: 'Martin', sexe: 'M' });
     d = ajouterUnion(b.donnees, a.personne.id, b.personne.id, true).donnees;
     expect(nom(d, a.personne.id).nom).toBe('Durand');
-  });
-
-  it('mariage saisi sans la case : `epouseSansLeNom` la désigne, `prendreLeNom` le lui donne', () => {
-    const c = couple('M', 'Martin', 'F', 'Durand');
-    const d = modifierUnion(c.d, c.union, true, false);
-    expect(epouseSansLeNom(d, c.union)?.id).toBe(c.b);
-    const apres = prendreLeNom(d, c.union);
-    expect(nom(apres, c.b)).toMatchObject({ nom: 'Martin', nomNaissance: 'Durand' });
-    expect(epouseSansLeNom(apres, c.union)).toBeUndefined();
-    expect(epouseSansLeNom(c.d, c.union)).toBeUndefined();
-    expect(() => prendreLeNom(c.d, c.union)).toThrow('mariage actuel');
   });
 });
 
