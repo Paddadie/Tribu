@@ -159,7 +159,7 @@ export function ecranUnion(p: Personne, idUnion: string): HTMLElement {
         marie,
       ),
       nomApres.noeud,
-      h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union (facultative)'), date.groupe),
+      h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union'), date.groupe),
       lieu.noeud,
       erreur,
       h('button', { type: 'button', class: 'bouton bouton-plein', onclick: enregistrer }, 'Enregistrer'),

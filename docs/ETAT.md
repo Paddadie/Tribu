@@ -1,6 +1,6 @@
 # État en cours
 
-Dernier commit : f2fab1d (lot 3 de V4). Lots 4 et 5 faits, non commités : 1024 tests, `tsc` et build verts au 29/10.
+Dernier commit : f77c972 (lots 4 et 5 de V4), arbre de travail propre : 1024 tests, `tsc` et build verts au 29/10.
 
 ## Plan V4 : liaison, nommage, arbre (19 points) — terminé
 - Plan détaillé, lots et suivi : docs/PLAN.md, section « V4 » ; les 6 lots sont cochés. Décisions des lots 0 à 5 : DECISIONS.md.
@@ -8,7 +8,7 @@ Dernier commit : f2fab1d (lot 3 de V4). Lots 4 et 5 faits, non commités : 1024 
 - Lot 4 : fratries collées, couleurs par famille (`couleursDesFamilles`), « née X », PAS_Y 154. Seuils de l'arbre : ne faire que baisser.
 - Lot 5 : `StyleTrait` (`plein` / `ex` / `adoption`) : ex en points ronds, adoption en tirets longs (fiche, arbre, PNG) ; légende « ex » ; `bloc-deces`. Captures : captures/apres-lot5 (hors git).
 
-**Prochaine étape** : Paul commite les lots 4 et 5, puis choisit la suite (points laissés ci-dessous, ou audit hors V4).
+**Prochaine étape** : Paul choisit la suite : points laissés ci-dessous, ou audit UX/UI hors V4. PLAN.md n'a plus de lot V4 ouvert ; les « avant » des prochaines captures sont dans captures/apres-lot5.
 
 ## Points laissés par les lots 2 à 5
 - Séparation automatique par `unirParents` : pas de proposition de reprise du nom ; « Mariés » sur les écrans Parent et Qui applique le nom de l'homme sans aperçu.

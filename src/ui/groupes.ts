@@ -133,7 +133,7 @@ export function ecranNouveauGroupe(): HTMLElement {
     h(
       'div',
       { class: 'contenu' },
-      h('div', { class: 'champ' }, h('label', { for: 'nom-groupe' }, 'Nom du groupe (facultatif)'), nom),
+      h('div', { class: 'champ' }, h('label', { for: 'nom-groupe' }, 'Nom du groupe'), nom),
       h('h2', { class: 'titre-section' }, 'Membres'),
       h('label', { class: 'champ-filtre champ-filtre-forme' }, icone('recherche'), h('span', { class: 'sr-only' }, 'Rechercher une personne'), recherche),
       liste,

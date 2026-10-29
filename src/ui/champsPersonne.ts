@@ -100,7 +100,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   const libelleNomNaissance = h('label', { for: 'nom-naissance' });
   const champNomNaissance = h('div', { class: 'champ' }, libelleNomNaissance, nomNaissance);
   const accorderNomNaissance = () => {
-    libelleNomNaissance.textContent = sexeCoche() === 'F' ? 'Nom de jeune fille (facultatif)' : 'Nom de naissance (facultatif)';
+    libelleNomNaissance.textContent = sexeCoche() === 'F' ? 'Nom de jeune fille' : 'Nom de naissance';
     champNomNaissance.hidden = !existante && sexeCoche() !== 'F';
   };
   accorderNomNaissance();
@@ -113,7 +113,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
     'div',
     { class: 'date-deces', hidden: !decede.checked },
     h('div', { class: 'champ' }, deces.groupe),
-    champ('Lieu du décès (facultatif)', 'lieu-deces', lieuDeces),
+    champ('Lieu du décès', 'lieu-deces', lieuDeces),
   );
   const accorderDecede = () => (motDecede.textContent = accorder(sexeCoche(), 'Décédé', 'Décédée', 'Décédé(e)'));
   accorderDecede();
@@ -169,10 +169,10 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
       h(
         'fieldset',
         { class: 'champ' },
-        h('legend', {}, 'Date de naissance (facultative, année seule possible)'),
+        h('legend', {}, 'Date de naissance (le mois seul n’est pas accepté)'),
         naissance.groupe,
       ),
-      h('div', { class: 'champ' }, h('label', { for: 'lieu-naissance' }, 'Lieu de naissance (facultatif)'), lieuNaissance, lieux),
+      h('div', { class: 'champ' }, h('label', { for: 'lieu-naissance' }, 'Lieu de naissance'), lieuNaissance, lieux),
       ...(avecNote ? [champ('Note', 'note', note)] : []),
     ],
     noeudDeces: h(

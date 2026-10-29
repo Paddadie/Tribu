@@ -53,7 +53,7 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
   marie.addEventListener('change', majMariage);
 
   const date = champDate('-union', 'de l’union', undefined, true);
-  const champDateUnion = h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union (facultative)'), date.groupe);
+  const champDateUnion = h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union'), date.groupe);
 
   selecteur = selecteurPersonne({
     surChoix: majMariage,

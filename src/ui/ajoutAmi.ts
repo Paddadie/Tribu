@@ -95,7 +95,7 @@ export function ajoutAmi(p: Personne): HTMLElement {
     : h(
         'div',
         { class: 'champ' },
-        h('label', { for: 'nom-groupe' }, 'Nom du nouveau groupe (facultatif)'),
+        h('label', { for: 'nom-groupe' }, 'Nom du nouveau groupe'),
         nomChamp,
         moi ? h('p', { class: 'secondaire' }, `${appel(moi)} fera aussi partie du groupe, comme de tous tes groupes.`) : null,
       );

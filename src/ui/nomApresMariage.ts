@@ -35,7 +35,7 @@ export function champLieuUnion(valeur: string | undefined) {
   const liste = h('datalist', { id: 'lieux-union' }, ...lieuxConnus(personnesVisibles(d), d.unions).map((n) => h('option', { value: n })));
   const champ = h('input', { id: 'lieu-union', type: 'text', value: valeur ?? '', autocomplete: 'off', autocapitalize: 'words', list: 'lieux-union' });
   return {
-    noeud: h('div', { class: 'champ' }, h('label', { for: 'lieu-union' }, 'Lieu du mariage (facultatif)'), champ, liste),
+    noeud: h('div', { class: 'champ' }, h('label', { for: 'lieu-union' }, 'Lieu du mariage'), champ, liste),
     lire: () => champ.value,
   };
 }
