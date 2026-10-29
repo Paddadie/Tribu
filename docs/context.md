@@ -23,6 +23,7 @@ Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run
 - Tout écran de personnes passe par `personnesVisibles(d)` (parents inconnus cachés) ; listes et choix par `personnesListees(d)` (parents « ? » sans nom cachés en plus).
 - `ChampsIdentite.lire()` lève une erreur sur une date incomplète : hors `try`, utiliser `lireNom()`.
 - Aucun nom réel de proche dans le code ni les tests (noms d'emprunt). docs/ est public, comme le reste du dépôt.
+- Export réel (`tribu-*.json`, dans Téléchargements, hors dépôt) : seulement pour lire des structures. Jamais de nom, date, lieu ou note réels dans le code, les tests, les fixtures, les commentaires, docs/ ou un message de commit ; on reproduit la structure avec des familles fictives. Captures réelles hors dépôt (scratchpad) seulement. Avant de rendre la main : vérifier qu'aucun nom de l'export ne figure dans les fichiers touchés.
 
 ## Renvois
 docs/ETAT.md (état, prochaine étape), docs/PLAN.md (étapes), docs/SPEC.md (comportement), docs/DECISIONS.md (décisions datées), README.md (format d'export).

@@ -1,27 +1,24 @@
 # État en cours
 
-**Non commité** (à commiter par Paul) : mission « Famille proche » (phases 1 à 5) et veuvage ; l'audit UX/UI est commité (28bf002). Au 21/10 : tests, `tsc` et build verts.
-**Audit UX/UI** : rapport https://claude.ai/artifact/5FzpsxbmAw7qgUyC2oXoZH (privé). D non revu par Paul en entier (fiche, arbre, Toutes les fiches).
+**Non commité** (à commiter par Paul) : plan V4 (docs/PLAN.md § V4, DECISIONS.md du 29/10), `.gitignore` des exports, règle d'anonymisation (context.md). Dernier commit : aa8546e. Tests, `tsc` et build verts au 29/10.
 
-## Mission « Famille proche » : faite, à regarder par Paul
-Rapport et maquettes : https://claude.ai/artifact/2JMCd1nRBCtLXRPY8jBt6U (privé). Stratégie S2 et réponses de Paul : DECISIONS.md (21/10).
-- `fratrie()` corrigée (`freresComplets`) : un couple de parents d'un même type suffit (adoption).
-- src/modele/familleProche.ts : `familleProche` (qui) et `disposerFoyer` (où), pur, testé ; `foyer()` supprimé.
-- arbre.ts : `dessinFoyer(f)` ne fait que le rendu (halo, défilement centré sur la personne, indice, appui long = nom complet).
-- src/ui/familleProche.test.ts : plus d'`ECHECS`, défilement admis selon la règle des 5 (4 sous 280 px) ; `scrollAutorise` retiré de cas.json.
-- Captures avant / après hors dépôt (scratchpad de la session), via `node scripts/captures.mjs --famille-proche <dossier>` (`npm run` avale l'option sous PowerShell).
-- Veuvage : union actuelle avec un défunt hors de la règle « un seul conjoint » (`conjointEnTrop`) ; fiche « Conjoint décédé » ; src/modele/veuvage.test.ts.
+## Plan V4 : liaison, nommage, arbre (19 points)
+- Plan détaillé, lots et suivi : docs/PLAN.md, section « V4 » (ne lire que l'architecture, le lot en cours, ses points, la stratégie de test et les décisions).
+- Questions tranchées le 29/10 : DECISIONS.md et fin de la section V4.
+- Ordre : lot 0 (outillage de test fictif), 1 (modèle), 2 (écrans), 3 (nommage), 4 (arbre), 5 (retouches). Lots 2, 4 et 5 : maquette publiée et validée avant le code.
+- Données de test : toutes fictives (générateur maison à graine). Export réel : structures seulement (voir context.md, Pièges).
+- « Prend le nom » : sonde du 29/10, les 5 chemins depuis la fiche du mari marchent ; seul trou, l'union déjà mariée (point 2).
 
-**Prochaine étape** : Paul regarde l'arbre de quelques fiches réelles (famille recomposée, adoption, noms longs, veuvage).
+**Prochaine étape** : lot 0, dès le feu vert de Paul.
 
-## Reste à faire (audit UX/UI)
+## Reste à faire (audit UX/UI, hors V4)
 - D, non fait : pile d'avatars « Neveux et nièces » / « Belle-famille » ; âge sous les nœuds ; astuce de l'arbre avec « Compris » ; zoom en un bloc.
-- P3 (sur accord) : Réglages, couleurs de familles, deux colonnes sur ordinateur.
-- Après validation de D : PLAN.md, DECISIONS.md, SPEC.md.
+- P3 (sur accord) : Réglages, deux colonnes sur ordinateur (les couleurs de familles passent dans V4, point 16).
+- Mission « Famille proche » : Paul doit encore regarder l'arbre de quelques fiches réelles.
 
 ## À valider / points ouverts
-- Veuvage : un export avec un remariage est refusé par une version d'avant ; pour noter après coup le défunt d'une personne déjà remariée, « Un conjoint » est grisé : saisir le défunt avant le nouveau conjoint.
-- `format:check` : fichiers de l'appli non formatés (déjà avant ce travail : fiche.ts, fiche.css, tests de parents…).
+- Veuvage : un export avec un remariage est refusé par une version d'avant ; pour noter après coup le défunt d'une personne déjà remariée, saisir le défunt avant le nouveau conjoint.
+- `format:check` : fichiers de l'appli non formatés (fiche.ts, fiche.css, tests de parents…).
 - Calendrier des fêtes ; `.ics` ; profils Edge `%TEMP%\tribu-captures-*`.
 - Téléphone : bandeau de mise à jour, Retour par geste en saisie, flou de la barre de l'arbre, partage du PNG.
 - UX-20 : couple entre deux fratries décalé (~0,4 case) ; instantané de la fixture à régénérer après vérification à l'œil.

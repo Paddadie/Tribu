@@ -3,6 +3,11 @@ dist/
 dev-dist/
 captures/
 
+# Exports de l'appli : données personnelles réelles, jamais versionnées
+tribu-*.json
+*.export.json
+exports/
+
 # Fichiers Claude : local uniquement
 CLAUDE.md
 CLAUDE.local.md
