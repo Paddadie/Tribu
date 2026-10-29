@@ -51,6 +51,23 @@ export function enregistrerParentSansNom(d: Donnees, idVirtuel: string): { donne
 }
 
 /**
+ * Pour « Qui est ce parent ? » : les enfants du « ? » `idInconnu` (virtuel ou enregistré) et leurs parents connus.
+ * `undefined` si ce « ? » n'a plus d'enfant.
+ */
+export function familleDuInconnu(d: Donnees, idInconnu: string): { enfants: Personne[]; parents: Personne[] } | undefined {
+  const virtuel = estVirtuel(idInconnu);
+  const idsEnfants = virtuel
+    ? filiationsSeules(d, idInconnu.slice(PREFIXE_VIRTUEL.length)).map((f) => f.enfant)
+    : d.filiations.filter((f) => f.parent === idInconnu).map((f) => f.enfant);
+  if (idsEnfants.length === 0) return undefined;
+  const idsParents = virtuel
+    ? [idInconnu.slice(PREFIXE_VIRTUEL.length)]
+    : d.filiations.filter((f) => idsEnfants.includes(f.enfant) && f.parent !== idInconnu).map((f) => f.parent);
+  const connu = (p: Personne) => idsParents.includes(p.id) && !p.inconnu && !estParentSansNom(p);
+  return { enfants: d.personnes.filter((p) => idsEnfants.includes(p.id)), parents: d.personnes.filter(connu) };
+}
+
+/**
  * « Qui est ce parent ? » : remplace le « ? » `idInconnu` (virtuel, enregistré, ou parent inconnu caché) par la personne
  * `idPersonne`, déjà dans Tribu ou tout juste créée. Elle devient parent de tous ses enfants, avec le même type de lien,
  * et reprend ses unions ; le « ? » disparaît. Refusé si elle est déjà parent de l'un d'eux, ou si le lien ferait une boucle.

@@ -6,12 +6,12 @@ import { disposerArbre, type Disposition, type Point } from '../modele/arbreGlob
 import { nomGroupe } from '../modele/deductions';
 import { prochesDeFamille } from '../modele/filtres';
 import { couleurFamille, filtrerParNom, nomComplet, simplifier } from '../modele/liste';
-import { enregistrerParentSansNom, estVirtuel } from '../modele/parentSansNom';
+import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Personne } from '../modele/types';
 import { noeud } from './arbre';
 import { h, icone } from './dom';
-import { lireDonnees, lireReglages, modifierDonnees } from './etat';
+import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
 import {
   calculerCadres,
@@ -689,17 +689,6 @@ class Carte {
       },
       true,
     );
-    // Toucher un parent « ? » l'enregistre, puis ouvre sa vraie fiche : la route n'écrit jamais.
-    this.vue.addEventListener('click', (e) => {
-      const lien = (e.target as Element).closest<HTMLAnchorElement>('a.noeud');
-      const id = lien?.dataset.id;
-      if (!id || !estVirtuel(id)) return;
-      e.preventDefault();
-      const creation = enregistrerParentSansNom(lireDonnees(), id);
-      if (!creation) return;
-      modifierDonnees(() => creation.donnees);
-      location.hash = `#/personne/${creation.personne.id}`;
-    });
     // Double clic à la souris seulement : au doigt, le double toucher est géré plus haut (Android enverrait les deux).
     this.vue.addEventListener('dblclick', (e) => {
       if (typePointeur !== 'mouse' || horsCarte(e) || (e.target as Element).closest('.noeud')) return;

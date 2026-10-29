@@ -118,6 +118,12 @@ export function remplacer(route: string, redessiner = true): void {
   if (redessiner) queueMicrotask(afficher);
 }
 
+/** Fin d'un écran d'ajout : la fiche tout juste créée prend sa place (Retour mène à la fiche de départ), sinon `revenir`. */
+export function apresAjout(defaut: string, idNouvelle?: string): void {
+  if (idNouvelle) remplacer(`#/personne/${idNouvelle}`);
+  else revenir(defaut);
+}
+
 /** Écran précédent de l'appli s'il y en a un, sinon `defaut` à la place de l'écran courant. */
 export function revenir(defaut: string): void {
   if (recul) return;

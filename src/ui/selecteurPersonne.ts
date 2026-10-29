@@ -14,15 +14,17 @@ import { lireDonnees, lireReglages, modifierDonnees } from './etat';
 import { signaler } from './surbrillance';
 import { contenuLigne } from './lignePersonne';
 
-type Mode = 'existante' | 'nouvelle';
+export type Mode = 'existante' | 'nouvelle';
 
 export interface OptionsSelecteur {
   /** Personne de départ : absente de la liste. */
-  personne: Personne;
+  personne?: Personne;
+  /** Onglet ouvert d'abord (« Nouvelle personne » sauf indication). */
+  modeInitial?: Mode;
   /** Nom accessible des onglets (« Origine du conjoint »). */
   libelleOrigine: string;
-  /** Bouton de validation pour une personne existante (« Ajouter ce conjoint »). */
-  libelleValider: string;
+  /** Bouton de validation pour une personne existante (« Ajouter ce conjoint ») ; fonction : selon la personne cochée. */
+  libelleValider: string | ((choisie: Personne | undefined) => string);
   /** Si présent, plusieurs personnes existantes peuvent être cochées d'un coup ; donne le bouton pour `n` ≥ 2 personnes. */
   libelleValiderPlusieurs?: (n: number) => string;
   /** Sexe coché d'avance pour une nouvelle personne. */
@@ -37,8 +39,8 @@ export interface OptionsSelecteur {
   pret?: () => boolean;
   /** Relie la personne de départ à `autre` (id) ; lève une erreur si le lien est refusé. */
   lier: (d: Donnees, autre: string) => Donnees;
-  /** Après un enregistrement réussi. */
-  apres: () => void;
+  /** Après un enregistrement réussi ; `idNouvelle` si la personne vient d'être créée. */
+  apres: (idNouvelle?: string) => void;
   /** Le choix change : onglet, sexe de la nouvelle personne, personne cochée. */
   surChoix?: () => void;
 }
@@ -61,19 +63,21 @@ export interface Selecteur {
   mode: () => Mode;
   /** Sexe de la personne qui sera reliée : celui coché (nouvelle) ou celui de l'unique personne cochée (existante). */
   sexeChoisi: () => Sexe | undefined;
+  /** L'unique personne existante cochée. */
+  choisie: () => Personne | undefined;
 }
 
 const appel = (p: Personne) => p.prenom || p.nom;
 
 export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
-  let mode: Mode = 'nouvelle';
+  let mode: Mode = o.modeInitial ?? 'nouvelle';
   /** Personnes existantes cochées (une seule hors choix multiple). */
   const choisies = new Set<string>();
   const multiple = o.libelleValiderPlusieurs !== undefined;
   let filtre = '';
 
   const erreur = h('p', { class: 'erreur', role: 'alert', hidden: true });
-  const identite = champsIdentite(undefined, false, o.sexeParDefaut);
+  const identite = champsIdentite(undefined, true, o.sexeParDefaut);
   const zone = h('div', { class: 'zone-conjoint' });
   const liste = h('div', { class: 'liste-choix' });
   const valider = h('button', { type: 'button', class: 'bouton bouton-plein' });
@@ -134,7 +138,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
   const lignes = (): HTMLElement[] => {
     const d = lireDonnees();
     const autres = personnesVisibles(d)
-      .filter((c) => c.id !== o.personne.id)
+      .filter((c) => c.id !== o.personne?.id)
       .sort(comparateur(lireReglages().tri));
     if (autres.length === 0) return [h('p', { class: 'vide' }, 'Aucune autre personne. Crées-en une avec « Nouvelle personne ».')];
     // Une personne cochée devenue indisponible (parent coché ou décoché) est décochée, même si la recherche la masque.
@@ -164,7 +168,13 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
 
   const majBouton = () => {
     valider.textContent =
-      mode !== 'existante' ? 'Créer et ajouter' : o.libelleValiderPlusieurs && choisies.size > 1 ? o.libelleValiderPlusieurs(choisies.size) : o.libelleValider;
+      mode !== 'existante'
+        ? 'Créer et ajouter'
+        : o.libelleValiderPlusieurs && choisies.size > 1
+          ? o.libelleValiderPlusieurs(choisies.size)
+          : typeof o.libelleValider === 'string'
+            ? o.libelleValider
+            : o.libelleValider(choisie());
     valider.disabled = (mode === 'existante' && choisies.size === 0) || o.pret?.() === false;
   };
 
@@ -221,12 +231,12 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
         // Un seul enregistrement : si un lien est refusé, aucun n'est ajouté.
         modifierDonnees((d) => autres.reduce(o.lier, d));
         signaler(autres[0]);
+        o.apres();
       } else {
         const champs = identite.lire();
         // Saisie vérifiée avant de parler d'homonyme.
         creerPersonne(lireDonnees(), champs);
-        if (!(await accepterHomonyme(personnesVisibles(lireDonnees()), champs, 'Pour relier celle qui existe, choisis-la dans « Déjà dans Tribu ».')))
-          return;
+        if (!(await accepterHomonyme(personnesVisibles(lireDonnees()), champs, 'Pour relier celle qui existe, choisis-la dans « Déjà dans Tribu ».'))) return;
         let idNouvelle = '';
         modifierDonnees((d) => {
           const nouvelle = creerPersonne(d, champs);
@@ -234,13 +244,18 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
           return o.lier(nouvelle.donnees, nouvelle.personne.id);
         });
         signaler(idNouvelle);
+        o.apres(idNouvelle);
       }
-      o.apres();
     } catch (err) {
       erreur.textContent = err instanceof Error ? err.message : 'Enregistrement impossible';
       erreur.hidden = false;
     }
   });
+
+  const choisie = () => {
+    const [id] = [...choisies];
+    return choisies.size === 1 ? lireDonnees().personnes.find((x) => x.id === id) : undefined;
+  };
 
   poserNom(true);
   dessiner();
@@ -264,10 +279,7 @@ export function selecteurPersonne(o: OptionsSelecteur): Selecteur {
     modifie: () => mode === 'nouvelle' && identite.modifie(),
     identite,
     mode: () => mode,
-    sexeChoisi: () => {
-      if (mode === 'nouvelle') return identite.sexe();
-      const [id] = [...choisies];
-      return choisies.size === 1 ? lireDonnees().personnes.find((x) => x.id === id)?.sexe : undefined;
-    },
+    sexeChoisi: () => (mode === 'nouvelle' ? identite.sexe() : choisie()?.sexe),
+    choisie,
   };
 }

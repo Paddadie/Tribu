@@ -228,6 +228,13 @@ try {
           await capture(`${fam}-${nom}-03-personnes`, '#/personnes', theme, '', hauteur, o);
           await capture(`${fam}-${nom}-04-arbre-toi`, '#/arbre', theme, '', hauteur, o);
           await capture(`${fam}-${nom}-05-arbre-tout`, '#/arbre', theme, clic('Tout'), hauteur, o);
+          // Écrans de saisie (V4, lot 2) : sur téléphone seulement, en pleine hauteur.
+          if (nom !== 'telephone') continue;
+          const union = JSON.parse(json).unions.find((u) => u.personneA === f.moi || u.personneB === f.moi);
+          await capture(`${fam}-${nom}-06-modifier`, `#/modifier/${f.moi}`, theme, '', 1700, o);
+          await capture(`${fam}-${nom}-07-conjoint`, `#/conjoint/${f.moi}`, theme, `document.querySelector('#marie')?.click()`, 1700, o);
+          await capture(`${fam}-${nom}-08-parent`, `#/parent/${f.moi}`, theme, '', 1700, o);
+          if (union) await capture(`${fam}-${nom}-09-union`, `#/union/${union.id}/${f.moi}`, theme, '', 1400, o);
         }
     }
   } else if (mode === 'maquettes') {

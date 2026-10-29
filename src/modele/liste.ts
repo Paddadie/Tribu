@@ -2,7 +2,7 @@
 // lettre et filtre. Fonctions pures, testables sans navigateur.
 
 import { MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
-import type { Personne, Sexe } from './types';
+import type { Personne, Sexe, Union } from './types';
 
 export interface Groupe {
   lettre: string;
@@ -61,16 +61,24 @@ export function memeNom(a: string, b: string): boolean {
  * (casse, accents et espaces ignorés, graphie la plus fréquente gardée), les plus répandus d'abord.
  */
 export function nomsConnus(personnes: Personne[]): string[] {
+  return textesConnus(personnes.flatMap((p) => [p.nom, p.nomNaissance]));
+}
+
+/** Lieux déjà saisis (naissance, décès, mariage), sur le même principe que `nomsConnus`. */
+export function lieuxConnus(personnes: Personne[], unions: Pick<Union, 'lieu'>[]): string[] {
+  return textesConnus([...personnes.flatMap((p) => [p.lieuNaissance, p.lieuDeces]), ...unions.map((u) => u.lieu)]);
+}
+
+/** Un texte par graphie proche (casse, accents et espaces ignorés), la plus fréquente gardée ; les plus répandus d'abord. */
+function textesConnus(valeurs: (string | undefined)[]): string[] {
   const parCle = new Map<string, Map<string, number>>();
-  for (const p of personnes) {
-    for (const brut of [p.nom, p.nomNaissance]) {
-      const nom = brut?.trim().replace(/\s+/g, ' ');
-      const cle = nom ? cleHomonyme(nom) : '';
-      if (!nom || !cle) continue;
-      const graphies = parCle.get(cle) ?? new Map<string, number>();
-      graphies.set(nom, (graphies.get(nom) ?? 0) + 1);
-      parCle.set(cle, graphies);
-    }
+  for (const brut of valeurs) {
+    const nom = brut?.trim().replace(/\s+/g, ' ');
+    const cle = nom ? cleHomonyme(nom) : '';
+    if (!nom || !cle) continue;
+    const graphies = parCle.get(cle) ?? new Map<string, number>();
+    graphies.set(nom, (graphies.get(nom) ?? 0) + 1);
+    parCle.set(cle, graphies);
   }
   const lignes = [...parCle.values()].map((graphies) => {
     const tri = [...graphies].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr'));
@@ -201,24 +209,30 @@ function formulerDate(date: string | undefined): string {
   return `${leJour(Number(m[3]))} ${mois} ${m[1]}`;
 }
 
-/** « le 12 juin 2010 », « en 2010 »… pour la date d'une union ; chaîne vide sans date. */
-export function libelleUnion(date: string | undefined): string {
-  return formulerDate(date);
+/** Date formulée puis « à <lieu> », chacun seulement s'il est connu : « le 3 mai 1975 à Brest », « à Brest », « en 1975 ». */
+function quandEtOu(date: string | undefined, lieu: string | undefined): string {
+  return [formulerDate(date), lieu?.trim() && `à ${lieu.trim()}`].filter(Boolean).join(' ');
 }
 
-export function libelleNaissance(naissance: string | undefined, sexe?: Sexe): string {
-  const date = formulerDate(naissance);
-  return date && `${accorder(sexe, 'né', 'née', 'né(e)')} ${date}`;
+/** « le 12 juin 2010 », « en 2010 à Brest »… pour une union ; chaîne vide sans date ni lieu. */
+export function libelleUnion(date: string | undefined, lieu?: string): string {
+  return quandEtOu(date, lieu);
+}
+
+/** « née le 8 février 1950 à Quimper », « né à Brest »… ; chaîne vide sans date ni lieu. */
+export function libelleNaissance(naissance: string | undefined, sexe?: Sexe, lieu?: string): string {
+  const quand = quandEtOu(naissance, lieu);
+  return quand && `${accorder(sexe, 'né', 'née', 'né(e)')} ${quand}`;
 }
 
 /**
- * « décédée le 14 janvier 2024 », accordé selon le sexe ; « décédée » seul pour un décès sans date (`decede`) ;
- * chaîne vide sinon.
+ * « décédée le 14 janvier 2024 (à Brest) », accordé selon le sexe ; « décédée » seul pour un décès sans date ni lieu
+ * (`decede`) ; chaîne vide sinon.
  */
-export function libelleDeces(deces: string | undefined, sexe?: Sexe, decede = false): string {
-  const date = formulerDate(deces);
+export function libelleDeces(deces: string | undefined, sexe?: Sexe, decede = false, lieu?: string): string {
+  const quand = quandEtOu(deces, lieu);
   const mot = accorder(sexe, 'décédé', 'décédée', 'décédé(e)');
-  return date ? `${mot} ${date}` : decede ? mot : '';
+  return quand ? `${mot} ${quand}` : decede ? mot : '';
 }
 
 export interface ChampsDate {

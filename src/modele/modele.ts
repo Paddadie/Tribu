@@ -3,6 +3,7 @@
 // une Error (message en français) quand une règle du modèle est violée.
 
 import type { Donnees, Filiation, GroupeAmis, Personne, Sexe, StatutUnion, TypeFiliation, Union } from './types';
+import { appliquerNomApres, nomApresParDefaut, quiAChangeDeNom } from './nomApres';
 
 export const MAX_PARENTS_PAR_TYPE = 2;
 
@@ -39,7 +40,7 @@ export interface ChampsPersonne {
   sansRappel?: boolean;
 }
 
-/** Champs que les écrans de saisie ne remplissent pas encore : absents de `ChampsPersonne`, `modifierPersonne` les garde. */
+/** Champs que tous les écrans n'envoient pas (création rapide, import ancien) : absents de `ChampsPersonne`, `modifierPersonne` les garde. */
 const CHAMPS_GARDES = ['lieuNaissance', 'lieuDeces', 'ignorerIncomplet', 'sansRappel'] as const;
 
 /** Décédée : interrupteur allumé, ou date de décès connue (données d'avant l'interrupteur). */
@@ -343,11 +344,6 @@ function prendreNomDuConjoint(d: Donnees, union: Union): Donnees {
   return { ...d, personnes: d.personnes.map((p) => (p.id === a.id ? a2 : p.id === b.id ? b2 : p)) };
 }
 
-/** L'autre personne de l'union. */
-function partenaire(d: Donnees, u: Union, id: string): Personne | undefined {
-  return d.personnes.find((p) => p.id === (u.personneA === id ? u.personneB : u.personneA));
-}
-
 /**
  * Épouse d'un mariage actuel femme-homme qui ne porte pas encore le nom de son mari (mariage saisi sans la case, ou
  * importé) : c'est à elle que « Elle prend le nom de X » s'adresse. `undefined` si personne ne changerait de nom.
@@ -367,16 +363,11 @@ export function prendreLeNom(d: Donnees, idUnion: string): Donnees {
 }
 
 /**
- * Les personnes de l'union qui portent encore le nom de l'autre et ont un nom de naissance : à la séparation, à la
- * suppression de l'union ou au passage à « non marié », l'écran leur propose de le reprendre (sans l'imposer).
+ * Les personnes de l'union qui portent encore le nom de l'autre (ou le nom composé du couple) et ont un nom de naissance :
+ * à la séparation, à la suppression de l'union ou au passage à « non marié », l'écran leur propose de le reprendre (sans l'imposer).
  */
 export function quiPeutReprendreSonNom(d: Donnees, idUnion: string): Personne[] {
-  const u = exigerUnion(d, idUnion);
-  return [u.personneA, u.personneB].flatMap((id) => {
-    const p = d.personnes.find((x) => x.id === id);
-    const autre = partenaire(d, u, id);
-    return p?.nomNaissance && autre?.nom && p.nom === autre.nom ? [p] : [];
-  });
+  return quiAChangeDeNom(d, exigerUnion(d, idUnion));
 }
 
 /** Reprise du nom de naissance : il redevient le nom d'usage, et le champ du nom de naissance est vidé. */
@@ -420,6 +411,33 @@ export function retablirUnion(d: Donnees, id: string): Donnees {
 export function supprimerUnion(d: Donnees, id: string): Donnees {
   if (!d.unions.some((u) => u.id === id)) throw new Error(`Union introuvable : ${id}`);
   return { ...d, unions: d.unions.filter((u) => u.id !== id) };
+}
+
+/** Union notée en reliant deux parents d'un même enfant. */
+export type ChoixUnion = 'couple' | 'marie' | 'separee';
+
+/** Union actuelle avec un vivant que `unirParents(d, a, b, choix)` ferait passer en « séparée ». */
+export function unionsQuiSeSepareraient(d: Donnees, a: string, b: string, choix: ChoixUnion): Union[] {
+  if (choix === 'separee' || unionEntre(d, a, b)) return [];
+  return d.unions.filter((u) => unionAvecVivant(d, u, a) || unionAvecVivant(d, u, b));
+}
+
+export function unionEntre(d: Donnees, a: string, b: string): Union | undefined {
+  return d.unions.find((u) => (u.personneA === a && u.personneB === b) || (u.personneA === b && u.personneB === a));
+}
+
+/**
+ * Note l'union des deux parents `a` et `b`, sans effet s'ils en ont déjà une. En couple ou mariés, leurs unions actuelles
+ * avec d'autres vivants passent d'abord en « séparées ». Un mariage donne le nom proposé d'office (celui de l'homme).
+ */
+export function unirParents(d: Donnees, a: string, b: string, choix: ChoixUnion): Donnees {
+  if (unionEntre(d, a, b)) return d;
+  const separe = unionsQuiSeSepareraient(d, a, b, choix).reduce((x, u) => separerUnion(x, u.id), d);
+  const { donnees, union } = ajouterUnion(separe, a, b, choix === 'marie', choix === 'separee' ? 'separee' : 'actuelle', undefined, false);
+  if (choix !== 'marie') return donnees;
+  const pa = donnees.personnes.find((p) => p.id === a)!;
+  const pb = donnees.personnes.find((p) => p.id === b)!;
+  return appliquerNomApres(donnees, union.id, nomApresParDefaut(pa, pb));
 }
 
 export function ajouterFiliation(d: Donnees, parent: string, enfant: string, type: TypeFiliation): { donnees: Donnees; filiation: Filiation } {

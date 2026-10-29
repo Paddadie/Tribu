@@ -8,10 +8,13 @@ import {
   initiales,
   libelleAdoptif,
   libelleMarie,
+  libelleDeces,
   libelleNaissance,
+  libelleUnion,
   nomComplet,
   nomListe,
   nomsConnus,
+  lieuxConnus,
   couleurFamille,
   NB_COULEURS,
 } from './liste';
@@ -31,6 +34,15 @@ describe('nomsConnus', () => {
   it('compte aussi les noms de naissance et ignore les noms vides', () => {
     const jeuneFille = { ...p('H', 'Durand'), nomNaissance: 'Lemaire' };
     expect(nomsConnus([jeuneFille, p('I', '  '), p('J', '')])).toEqual(['Durand', 'Lemaire']);
+  });
+});
+
+describe('lieuxConnus', () => {
+  it('réunit lieux de naissance, de décès et de mariage, graphies proches regroupées', () => {
+    const a = { ...p('A', 'X'), lieuNaissance: 'Quimper', lieuDeces: 'Brest' };
+    const b = { ...p('B', 'Y'), lieuNaissance: 'quimper ' };
+    const c = { ...p('C', 'Y'), lieuDeces: 'Quimper' };
+    expect(lieuxConnus([a, b, c, p('D', 'Z')], [{ lieu: 'Brest' }, { lieu: 'Brest' }, {}])).toEqual(['Brest', 'Quimper']);
   });
 });
 
@@ -182,6 +194,19 @@ describe('libelleNaissance', () => {
     expect(libelleNaissance('')).toBe('');
     expect(libelleNaissance('1961-13-01')).toBe('');
     expect(libelleNaissance('n’importe quoi')).toBe('');
+  });
+});
+
+describe('lieux dans les libellés (naissance, décès, union)', () => {
+  it('ajoute « à <lieu> » après la date, ou seul sans date', () => {
+    expect(libelleNaissance('1950-02-08', 'F', 'Quimper')).toBe('née le 8 février 1950 à Quimper');
+    expect(libelleNaissance(undefined, 'M', ' Brest ')).toBe('né à Brest');
+    expect(libelleNaissance('1950', 'M', '  ')).toBe('né en 1950');
+    expect(libelleDeces('2024-01-14', 'F', true, 'Lorient')).toBe('décédée le 14 janvier 2024 à Lorient');
+    expect(libelleDeces(undefined, 'M', true, 'Lorient')).toBe('décédé à Lorient');
+    expect(libelleDeces(undefined, 'M', true)).toBe('décédé');
+    expect(libelleUnion('1975', 'Brest')).toBe('en 1975 à Brest');
+    expect(libelleUnion(undefined, undefined)).toBe('');
   });
 });
 

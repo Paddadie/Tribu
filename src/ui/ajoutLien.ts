@@ -1,19 +1,23 @@
 // Ajout d'un parent, d'un enfant ou d'un frère / d'une sœur à une personne : choisir une personne
 // existante ou en créer une, puis préciser le lien (biologique ou adoptif).
-// Enfant d'une personne en couple : le conjoint peut être ajouté comme second parent dans la même saisie.
+// Enfant : l'autre parent se choisit parmi le conjoint, les conjoints défunts, les ex et les coparents (`autresParents`).
+// Parent : le nouveau parent l'est aussi de la fratrie présumée (cases cochées d'office) ; si l'enfant n'avait qu'un
+// parent, les deux sont reliés par une union (en couple, mariés ou séparés), avec un avertissement si une union en cours
+// passe en « séparés ».
 // Frère ou sœur : enfant des parents cochés (un seul coché : demi-frère ou demi-sœur) ; sans parent connu,
 // pas de case : le lien passe par un parent inconnu créé en coulisse.
-// Les personnes déjà liées ne sont pas choisissables.
+// Les personnes déjà liées ne sont pas choisissables. Après une création, la fiche de la nouvelle personne s'ouvre.
 
-import { conjoint, fratrie, liensParents } from '../modele/deductions';
-import { avecDe, enumerer, nomComplet } from '../modele/liste';
-import { ajouterFiliation, ajouterFiliations, ajouterFrereSansParent, ajouterUnion } from '../modele/modele';
-import { nomsEnfant, suggestions } from '../modele/saisie';
+import { fratrie, liensParents } from '../modele/deductions';
+import { accorder, avecDe, enumerer, nomComplet } from '../modele/liste';
+import { ajouterFiliations, ajouterFrereSansParent, fratriePresumee, unirParents } from '../modele/modele';
+import { autresParents, nomsEnfant, nomsFratrie, suggestions } from '../modele/saisie';
 import type { Donnees, Personne, TypeFiliation } from '../modele/types';
 import { h, icone } from './dom';
 import { avatarPersonne } from './lignePersonne';
-import { garderSaisie, lienRetour, revenir } from './navigation';
-import { selecteurPersonne } from './selecteurPersonne';
+import { apresAjout, garderSaisie, lienRetour } from './navigation';
+import { selecteurPersonne, type Selecteur } from './selecteurPersonne';
+import { choixUnionParents } from './unionParents';
 
 export type RoleLien = 'parent' | 'enfant' | 'frere';
 
@@ -25,9 +29,14 @@ const TEXTES = {
 
 const appel = (p: Personne) => p.prenom || p.nom;
 
-/** Case à cocher en carte : libellé et précision. */
-function caseACocher(libelle: string, detail: string, onchange: () => void): { noeud: HTMLElement; boite: HTMLInputElement } {
-  const boite = h('input', { type: 'checkbox', class: 'boite', checked: true, onchange });
+/** Case (ou bouton radio) en carte : libellé et précision. */
+function caseACocher(
+  libelle: string,
+  detail: string,
+  onchange: () => void,
+  radio?: { name: string; checked: boolean },
+): { noeud: HTMLElement; boite: HTMLInputElement } {
+  const boite = h('input', { type: radio ? 'radio' : 'checkbox', name: radio?.name, class: 'boite', checked: radio ? radio.checked : true, onchange });
   const noeud = h(
     'label',
     { class: 'case' },
@@ -41,31 +50,64 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
   const retour = `#/personne/${p.id}`;
   const textes = TEXTES[role];
   let type: TypeFiliation = 'biologique';
+  // Le sélecteur prévient d'un changement de choix dès sa construction : il n'existe pas encore à ce moment-là.
+  let selecteur: Selecteur | undefined;
+  const rafraichir = () => selecteur?.rafraichir();
 
-  // Enfant : le conjoint éventuel, second parent coché d'office.
-  const couple = role === 'enfant' ? conjoint(d, p.id)?.personne : undefined;
-  const caseConjoint =
-    couple && caseACocher(`Ajouter aussi ${appel(couple)} comme parent`, couple.sexe === 'F' ? 'Sa conjointe' : 'Son conjoint', () => selecteur.rafraichir());
+  // Enfant : l'autre parent, le premier proposé coché d'office ; la dernière option n'en ajoute aucun.
+  const candidats = role === 'enfant' ? autresParents(d, p.id) : [];
+  const optionsAutre = candidats.map((c, i) => ({
+    personne: c.personne,
+    ...caseACocher(nomComplet(c.personne), c.detail, rafraichir, { name: 'autre-parent', checked: i === 0 }),
+  }));
+  const sansAutre = caseACocher('Autre parent ou inconnu', '', rafraichir, { name: 'autre-parent', checked: false });
+  const autreParent = () => optionsAutre.find((o) => o.boite.checked)?.personne;
 
   // Frère ou sœur : une case par parent connu, toutes cochées.
   const parentsConnus = role === 'frere' ? liensParents(d, p.id).map((l) => l.personne) : [];
-  const casesParents = parentsConnus.map((pa) => ({ pa, ...caseACocher(nomComplet(pa), '', () => selecteur.rafraichir()) }));
+  const casesParents = parentsConnus.map((pa) => ({
+    pa,
+    ...caseACocher(nomComplet(pa), accorder(pa.sexe, 'Son père', 'Sa mère', 'Son parent'), rafraichir),
+  }));
   const sansParentConnu = role === 'frere' && parentsConnus.length === 0;
   const parentsCoches = () => casesParents.filter((c) => c.boite.checked).map((c) => c.pa);
 
-  // Parent : si l'enfant n'en a qu'un, proposer de relier les deux par une union passée (pointillés dans les arbres).
-  const parentActuel = role === 'parent' && liensParents(d, p.id).length === 1 ? liensParents(d, p.id)[0].personne : undefined;
-  const caseCouple =
-    parentActuel && caseACocher(`${appel(parentActuel)} et ce parent ont été en couple`, 'Union terminée, reliée par un trait pointillé', () => undefined);
-  /** Union passée entre le parent actuel et le nouveau, sauf si la case est décochée ou s'ils sont déjà liés. */
-  const avecUnionPassee = (x: Donnees, nouveau: string): Donnees => {
-    if (!parentActuel || !caseCouple?.boite.checked) return x;
-    const lies = x.unions.some((u) => [u.personneA, u.personneB].includes(parentActuel.id) && [u.personneA, u.personneB].includes(nouveau));
-    return lies ? x : ajouterUnion(x, parentActuel.id, nouveau, false, 'separee').donnees;
+  // Parent : l'unique parent connu de l'enfant, à relier au nouveau par une union.
+  const liens = role === 'parent' ? liensParents(d, p.id) : [];
+  const parentActuel = liens.length === 1 ? liens[0].personne : undefined;
+
+  // Parent : fratrie présumée (enfants du même seul parent connu), cochée d'office et recalculée selon le type de lien.
+  const carteFreres = h('div', { class: 'carte' });
+  let casesFreres: { f: Personne; noeud: HTMLElement; boite: HTMLInputElement }[] = [];
+  const blocFreres = h(
+    'fieldset',
+    { class: 'champ' },
+    h('legend', {}, 'Aussi parent de'),
+    carteFreres,
+    h('p', { class: 'aide' }, 'Décoche pour un demi-frère ou une demi-sœur.'),
+  );
+  const dessinerFreres = () => {
+    const presumes = role === 'parent' ? fratriePresumee(d, p.id, type) : [];
+    const seul = parentActuel ? ` · même seul parent connu, ${appel(parentActuel)}` : '';
+    casesFreres = presumes.map((f) => ({
+      f,
+      ...caseACocher(nomComplet(f), `${accorder(f.sexe, 'Frère', 'Sœur', 'Frère ou sœur')} ${avecDe(appel(p))}${seul}`, () => undefined),
+    }));
+    carteFreres.replaceChildren(...casesFreres.map((c) => c.noeud));
+    blocFreres.hidden = casesFreres.length === 0;
   };
+  dessinerFreres();
+
+  // Parent : union avec le parent actuel (une personne créée n'a pas encore d'union).
+  const nouveauParent = () => (selecteur?.mode() === 'existante' ? selecteur.choisie()?.id : undefined) ?? 'nouvelle';
+  const union = parentActuel && choixUnionParents(d, parentActuel, nouveauParent);
 
   /** Parents du nouvel enfant (rôle enfant ou frère). */
-  const parentsDuLien = (): Personne[] => (role === 'frere' ? parentsCoches() : couple && caseConjoint?.boite.checked ? [p, couple] : [p]);
+  const parentsDuLien = (): Personne[] => {
+    if (role === 'frere') return parentsCoches();
+    const autre = autreParent();
+    return autre ? [p, autre] : [p];
+  };
 
   const indisponible = (x: Donnees, c: Personne): string | undefined => {
     const estParent = (parent: string, enfant: string) => x.filiations.some((f) => f.parent === parent && f.enfant === enfant);
@@ -79,24 +121,34 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
     return undefined;
   };
 
-  const selecteur = selecteurPersonne({
+  const lierParent = (x: Donnees, autre: string): Donnees => {
+    const relie = ajouterFiliations(
+      x,
+      [autre],
+      p.id,
+      type,
+      casesFreres.filter((c) => c.boite.checked).map((c) => c.f.id),
+    );
+    const choix = union?.choix();
+    return parentActuel && choix ? unirParents(relie, parentActuel.id, autre, choix) : relie;
+  };
+
+  selecteur = selecteurPersonne({
     personne: p,
     libelleOrigine: textes.origine,
     libelleValider: textes.valider,
     // Un parent n'en compte que deux : le choix multiple ne vaut que pour les enfants et la fratrie.
     libelleValiderPlusieurs: role === 'enfant' ? (n) => `Ajouter ${n} enfants` : role === 'frere' ? (n) => `Ajouter ${n} à la fratrie` : undefined,
-    // Enfant, frère ou sœur : nom du père (ou de la fiche), bouton pour l'autre parent ; la fratrie prend les parents cochés,
-    // la fiche seulement si aucun n'est connu (la personne a pu changer de nom). Parent : nom de la fiche.
-    noms: () => {
-      const parents = role === 'enfant' || role === 'frere' ? parentsDuLien() : [];
-      return nomsEnfant(parents.length > 0 ? parents : [p]);
-    },
+    // Enfant : nom du père (ou de la fiche), bouton pour l'autre parent. Frère ou sœur : nom de naissance de la fiche
+    // d'abord, puis ceux des parents cochés. Parent : nom de la fiche.
+    noms: () => (role === 'frere' ? nomsFratrie(p, parentsCoches()) : nomsEnfant(role === 'enfant' ? parentsDuLien() : [p])),
     suggestions: (x) => suggestions(x, p.id, role),
     indisponible,
     pret: role === 'frere' && !sansParentConnu ? () => parentsCoches().length > 0 : undefined,
+    surChoix: () => union?.maj(),
     lier: (x, autre) =>
       role === 'parent'
-        ? avecUnionPassee(ajouterFiliation(x, autre, p.id, type).donnees, autre)
+        ? lierParent(x, autre)
         : sansParentConnu
           ? ajouterFrereSansParent(x, p.id, autre)
           : ajouterFiliations(
@@ -105,15 +157,25 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
               autre,
               type,
             ),
-    apres: () => revenir(retour),
+    apres: (idNouvelle) => apresAjout(retour, idNouvelle),
   });
-  garderSaisie(selecteur.modifie);
+  const choix = selecteur;
+  garderSaisie(choix.modifie);
 
   const optionType = (valeur: TypeFiliation, libelle: string) =>
     h(
       'label',
       { class: 'choix' },
-      h('input', { type: 'radio', name: 'type-lien', value: valeur, checked: valeur === type, onchange: () => (type = valeur) }),
+      h('input', {
+        type: 'radio',
+        name: 'type-lien',
+        value: valeur,
+        checked: valeur === type,
+        onchange: () => {
+          type = valeur;
+          dessinerFreres();
+        },
+      }),
       h('span', {}, libelle),
     );
 
@@ -127,6 +189,10 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
       h('div', { class: 'carte' }, ...casesParents.map((c) => c.noeud)),
       casesParents.length > 1 && h('p', { class: 'aide' }, 'Décoche un parent pour un demi-frère ou une demi-sœur.'),
     );
+
+  const champAutreParent =
+    optionsAutre.length > 0 &&
+    h('fieldset', { class: 'champ' }, h('legend', {}, 'Autre parent'), h('div', { class: 'carte' }, ...optionsAutre.map((o) => o.noeud), sansAutre.noeud));
 
   return h(
     'div',
@@ -142,12 +208,13 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
       { class: 'contenu' },
       h('p', { class: 'contexte' }, avatarPersonne(p), 'pour ', h('b', {}, nomComplet(p))),
       champsParents,
-      caseConjoint && h('div', { class: 'carte' }, caseConjoint.noeud),
-      caseCouple && h('div', { class: 'carte' }, caseCouple.noeud),
+      champAutreParent,
+      role === 'parent' && blocFreres,
       sansParentConnu &&
         h('p', { class: 'aide' }, 'Parents inconnus : les deux seront frères ou sœurs. Ajoute un parent à l’un d’eux, il le deviendra pour tous.'),
-      selecteur.onglets,
-      selecteur.zone,
+      choix.onglets,
+      choix.zone,
+      union?.noeud,
       !sansParentConnu &&
         h(
           'fieldset',
@@ -155,7 +222,7 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
           h('legend', {}, 'Type de lien'),
           h('div', { class: 'choix-groupe' }, optionType('biologique', 'Biologique'), optionType('adoptif', 'Adoptif')),
         ),
-      selecteur.pied,
+      choix.pied,
     ),
   );
 }

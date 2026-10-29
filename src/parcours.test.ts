@@ -199,8 +199,11 @@ describe('ajout d’un lien', () => {
     const fanny = enregistrees().personnes.find((p) => p.prenom === 'Fanny')!;
     expect(fanny.sexe).toBe('F');
     expect(enregistrees().unions).toContainEqual(expect.objectContaining({ personneA: ids.Denis, personneB: fanny.id, marie: true }));
+    // Nom de l'homme pour les deux, d'office ; la fiche créée remplace l'écran d'ajout.
+    expect(fanny.nom).toBe('Martin');
     expect(fanny.nomNaissance).toBe('Roux');
-    expect(trouver('section', 'Conjoint').textContent).toContain('Fanny Martin');
+    expect(location.hash).toBe(`#/personne/${fanny.id}`);
+    expect(trouver('section', 'Conjoint').textContent).toContain('Denis Martin');
   });
 
   it('ami choisi parmi les fiches : forme un groupe, quitté depuis la fiche et rétabli par le bandeau', async () => {
@@ -306,8 +309,8 @@ describe('ajout d’un lien', () => {
 
     const elise = enregistrees().personnes.find((p) => p.prenom === 'Élise')!;
     expect(enregistrees().filiations).toContainEqual(expect.objectContaining({ parent: elise.id, enfant: ids.Denis, type: 'biologique' }));
-    expect(location.hash).toBe(`#/personne/${ids.Denis}`);
-    expect(trouver('section', 'Parents').textContent).toContain('Élise Durand');
+    expect(location.hash).toBe(`#/personne/${elise.id}`);
+    expect(trouver('section', 'Enfants').textContent).toContain('Denis Martin');
   });
 
   it('s’ouvre sur « Nouvelle personne », le curseur dans le prénom', async () => {
@@ -323,7 +326,8 @@ describe('ajout d’un lien', () => {
     const d = ajouterUnion(thomas.donnees, lea.personne.id, thomas.personne.id).donnees;
     await demarrer(d, `#/enfant/${lea.personne.id}`);
 
-    expect(trouver('label.case', 'Ajouter aussi Mathis comme parent').querySelector('input')!.checked).toBe(true);
+    expect(trouver('label.case', 'Mathis Petit').querySelector('input')!.checked).toBe(true);
+    expect(trouver('label.case', 'Mathis Petit').textContent).toContain('Conjoint');
     const nom = ecran().querySelector<HTMLInputElement>('#nom')!;
     expect(nom.value).toBe('Petit');
     await toucher(trouver('button.bouton-nom', 'Prendre Dubois, le nom de Léa'));
@@ -338,7 +342,8 @@ describe('ajout d’un lien', () => {
         .filiations.filter((f) => f.enfant === jules.id)
         .map((f) => f.parent),
     ).toEqual([lea.personne.id, thomas.personne.id]);
-    expect(trouver('section', 'Conjoint').textContent).toContain('1 enfant ensemble');
+    expect(location.hash).toBe(`#/personne/${jules.id}`);
+    expect(trouver('section', 'Parents').textContent).toContain('Mathis Petit');
   });
 
   it('frère ou sœur depuis la fiche : un seul parent coché donne un demi-frère', async () => {
@@ -360,8 +365,8 @@ describe('ajout d’un lien', () => {
         .filiations.filter((f) => f.enfant === hugo.id)
         .map((f) => f.parent),
     ).toEqual([ids.Anne]);
-    expect(location.hash).toBe(`#/personne/${ids.Chloé}`);
-    expect(trouver('section', 'Parents et fratrie').textContent).toContain('Hugo Martin');
+    expect(location.hash).toBe(`#/personne/${hugo.id}`);
+    expect(ecran().textContent).toContain('Chloé Martin');
   });
 
   it('frère ou sœur : décocher un parent avec une date incomplète met à jour le bouton', async () => {
@@ -397,8 +402,8 @@ describe('ajout d’un lien', () => {
     saisir('prenom', 'Hugo');
     await toucher(trouver('button', 'Créer et ajouter'));
 
-    expect(location.hash).toBe(`#/personne/${ids.Denis}`);
-    expect(trouver('section', 'Frères et sœurs').textContent).toContain('Hugo Martin');
+    expect(location.hash).toBe(`#/personne/${enregistrees().personnes.find((p) => p.prenom === 'Hugo')!.id}`);
+    expect(trouver('section', 'Frères et sœurs').textContent).toContain('Denis Martin');
     expect(ecran().textContent).not.toContain('Parents');
     const d = enregistrees();
     expect(d.personnes.filter((p) => p.inconnu)).toHaveLength(1);
@@ -437,7 +442,7 @@ describe('ajout d’un lien', () => {
     await toucher(trouver('button', 'Créer et ajouter'));
     await toucher(trouver('dialog.confirmation button', 'Créer quand même'));
     expect(enregistrees().personnes).toHaveLength(5);
-    expect(location.hash).toBe(`#/personne/${ids.Denis}`);
+    expect(location.hash).not.toBe(`#/parent/${ids.Denis}`);
   });
 
   it('Retour avec une saisie en cours demande confirmation', async () => {
@@ -502,23 +507,27 @@ describe('retrait sans confirmation, annulable', () => {
     expect(bandeau()!.textContent).toContain('Lien rétabli.');
   });
 
-  it('mariage avec « Prend le nom » éteint et date d’union, montrée sur la fiche', async () => {
+  it('mariage où chacun garde son nom, avec date et lieu d’union, montrés sur la fiche', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, `#/conjoint/${ids.Denis}`);
     await toucher(trouver('label', 'Nouvelle personne').querySelector('input')!);
     saisir('prenom', 'Fanny');
     saisir('nom', 'Roux');
-    expect(ecran().querySelector<HTMLElement>('label[for="prend-nom"]')!.hidden).toBe(true);
+    const choixNom = ecran().querySelector<HTMLElement>('.nom-apres')!;
+    expect(choixNom.hidden).toBe(true);
     await toucher(ecran().querySelector<HTMLInputElement>('#marie')!);
-    expect(ecran().querySelector<HTMLElement>('label[for="prend-nom"]')!.hidden).toBe(false);
-    await toucher(ecran().querySelector<HTMLInputElement>('#prend-nom')!);
+    expect(choixNom.hidden).toBe(false);
+    expect(trouver('label.case', 'Martin pour les deux').querySelector('input')!.checked).toBe(true);
+    expect(trouver('label.case', 'Martin pour les deux').textContent).toContain('Fanny Martin, née Roux');
+    await toucher(trouver('label.case', 'Chacun garde le sien').querySelector('input')!);
     saisir('annee-union', '2012');
+    saisir('lieu-union', 'Quimper');
     await toucher(trouver('button', 'Créer et ajouter'));
 
     const fanny = enregistrees().personnes.find((p) => p.prenom === 'Fanny')!;
     expect(fanny.nom).toBe('Roux');
     expect(fanny.nomNaissance).toBeUndefined();
-    expect(enregistrees().unions).toContainEqual(expect.objectContaining({ personneB: fanny.id, marie: true, date: '2012' }));
+    expect(enregistrees().unions).toContainEqual(expect.objectContaining({ personneB: fanny.id, marie: true, date: '2012', lieu: 'Quimper' }));
     expect(trouver('section', 'Conjoint').textContent).toContain('Union en 2012');
   });
 
@@ -1090,7 +1099,7 @@ describe('mémo : décès, âge et anniversaires', () => {
     await demarrer(donnees, `#/modifier/${ids.Anne}`);
     const bascule = ecran().querySelector<HTMLInputElement>('#decede')!;
     const ligne = ecran().querySelector<HTMLElement>('label[for=decede] .ligne-nom')!;
-    const date = ecran().querySelector<HTMLElement>('#annee-deces')!.closest<HTMLElement>('[hidden], .champ')!;
+    const date = ecran().querySelector<HTMLElement>('#annee-deces')!.closest<HTMLElement>('.champ')!.parentElement!;
     expect(bascule.checked).toBe(false);
     expect(ligne.textContent).toBe('Décédée');
     expect(date.hidden).toBe(true);
@@ -1189,17 +1198,65 @@ describe('arbre global', () => {
     expect(titre()).toBe('Arbre');
   });
 
-  it('enregistre le parent « ? » touché, puis ouvre sa vraie fiche', async () => {
+  it('le parent « ? » touché ouvre « Qui est ce parent ? », sans rien enregistrer ; une personne créée le remplace', async () => {
     let d = donneesVides();
     const anne = creerPersonne(d, { prenom: 'Anne', nom: 'Martin', sexe: 'F' });
     const chloe = creerPersonne(anne.donnees, { prenom: 'Chloé', nom: 'Martin', sexe: 'F' });
     d = ajouterFiliation(chloe.donnees, anne.personne.id, chloe.personne.id, 'biologique').donnees;
     await demarrer(d, '#/arbre', { moi: chloe.personne.id });
+    await toucher(ecran().querySelector<HTMLElement>('.calque a[href^="#/qui/virtuel:"]')!);
+    expect(location.hash).toBe(`#/qui/virtuel:${anne.personne.id}`);
+    expect(titre()).toBe('Qui est ce parent ?');
+    expect(ecran().querySelector('.contexte')?.textContent).toBe('?L’autre parent de Chloé, enfant de Anne Martin.');
     expect(enregistrees().personnes).toHaveLength(2);
-    await toucher(ecran().querySelector<HTMLElement>('.calque a[href^="#/personne/virtuel:"]')!);
-    expect(enregistrees().personnes).toHaveLength(3);
-    expect(ecran().querySelector('.identite h1')?.textContent).toContain('Parent inconnu');
-    expect(location.hash).not.toContain('virtuel:');
+
+    await toucher(trouver('label', 'Nouvelle personne').querySelector('input')!);
+    expect(ecran().querySelector<HTMLInputElement>('input[name=sexe][value=M]')!.checked).toBe(true);
+    saisir('prenom', 'Bruno');
+    saisir('nom', 'Martin');
+    expect(trouver('label.choix', 'En couple').querySelector('input')!.checked).toBe(true);
+    await toucher(trouver('button', 'Créer et ajouter'));
+
+    const apres = enregistrees();
+    const bruno = apres.personnes.find((p) => p.prenom === 'Bruno')!;
+    expect(apres.personnes.filter((p) => p.sansNom)).toHaveLength(0);
+    expect(apres.filiations).toContainEqual(expect.objectContaining({ parent: bruno.id, enfant: chloe.personne.id }));
+    expect(apres.unions).toContainEqual(expect.objectContaining({ personneA: anne.personne.id, personneB: bruno.id, statut: 'actuelle' }));
+    expect(location.hash).toBe(`#/personne/${bruno.id}`);
+  });
+
+  it('« Qui est ce parent ? » : une personne en couple, « Séparés » d’office, avertissement si l’on choisit « En couple »', async () => {
+    let d = donneesVides();
+    const ids: Record<string, string> = {};
+    for (const [prenom, sexe] of [
+      ['Anne', 'F'],
+      ['Chloé', 'F'],
+      ['Denis', 'M'],
+      ['Fanny', 'F'],
+    ] as const) {
+      const r = creerPersonne(d, { prenom, nom: 'Martin', sexe });
+      d = r.donnees;
+      ids[prenom] = r.personne.id;
+    }
+    d = ajouterFiliation(d, ids.Anne, ids.Chloé, 'biologique').donnees;
+    d = ajouterUnion(d, ids.Denis, ids.Fanny).donnees;
+    await demarrer(d, `#/qui/virtuel:${ids.Anne}`);
+    expect(trouver('label', 'Déjà dans Tribu').querySelector('input')!.checked).toBe(true);
+    expect(trouver('button.ligne-choix', 'Chloé').hasAttribute('disabled')).toBe(true);
+
+    await toucher(trouver('button.ligne-choix', 'Denis'));
+    expect(trouver('button', 'C’est Denis')).toBeTruthy();
+    expect(trouver('label.choix', 'Séparés').querySelector('input')!.checked).toBe(true);
+    expect(ecran().querySelector<HTMLElement>('.avertissement')!.hidden).toBe(true);
+    await toucher(trouver('label.choix', 'En couple').querySelector('input')!);
+    expect(ecran().querySelector('.avertissement')!.textContent).toBe('Denis est en couple avec Fanny : cette union-là passera en « séparés ».');
+    await toucher(trouver('button', 'C’est Denis'));
+
+    const apres = enregistrees();
+    expect(apres.filiations).toContainEqual(expect.objectContaining({ parent: ids.Denis, enfant: ids.Chloé }));
+    expect(apres.unions).toContainEqual(expect.objectContaining({ personneA: ids.Denis, personneB: ids.Fanny, statut: 'separee' }));
+    expect(apres.unions).toContainEqual(expect.objectContaining({ personneA: ids.Anne, personneB: ids.Denis, statut: 'actuelle' }));
+    expect(location.hash).toBe(`#/personne/${ids.Denis}`);
   });
 
   it('cherche une personne de l’arbre', async () => {
@@ -1446,5 +1503,93 @@ describe('filtres de la liste', () => {
     const completes = donnees.personnes.map((p) => ({ ...p, prenom: p.prenom || 'X', nom: p.nom || 'Y', naissance: '1980-01-01' }));
     await demarrer({ ...donnees, personnes: completes }, '#/personnes');
     expect([...ecran().querySelectorAll('.puces-liste button')].map((b) => b.textContent)).toEqual(['Toutes']);
+  });
+});
+
+describe('V4 lot 2 : saisie', () => {
+  /** Céleste Martinez et Achille Rochefort, en couple sans être mariés. */
+  function couple() {
+    const celeste = creerPersonne(donneesVides(), { prenom: 'Céleste', nom: 'Martinez', sexe: 'F' });
+    const achille = creerPersonne(celeste.donnees, { prenom: 'Achille', nom: 'Rochefort', sexe: 'M' });
+    const { donnees, union } = ajouterUnion(achille.donnees, celeste.personne.id, achille.personne.id);
+    return { donnees, union, celeste: celeste.personne.id, achille: achille.personne.id };
+  }
+  const coche = (texte: string) => trouver('label.case', texte).querySelector('input')!.checked;
+
+  it('nom après le mariage : le nom de l’homme d’office, même écran des deux côtés, reprise du nom proposée à la séparation', async () => {
+    const { donnees, union, celeste, achille } = couple();
+    await demarrer(donnees, `#/union/${union.id}/${celeste}`);
+    await toucher(ecran().querySelector<HTMLInputElement>('#marie')!);
+    expect(coche('Rochefort pour les deux')).toBe(true);
+    expect(trouver('label.case', 'Rochefort pour les deux').textContent).toContain('Céleste Rochefort, née Martinez');
+    await toucher(trouver('button', 'Enregistrer'));
+    const mariee = enregistrees().personnes.find((p) => p.id === celeste)!;
+    expect([mariee.nom, mariee.nomNaissance]).toEqual(['Rochefort', 'Martinez']);
+
+    await demarrer(enregistrees(), `#/union/${union.id}/${achille}`);
+    expect(coche('Rochefort pour les deux')).toBe(true);
+    await toucher(trouver('button', 'Se sont séparés'));
+    await pause();
+    expect(dialogue()!.textContent).toContain('Céleste porte encore le nom d’Achille. Reprendre son nom de naissance, Martinez ?');
+    await toucher(trouver('dialog.confirmation button', 'Reprendre Martinez'));
+    expect(enregistrees().personnes.find((p) => p.id === celeste)!.nom).toBe('Martinez');
+  });
+
+  it('Modifier : les interrupteurs « Rappels » et « Signaler » éteints sont enregistrés', async () => {
+    const { donnees, celeste } = couple();
+    await demarrer(donnees, `#/modifier/${celeste}`);
+    await toucher(ecran().querySelector<HTMLInputElement>('#rappels')!);
+    await toucher(ecran().querySelector<HTMLInputElement>('#signaler')!);
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(enregistrees().personnes.find((p) => p.id === celeste)).toEqual(expect.objectContaining({ sansRappel: true, ignorerIncomplet: true }));
+  });
+
+  it('enfant : l’ex est proposé comme autre parent, « Autre parent ou inconnu » n’en ajoute aucun', async () => {
+    const { donnees: d, celeste } = couple();
+    const separes = { ...d, unions: d.unions.map((u) => ({ ...u, statut: 'separee' as const })) };
+    await demarrer(separes, `#/enfant/${celeste}`);
+    expect(coche('Achille Rochefort')).toBe(true);
+    expect(trouver('label.case', 'Achille Rochefort').textContent).toContain('Ex');
+    await toucher(trouver('label.case', 'Autre parent ou inconnu').querySelector('input')!);
+    saisir('prenom', 'Zoé');
+    await toucher(trouver('button', 'Créer et ajouter'));
+    const zoe = enregistrees().personnes.find((p) => p.prenom === 'Zoé')!;
+    expect(
+      enregistrees()
+        .filiations.filter((f) => f.enfant === zoe.id)
+        .map((f) => f.parent),
+    ).toEqual([celeste]);
+  });
+
+  it('parent : aussi parent de la fratrie présumée (cochée d’office), uni en couple à l’unique parent connu', async () => {
+    let d = donneesVides();
+    const ids: Record<string, string> = {};
+    for (const [prenom, sexe] of [
+      ['Anne', 'F'],
+      ['Chloé', 'F'],
+      ['Denis', 'M'],
+    ] as const) {
+      const r = creerPersonne(d, { prenom, nom: 'Martin', sexe });
+      d = r.donnees;
+      ids[prenom] = r.personne.id;
+    }
+    d = ajouterFiliation(d, ids.Anne, ids.Chloé, 'biologique').donnees;
+    d = ajouterFiliation(d, ids.Anne, ids.Denis, 'biologique').donnees;
+    await demarrer(d, `#/parent/${ids.Chloé}`);
+    expect(coche('Denis Martin')).toBe(true);
+    expect(trouver('label.choix', 'En couple').querySelector('input')!.checked).toBe(true);
+    saisir('prenom', 'Gilles');
+    await toucher(trouver('button', 'Créer et ajouter'));
+
+    const apres = enregistrees();
+    const gilles = apres.personnes.find((p) => p.prenom === 'Gilles')!;
+    expect(
+      apres.filiations
+        .filter((f) => f.parent === gilles.id)
+        .map((f) => f.enfant)
+        .sort(),
+    ).toEqual([ids.Chloé, ids.Denis].sort());
+    expect(apres.unions).toContainEqual(expect.objectContaining({ personneA: ids.Anne, personneB: gilles.id, statut: 'actuelle' }));
+    expect(location.hash).toBe(`#/personne/${gilles.id}`);
   });
 });

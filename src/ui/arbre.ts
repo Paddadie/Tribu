@@ -57,7 +57,11 @@ export function noeud(p: Personne | undefined, moi: string | undefined, x: numbe
   const title = sansNom ? false : `${p.prenom} ${p.nom}`.trim();
   return o.ici
     ? h('span', { class: 'noeud ici', style, 'aria-current': 'page', title }, ...contenu)
-    : h('a', { class: 'noeud', href: `#/personne/${p.id}`, style, title }, ...contenu);
+    : h(
+        'a',
+        { class: 'noeud', href: sansNom ? `#/qui/${p.id}` : `#/personne/${p.id}`, style, title, 'aria-label': sansNom && 'Qui est ce parent ?' },
+        ...contenu,
+      );
 }
 
 function svg(l: number, haut: number, traits: Trait[]): SVGSVGElement {

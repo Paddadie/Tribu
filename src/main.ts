@@ -16,6 +16,7 @@ import { ecranIllisible } from "./ui/illisible";
 import { ecranLien } from "./ui/lien";
 import { demarrerNavigation, profondeurCourante, remplacer } from "./ui/navigation";
 import { ecranPersonnes } from "./ui/personnes";
+import { quiParent } from "./ui/quiParent";
 import { ecranReglages } from "./ui/reglages";
 import { ecranUnion } from "./ui/union";
 import { ecranVerification } from "./ui/verification";
@@ -31,6 +32,7 @@ import { ecranVerification } from "./ui/verification";
 //   #/parent/<id>      ajout d'un parent à la personne    #/enfant/<id>   ajout d'un enfant
 //   #/frere/<id>       ajout d'un frère ou d'une sœur (enfant des parents cochés)
 //   #/lien/<filiation>/<id>   type du lien parent-enfant, ouvert depuis la fiche de <id>
+//   #/qui/<id>         « Qui est ce parent ? » : remplace le parent « ? » <id> (virtuel ou enregistré)
 //   #/verification    vérification des données (doublons, isolés, dates)
 //   #/arbre            arbre de tous les liens autour de « Moi »      #/arbre/familles   le même, feuille Familles ouverte
 //   #/arbre/famille/<nom simplifié>   le même, zoomé sur une famille      #/arbre/groupe/<id>   le même, zoomé sur un groupe d'amis
@@ -69,6 +71,10 @@ function vue(route: string): HTMLElement {
     if (origine) return ecranUnion(origine, id);
   }
   if ((section === "parent" || section === "enfant" || section === "frere") && personne) return ajoutLien(personne, section, lireDonnees());
+  if (section === "qui" && id) {
+    const ecran = quiParent(id, lireDonnees());
+    if (ecran) return ecran;
+  }
   if (section === "lien") {
     const origine = lireDonnees().personnes.find((p) => p.id === route.split("/")[3]);
     if (origine) return ecranLien(id, origine);

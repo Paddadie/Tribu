@@ -33,6 +33,8 @@
   --danger-bord: #e3bdbd;
   --erreur-fond: #fbeaea;
   --succes-fond: #e4f2ea;
+  --avert-fond: #fdf0dc;
+  --avert-texte: #7a4a06;
   --sur-accent: #fff;
   --sur-danger: #fff;
   --ombre-bouton: rgba(20, 60, 50, 0.3);
@@ -78,6 +80,8 @@
   --danger-bord: #6b3535;
   --erreur-fond: #3a2020;
   --succes-fond: #1d3a2d;
+  --avert-fond: #3a2c14;
+  --avert-texte: #f3c983;
   --sur-accent: #0c1f19;
   --sur-danger: #2a0d0d;
   --c0: #6fb89f;

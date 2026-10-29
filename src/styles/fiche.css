@@ -920,6 +920,30 @@ fieldset.champ legend {
   display: none;
 }
 
+/* Nom après le mariage : options à cases rondes, nom composé déplié sous la sienne. */
+.nom-apres .case[hidden],
+.nom-compose[hidden],
+.avertissement[hidden] {
+  display: none;
+}
+
+.nom-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 14px 56px;
+}
+
+/* Conséquence d'un choix à connaître avant d'enregistrer (union en cours qui passera en « séparés »). */
+.avertissement {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--rayon-s);
+  background: var(--avert-fond);
+  color: var(--avert-texte);
+  font-size: var(--t2);
+}
+
 /* Erreur + bouton de validation des écrans d'ajout : visibles sans défiler la liste. */
 .pied-collant {
   position: sticky;

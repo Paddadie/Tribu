@@ -117,8 +117,9 @@
   animation-name: entree-arriere;
 }
 
-/* Parent sans nom : cercle gris clair avec « ? » (arbre global et dessins de la fiche). */
+/* Parent sans nom : cercle gris clair avec « ? » (arbre global, dessins de la fiche, écran « Qui est ce parent ? »). */
 .noeud .avatar.sans-nom,
+.contexte .avatar.sans-nom,
 .calque .noeud .avatar.sans-nom {
   background: color-mix(in srgb, var(--trait-ex) 22%, var(--carte));
   border: 1.5px dashed var(--trait-ex);

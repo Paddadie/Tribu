@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fratrie } from './deductions';
 import { avecDe, enumerer, grouperParLettre, groupeVise, homonymes, lettresIndex } from './liste';
 import { ajouterFiliation, ajouterFiliations, ajouterUnion, creerPersonne, donneesVides } from './modele';
-import { nomsConjointSelonEnfants, nomsEnfant, suggestions } from './saisie';
+import { autresParents, nomsConjointSelonEnfants, nomsEnfant, nomsFratrie, suggestions, suggestionsParentInconnu } from './saisie';
 import type { Donnees, Personne, Sexe } from './types';
 
 /** Petit constructeur de scénario : personnes par prénom, liens par prénom. */
@@ -292,5 +292,72 @@ describe('index alphabétique', () => {
     expect(groupeVise(groupes, 'N')).toBe('Z');
     const sansZ = grouperParLettre([personne('Anne', 'A'), personne('Marc', 'M')], 'prenom');
     expect(groupeVise(sansZ, 'Y')).toBe('M');
+  });
+});
+
+describe('lot 2 : autre parent, fratrie, « Qui est ce parent ? »', () => {
+  /** Marc : conjointe Nathalie, ex Aurélie (2 enfants), Tristan avec Inès sans union. */
+  function famille() {
+    const m = monde();
+    m.pers('Marc', 'Lambert', 'M');
+    m.pers('Nathalie', 'Roy', 'F');
+    m.pers('Aurélie', 'Faure', 'F');
+    m.pers('Inès', 'Petit', 'F');
+    for (const e of ['Zoé', 'Théo', 'Tristan']) m.pers(e, 'Lambert');
+    m.union('Marc', 'Nathalie');
+    const ex = ajouterUnion(m.d, m.id['Marc'], m.id['Aurélie'], true, 'separee');
+    const d = ajouterFiliations(
+      ajouterFiliations(
+        ajouterFiliations(ex.donnees, [m.id['Marc'], m.id['Aurélie']], m.id['Zoé'], 'biologique'),
+        [m.id['Marc'], m.id['Aurélie']],
+        m.id['Théo'],
+        'biologique',
+        [],
+      ),
+      [m.id['Marc'], m.id['Inès']],
+      m.id['Tristan'],
+      'biologique',
+      [],
+    );
+    return { d, id: m.id };
+  }
+
+  it('autresParents : conjoint actuel, puis ex, puis autres parents de ses enfants', () => {
+    const { d, id } = famille();
+    expect(autresParents(d, id['Marc']).map((a) => [a.personne.prenom, a.detail])).toEqual([
+      ['Nathalie', 'Conjointe'],
+      ['Aurélie', 'Ex · 2 enfants ensemble'],
+      ['Inès', 'Mère de Tristan'],
+    ]);
+  });
+
+  it('suggestionsParentInconnu : entourage des parents connus, sans eux ni les enfants', () => {
+    const { d, id } = famille();
+    const p = (x: string) => d.personnes.find((q) => q.id === id[x])!;
+    expect(suggestionsParentInconnu(d, [p('Marc')], [p('Zoé')]).map((s) => [s.personne.prenom, s.detail])).toEqual([
+      ['Nathalie', 'Conjointe de Marc'],
+      ['Aurélie', 'Ex de Marc'],
+      ['Inès', 'Mère de Tristan'],
+    ]);
+  });
+
+  it('suggestions d’enfant : aussi les enfants des ex', () => {
+    const m = monde();
+    m.pers('Paul', 'Roy', 'M');
+    m.pers('Lise', 'Faure', 'F');
+    m.pers('Hugo', 'Faure');
+    m.filiation('Lise', 'Hugo');
+    const d = ajouterUnion(m.d, m.id['Paul'], m.id['Lise'], false, 'separee').donnees;
+    expect(suggestions(d, m.id['Paul'], 'enfant').map((s) => [s.personne.prenom, s.detail])).toContainEqual(['Hugo', 'Enfant de Lise']);
+  });
+
+  it('nomsFratrie : nom de naissance de la fiche d’abord, puis ceux des parents', () => {
+    const fiche: Personne = { id: 'f', prenom: 'Odile', nom: 'Rochefort', nomNaissance: 'Vasseur', note: '' };
+    const pere: Personne = { id: 'p', prenom: 'Jean', nom: 'Vasseur', sexe: 'M', note: '' };
+    const mere: Personne = { id: 'm', prenom: 'Anne', nom: 'Morel', sexe: 'F', note: '' };
+    expect(nomsFratrie(fiche, [mere, pere]).map((n) => [n.nom, n.de.prenom])).toEqual([
+      ['Vasseur', 'Odile'],
+      ['Morel', 'Anne'],
+    ]);
   });
 });

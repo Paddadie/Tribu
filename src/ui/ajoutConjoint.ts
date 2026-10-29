@@ -3,14 +3,16 @@
 // Mode « ex » : union déjà terminée, ajoutable même si l'un ou l'autre est en couple.
 
 import { avecDe, nomComplet } from '../modele/liste';
-import { ajouterUnion, enCouple } from '../modele/modele';
+import { ajouterUnion, enCouple, modifierLieuUnion } from '../modele/modele';
+import { appliquerNomApres } from '../modele/nomApres';
 import { nomsConjointSelonEnfants, suggestions } from '../modele/saisie';
 import type { Personne } from '../modele/types';
 import { champDate } from './champsPersonne';
 import { h, icone } from './dom';
 import { lireDonnees } from './etat';
 import { avatarPersonne } from './lignePersonne';
-import { garderSaisie, lienRetour, revenir } from './navigation';
+import { apresAjout, garderSaisie, lienRetour } from './navigation';
+import { champLieuUnion, choixNomApres, defautNomApres, type Membre } from './nomApresMariage';
 import { selecteurPersonne, type Selecteur } from './selecteurPersonne';
 
 export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
@@ -29,46 +31,32 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
     marie,
   );
 
-  const prendLeNom = h('input', { id: 'prend-nom', type: 'checkbox', class: 'bascule', checked: true });
-  const lignePrendLeNom = h(
-    'label',
-    { class: 'carte interrupteur', for: 'prend-nom', hidden: true },
-    h(
-      'span',
-      { class: 'ligne-texte' },
-      h('span', { class: 'ligne-nom' }, 'Prend le nom du mari'),
-      h('span', { class: 'secondaire' }, 'Éteint, elle garde son nom de jeune fille'),
-    ),
-    prendLeNom,
-  );
   let selecteur: Selecteur | undefined;
-  // Seule une femme qui épouse un homme prend son nom : la ligne n'existe pas pour un mari, ni pour un couple de femmes.
-  const prendLeNomPossible = () => !ex && marie.checked && p.sexe !== 'F' && selecteur?.sexeChoisi() === 'F';
-  // Nouvelle épouse : son nom devient celui du mari dans le formulaire, l'ancien passant en nom de jeune fille (s'il est libre).
-  let avant: { nom: string; nomNaissance: string } | undefined;
-  const majPrendLeNom = () => {
-    lignePrendLeNom.hidden = !prendLeNomPossible();
-    if (!selecteur) return;
-    const { identite } = selecteur;
-    const poser = selecteur.mode() === 'nouvelle' && !lignePrendLeNom.hidden && prendLeNom.checked && !!p.nom.trim();
-    if (poser && !avant) {
-      avant = { nom: identite.lireNom(), nomNaissance: identite.lireNomNaissance() };
-      identite.definirNom(p.nom);
-      if (avant.nom.trim() && !avant.nomNaissance.trim() && avant.nom.trim() !== p.nom.trim()) identite.definirNomNaissance(avant.nom.trim());
-    } else if (!poser && avant) {
-      if (identite.lireNom() === p.nom) identite.definirNom(avant.nom);
-      identite.definirNomNaissance(avant.nomNaissance);
-      avant = undefined;
+  // L'autre membre du couple : la personne cochée, ou celle en cours de saisie (sans id avant sa création).
+  const autre = (): Membre => {
+    if (selecteur?.mode() === 'existante') {
+      const c = selecteur.choisie();
+      if (c) return { id: c.id, prenom: c.prenom, sexe: c.sexe, origine: c.nom };
     }
+    const identite = selecteur?.identite;
+    return { id: 'nouvelle', prenom: identite?.lirePrenom().trim() ?? '', sexe: identite?.sexe(), origine: identite?.lireNom().trim() ?? '' };
   };
-  marie.addEventListener('change', majPrendLeNom);
-  prendLeNom.addEventListener('change', majPrendLeNom);
+  const nomApres = choixNomApres(() => [{ id: p.id, prenom: p.prenom, sexe: p.sexe, origine: p.nom }, autre()], defautNomApres);
+  const lieu = champLieuUnion(undefined);
+
+  // Nom après le mariage pour un mariage en cours seulement ; le lieu pour tout mariage (décision 9).
+  const majMariage = () => {
+    nomApres.noeud.hidden = ex || !marie.checked;
+    lieu.noeud.hidden = !marie.checked;
+    nomApres.rafraichir();
+  };
+  marie.addEventListener('change', majMariage);
 
   const date = champDate('-union', 'de l’union', undefined, true);
   const champDateUnion = h('div', { class: 'champ' }, h('label', { for: 'jour-union' }, 'Date de l’union (facultative)'), date.groupe);
 
   selecteur = selecteurPersonne({
-    surChoix: majPrendLeNom,
+    surChoix: majMariage,
     personne: p,
     libelleOrigine: ex ? 'Origine de l’ex' : 'Origine du conjoint',
     libelleValider: ex ? 'Ajouter cet ex' : 'Ajouter ce conjoint',
@@ -86,10 +74,18 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
         : enCouple(d, c.id)
           ? 'Déjà en couple'
           : undefined,
-    lier: (d, autre) => ajouterUnion(d, p.id, autre, marie.checked, ex ? 'separee' : 'actuelle', date.lire(), prendLeNomPossible() && prendLeNom.checked).donnees,
-    apres: () => revenir(retour),
+    lier: (d, idAutre) => {
+      const { donnees, union } = ajouterUnion(d, p.id, idAutre, marie.checked, ex ? 'separee' : 'actuelle', date.lire(), false);
+      if (!marie.checked) return donnees;
+      const nommes = ex ? donnees : appliquerNomApres(donnees, union.id, nomApres.lire(p.id, idAutre));
+      return modifierLieuUnion(nommes, union.id, lieu.lire());
+    },
+    apres: (idNouvelle) => apresAjout(retour, idNouvelle),
   });
   const choix = selecteur;
+  // Le nom ou le prénom saisis changent les libellés du choix de nom.
+  choix.zone.addEventListener('input', () => nomApres.rafraichir());
+  majMariage();
   garderSaisie(choix.modifie);
 
   return h(
@@ -108,8 +104,9 @@ export function ajoutConjoint(p: Personne, ex = false): HTMLElement {
       choix.onglets,
       choix.zone,
       interrupteur,
-      lignePrendLeNom,
+      nomApres.noeud,
       champDateUnion,
+      lieu.noeud,
       choix.pied,
     ),
   );
