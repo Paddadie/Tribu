@@ -11,7 +11,7 @@
 import { fratrie, liensParents } from '../modele/deductions';
 import { accorder, avecDe, enumerer, nomComplet } from '../modele/liste';
 import { ajouterFiliations, ajouterFrereSansParent, fratriePresumee, unirParents } from '../modele/modele';
-import { autresParents, nomsEnfant, nomsFratrie, suggestions } from '../modele/saisie';
+import { autresParents, nomsEnfant, nomsFratrie, nomsParent, suggestions } from '../modele/saisie';
 import type { Donnees, Personne, TypeFiliation } from '../modele/types';
 import { h, icone } from './dom';
 import { avatarPersonne } from './lignePersonne';
@@ -140,8 +140,8 @@ export function ajoutLien(p: Personne, role: RoleLien, d: Donnees): HTMLElement 
     // Un parent n'en compte que deux : le choix multiple ne vaut que pour les enfants et la fratrie.
     libelleValiderPlusieurs: role === 'enfant' ? (n) => `Ajouter ${n} enfants` : role === 'frere' ? (n) => `Ajouter ${n} à la fratrie` : undefined,
     // Enfant : nom du père (ou de la fiche), bouton pour l'autre parent. Frère ou sœur : nom de naissance de la fiche
-    // d'abord, puis ceux des parents cochés. Parent : nom de la fiche.
-    noms: () => (role === 'frere' ? nomsFratrie(p, parentsCoches()) : nomsEnfant(role === 'enfant' ? parentsDuLien() : [p])),
+    // d'abord, puis ceux des parents cochés. Parent : nom de naissance de la fiche.
+    noms: () => (role === 'frere' ? nomsFratrie(p, parentsCoches()) : role === 'enfant' ? nomsEnfant(parentsDuLien()) : nomsParent(p)),
     suggestions: (x) => suggestions(x, p.id, role),
     indisponible,
     pret: role === 'frere' && !sansParentConnu ? () => parentsCoches().length > 0 : undefined,

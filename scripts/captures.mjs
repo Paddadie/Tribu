@@ -58,6 +58,23 @@ const APPAREILS = [
   { nom: 'ordinateur', largeur: 1440, hauteur: 900, mobile: false },
 ];
 
+/** Parent par le sang le plus éloigné de `moi` (remonter aux ancêtres puis redescendre), pour l'écran « Lien avec toi ». */
+function plusEloigne(d, moi) {
+  const nommes = new Set(d.personnes.filter((p) => !p.inconnu && !p.sansNom).map((p) => p.id));
+  const parcourir = (depart, suivants) => {
+    const distance = new Map([[depart, 0]]);
+    const file = [depart];
+    for (const x of file) for (const v of suivants(x)) if (!distance.has(v)) (distance.set(v, distance.get(x) + 1), file.push(v));
+    return distance;
+  };
+  const parents = (x) => d.filiations.filter((f) => f.enfant === x).map((f) => f.parent);
+  const enfants = (x) => d.filiations.filter((f) => f.parent === x).map((f) => f.enfant);
+  const loin = new Map();
+  for (const [ancetre, haut] of parcourir(moi, parents))
+    for (const [id, bas] of parcourir(ancetre, enfants)) if (nommes.has(id)) loin.set(id, Math.min(loin.get(id) ?? Infinity, haut + bas));
+  return [...loin].sort((a, b) => b[1] - a[1])[0]?.[0];
+}
+
 /**
  * Géométrie réelle de la carte « Famille proche », relative à la carte : nœuds (avatar, nom, années), visibilité
  * (dans la carte, et dans la partie montrée d'une bande qui défile), noms coupés, chevauchements, zoom, défilement.
@@ -235,6 +252,9 @@ try {
           await capture(`${fam}-${nom}-07-conjoint`, `#/conjoint/${f.moi}`, theme, `document.querySelector('#marie')?.click()`, 1700, o);
           await capture(`${fam}-${nom}-08-parent`, `#/parent/${f.moi}`, theme, '', 1700, o);
           if (union) await capture(`${fam}-${nom}-09-union`, `#/union/${union.id}/${f.moi}`, theme, '', 1400, o);
+          // Nommage (V4, lot 3) : « Lien avec toi » du proche le plus éloigné, détail ouvert.
+          const loin = plusEloigne(JSON.parse(json), f.moi);
+          if (loin) await capture(`${fam}-${nom}-10-lien`, `#/personne/${loin}`, theme, `document.querySelector('.bouton-detail')?.click()`, 1400, o);
         }
     }
   } else if (mode === 'maquettes') {

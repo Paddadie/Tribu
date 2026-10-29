@@ -8,6 +8,9 @@ import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVide
 import { charger, exporterJson, sauvegarder } from './modele/stockage';
 import { entreesCalendrier } from './modele/fetes';
 import type { Donnees, Sexe } from './modele/types';
+import { dupontel } from './modele/test/familles';
+import { chemin } from './modele/deductions';
+import { dessinChemin } from './ui/arbre';
 
 vi.mock('./pwa', () => ({ initPwa: () => {} }));
 
@@ -1591,5 +1594,31 @@ describe('V4 lot 2 : saisie', () => {
     ).toEqual([ids.Chloé, ids.Denis].sort());
     expect(apres.unions).toContainEqual(expect.objectContaining({ personneA: ids.Anne, personneB: gilles.id, statut: 'actuelle' }));
     expect(location.hash).toBe(`#/personne/${gilles.id}`);
+  });
+});
+
+describe('Lien avec toi : chemin composé (V4, lot 3)', () => {
+  it('fiche du cousin du père : phrase composée, « Détail » déplie les étapes puis les replie', async () => {
+    const f = dupontel();
+    await demarrer(f.donnees, '#/personne/dupontel-bastien', { moi: f.moi });
+    const legende = ecran().querySelector<HTMLElement>('.legende-composee')!;
+    expect(legende.firstElementChild!.textContent).toBe('Toi → ton père → son cousin');
+    const detail = legende.querySelector<HTMLElement>('.legende-detail')!;
+    const bouton = legende.querySelector<HTMLButtonElement>('.bouton-detail')!;
+    expect(detail.hidden).toBe(true);
+    bouton.click();
+    expect(detail.hidden).toBe(false);
+    expect(detail.textContent).toBe('Toi → ton père → son père → son frère → son fils');
+    expect(bouton.getAttribute('aria-expanded')).toBe('true');
+    bouton.click();
+    expect(detail.hidden).toBe(true);
+  });
+
+  it('sans différence entre les deux lectures, pas de bouton « Détail »', () => {
+    const f = dupontel();
+    const etapes = chemin(f.donnees, f.moi, 'dupontel-gaspard')!;
+    const el = dessinChemin(etapes, f.moi, f.donnees);
+    expect(el.querySelector('.legende')?.textContent).toBe('Toi → ton père');
+    expect(el.querySelector('.bouton-detail')).toBeNull();
   });
 });

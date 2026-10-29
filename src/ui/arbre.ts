@@ -224,9 +224,25 @@ export function dessinFoyer(f: FamilleProche): HTMLElement {
   return el;
 }
 
+/** Phrase du chemin, composée (« Toi → ton père → son cousin ») ; « Détail » déplie la lecture étape par étape quand elle diffère. */
+function legendeChemin(etapes: Etape[], d?: Donnees): HTMLElement {
+  const ligne = (mots: string[]) => [h('b', {}, 'Toi'), ` → ${mots.join(' → ')}`];
+  const composes = motsChemin(etapes, d);
+  const pas = motsChemin(etapes);
+  if (composes.join() === pas.join()) return h('p', { class: 'legende' }, ...ligne(composes));
+  const detail = h('span', { class: 'legende-detail', hidden: true }, ...ligne(pas));
+  const bouton = h('button', { type: 'button', class: 'bouton-detail', 'aria-expanded': 'false' }, 'Détail');
+  bouton.addEventListener('click', () => {
+    detail.hidden = !detail.hidden;
+    bouton.setAttribute('aria-expanded', String(!detail.hidden));
+    bouton.textContent = detail.hidden ? 'Détail' : 'Masquer le détail';
+  });
+  return h('div', { class: 'legende legende-composee' }, h('span', {}, ...ligne(composes)), bouton, detail);
+}
+
 /** « Lien avec toi » : chemin de « Moi » à la personne, coude pour parent et enfant, trait double pour un couple, simple pour une amitié. */
 export function dessinChemin(etapes: Etape[], moi: string, d?: Donnees): HTMLElement {
-  const phrase = h('p', { class: 'legende' }, h('b', {}, 'Toi'), ` → ${motsChemin(etapes, d).join(' → ')}`);
+  const phrase = legendeChemin(etapes, d);
   const R = 17,
     RANG = 58,
     CO = 8,

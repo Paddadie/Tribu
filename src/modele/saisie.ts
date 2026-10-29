@@ -39,6 +39,11 @@ export function nomsFratrie(fiche: Personne, parents: Personne[]): NomPropose[] 
   return [...premier, ...nomsEnfant(parents).filter((n) => n.nom !== sien)];
 }
 
+/** Nom proposé pour un nouveau parent de `fiche` : son nom de naissance (celui d'une femme avant le mariage), sinon son nom. */
+export function nomsParent(fiche: Personne): NomPropose[] {
+  return nomsFratrie(fiche, []);
+}
+
 export interface AutreParent {
   personne: Personne;
   /** Pourquoi elle est proposée (« Ex · 2 enfants ensemble », « Mère de Tristan »). */

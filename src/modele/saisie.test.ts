@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fratrie } from './deductions';
 import { avecDe, enumerer, grouperParLettre, groupeVise, homonymes, lettresIndex } from './liste';
 import { ajouterFiliation, ajouterFiliations, ajouterUnion, creerPersonne, donneesVides } from './modele';
-import { autresParents, nomsConjointSelonEnfants, nomsEnfant, nomsFratrie, suggestions, suggestionsParentInconnu } from './saisie';
+import { autresParents, nomsConjointSelonEnfants, nomsEnfant, nomsFratrie, nomsParent, suggestions, suggestionsParentInconnu } from './saisie';
 import type { Donnees, Personne, Sexe } from './types';
 
 /** Petit constructeur de scénario : personnes par prénom, liens par prénom. */
@@ -359,5 +359,11 @@ describe('lot 2 : autre parent, fratrie, « Qui est ce parent ? »', () => {
       ['Vasseur', 'Odile'],
       ['Morel', 'Anne'],
     ]);
+  });
+
+  it('nomsParent : nom de naissance de la fiche (celui de son père), pas le nom pris au mariage', () => {
+    const mariee: Personne = { id: 'f', prenom: 'Odile', nom: 'Rochefort', nomNaissance: 'Vasseur', note: '' };
+    expect(nomsParent(mariee).map((n) => n.nom)).toEqual(['Vasseur']);
+    expect(nomsParent({ ...mariee, nomNaissance: undefined }).map((n) => n.nom)).toEqual(['Rochefort']);
   });
 });

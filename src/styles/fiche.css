@@ -1179,6 +1179,29 @@ fieldset.champ legend {
   color: var(--encre);
 }
 
+/* Chemin composé : « Détail » déplie la lecture étape par étape. */
+.dessin .legende-composee {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.bouton-detail {
+  font: inherit;
+  font-size: var(--t2);
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 4px 8px;
+  min-height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.legende-detail {
+  font-size: var(--t1);
+}
+
 /* Dessins de la fiche : une personne décédée porte une petite croix, comme dans l'arbre global. */
 .arbre .noeud .avatar.decede {
   position: relative;

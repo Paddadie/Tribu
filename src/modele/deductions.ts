@@ -249,6 +249,9 @@ function calculer(d: Donnees, parents: Parents, de: string, vers: string): Relat
   if (de === vers) return { type: 'soi' };
   const monConjoint = conjoint(d, de);
   if (monConjoint?.personne.id === vers) return { type: 'conjoint', marie: monConjoint.union.marie, ...fiances(monConjoint.union) };
+  // Veuf remarié : le défunt reste son époux, comme il le reste pour le défunt (son seul conjoint).
+  const defunt = conjointsDefunts(d, de).find((c) => c.personne.id === vers);
+  if (defunt) return { type: 'conjoint', marie: defunt.union.marie };
   const direct = sang(d, parents, de, vers);
   if (direct) return direct;
   // Alliance : uniquement par le conjoint actuel (`conjoint`), jamais en parcourant les unions.

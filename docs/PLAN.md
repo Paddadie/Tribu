@@ -500,7 +500,7 @@ L'ordre suit ta demande : 0, 1, 2, 3, 4, 5. En option, le lot 5, qui est indépe
 - [x] Lot 0 — outillage de test (29/10) : src/modele/test/ (générateur, invariants, scénarios, séquences, mesures de disposition), arbreGlobal.invariants.test.ts (seuils d'aujourd'hui), `npm run familles`, `npm run captures -- --familles`
 - [x] Lot 1 — modèle et liaison (29/10) : types et migration v6, `remplacerParent`, `reprendreNomDeNaissance` / `prendreLeNom`, `fratriePresumee`, lieux, `ignorerIncomplet`, `sansRappel` ; src/modele/v6.test.ts, L2, L3, L5 au vert, séquences avec remplacement de « ? »
 - [x] Lot 2 — écrans de saisie (29/10) : nom après le mariage (nomApres.ts, nomApresMariage.ts), écran Union, ajout d'un parent (fratrie présumée, union avec avertissement : unionParents.ts, `unirParents`), « Qui est ce parent ? » (quiParent.ts, `#/qui/<id>`), autre parent d'un enfant (`autresParents`), lieux, interrupteurs Rappels / À compléter, fiche créée ouverte après l'ajout ; captures 06 à 09
-- [ ] Lot 3 — nommage
+- [x] Lot 3 — nommage (29/10) : relations composées (`composer` dans parente.ts, moins de segments nommés, pivot le plus proche à égalité ; « Détail » étape par étape sur la fiche), couche des ex (`lienEx` : ton ex, ex-belle-mère, « Ex de <prénom> »), arrière-grand-oncle et arrière-petit-neveu, cousin issu de germain, veuf remarié, compagne non mariée d’un proche dite par ce proche, nom de naissance proposé pour un nouveau parent ; tests de symétrie sur toutes les paires des familles fictives ; capture 10
 - [ ] Lot 4 — arbre principal (maquette d'abord)
 - [ ] Lot 5 — retouches (maquette d'abord)
 
