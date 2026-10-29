@@ -6,17 +6,17 @@ Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run
 
 ## Carte du code
 - src/modele/types.ts : `Personne`, `Union`, `Filiation`, `GroupeAmis`, `Donnees`. migration.ts : `migrer()` v1 → v4.
-- src/modele/modele.ts : opérations pures (`creerPersonne`, `ajouterUnion`, `ajouterFiliation`, groupes), `estDecede`, `personnesVisibles`, `personnesListees`, `groupesDeLaFamille`.
+- src/modele/modele.ts : opérations pures, rangées par sujet et toutes réexportées par modele.ts (on importe depuis './modele') : dates.ts (`MOTIF_DATE`, `estDateValide`), personnes.ts (`creerPersonne`, `estDecede`, `personnesVisibles`, `personnesListees`, `enCouple`), unions.ts (`ajouterUnion`, `unirParents`), filiations.ts (`ajouterFiliation`, `reporterParent`, parents inconnus), groupes.ts (`creerGroupe`, `groupesDeLaFamille`) ; modele.ts garde `supprimerPersonne`.
 - src/modele/deductions.ts : `amis`, `relation`, `chemin`, `fratrie` (`freresComplets`), `parcours`. familleProche.ts : dessin « Famille proche » sans DOM, `familleProche` (qui) puis `disposerFoyer(f, largeur)` (où), traits à `StyleTrait` (plein / ex / adoption, repris par l'arbre et le PNG) ; tests de référence sur tests/fixtures/famille-proche (src/ui/familleProche.test.ts). parente.ts : `etiquette`, `lienAvecMoi`, `composer` (chemin en relations composées), `motsChemin`, `lienEx` (ex), `lienDepuisAmi`. saisie.ts : `suggestions`.
 - src/modele/arbreGlobal.ts : `disposerArbre(d, moi)` → places, couples, branches, `groupes`, `etiquettes`. partie.ts : `disposerPartie` en étapes (blocs, générations, classe `Lignes`). parentSansNom.ts : parent « ? ».
-- src/modele/liste.ts : `couleurFamille(p, d)` (couleur attribuée par `couleursDesFamilles`, sans voisines proches), `mentionNaissance` (« née X »). src/ui/geometrieArbre.ts : pixels de l'arbre partagés écran / PNG (PAS_Y, SOUS_NOM, `hautEtiquette`).
+- src/modele/liste.ts : `nomComplet`, `prenomOuNom`, `majuscule`, `couleurFamille(p, d)` (couleur attribuée par `couleursDesFamilles`, sans voisines proches), `mentionNaissance` (« née X »). src/ui/geometrieArbre.ts : pixels de l'arbre partagés écran / PNG (PAS_Y, SOUS_NOM, `hautEtiquette`).
 - src/modele/anonymiser.ts + fixtures/arbre-anonyme.json : vrai arbre anonymisé ; arbreGlobal.fixture.test.ts = invariants et instantané (à régénérer avec `-u` seulement si la disposition change exprès).
 - src/modele/evenements.ts : `evenementsAVenir(d, aujourdhui, jours, {fetes})` (anniversaires, unions, fêtes, décès) ; noces.ts (`dureeUnion`, nom des noces) ; fetes.ts (calendrier des prénoms, `entreesCalendrier`).
 - src/modele/fusion.ts : import par fusion (`fusionner`, questions de conflit) ; src/ui/choisir.ts (question à choix), fenetreListe.ts (fenêtre-liste), import.ts, reglages.ts (4 onglets).
 - src/modele/filtres.ts : filtres de la liste (`filtrerListe`, `manquesDe`, `familleDe`).
 - src/ui/accueil.ts (salutation, recherche, Aujourd'hui, Bientôt, souvenir, raccourcis), personnes.ts (`#/personnes`, liste + index), agenda.ts (`#/agenda`).
-- src/ui/ : fiche.ts, arbre.ts (`dessinFoyer` = rendu seul, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts. src/main.ts : routes et View Transition.
-- src/style.css : jetons en tête ; blocs « Dessins de la fiche », « Arbre global », « États communs », « Animations » en fin.
+- src/ui/ : fiche.ts, arbre.ts (`dessinFoyer` = rendu seul, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts ; ecran.ts (`barreEcran`, `boutonRetour` : en-tête des écrans). src/main.ts : routes et View Transition.
+- src/style.css : n'importe que src/styles/, dans l'ordre de la cascade : base (jetons), accueil, fiche, reglages, messages, composants, ajout, dessins (dessins de la fiche), arbre, etats, animations.
 - src/modele/test/ (lot 0 de V4) : familles.ts (générateur à graine, `famillesDeReference`), invariants.ts (`verifierInvariants`), outils.ts (`jouer`, `finsSelonLOrdre`, `canonique`), disposition.ts (`fautesDisposition`, `metriques`) ; scenarios.test.ts (L1 à L5), sequences.test.ts ; seuils de l'arbre dans src/modele/arbreGlobal.invariants.test.ts.
 - Tests : `*.test.ts` à côté du code ; src/parcours.test.ts = écrans sous happy-dom (`demarrer(donnees, route, reglages?)`).
 
