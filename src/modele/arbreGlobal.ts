@@ -10,7 +10,7 @@ import { disposerPartie, ECART_FAMILLES, lier, type Bloc, type Voisins } from '.
 import type { Donnees, Personne } from './types';
 
 /** Hauteurs possibles du trait commun, sous la ligne des parents (en générations), et écart entre deux niveaux. */
-const BANDE_BUS: [number, number] = [0.56, 0.8];
+export const BANDE_BUS: [number, number] = [0.62, 0.8];
 const PAS_BUS = 0.1;
 /** Deux portées à moins de cet écart (en places) comptent comme se touchant. */
 const MARGE_BUS = 0.2;
@@ -60,6 +60,8 @@ export interface EtiquetteFamille extends Point {
   lignee?: number;
   /** Fratrie sans parent connu : le nom se place au-dessus du trait commun des enfants. */
   fratrie?: boolean;
+  /** Deux noms au-dessus d'un couple : le premier finit en `x` (« fin »), le second y commence (« debut »). Centré sinon. */
+  ancre?: 'fin' | 'debut';
 }
 
 export interface Disposition {
@@ -379,7 +381,7 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
   principale.blocs.forEach((b, id) => blocDe.set(id, b));
   if (idsBulle.length > 0) disposerBulle(gr, idsBulle, rep, pl, positions, blocDe);
 
-  const deLignee = couleursParNom(personnes, positions);
+  const deLignee = couleursParNom(personnes, positions, donnees);
   // Un parent inconnu occupe une place pour le calcul, mais n'est pas dessiné.
   const places = d.personnes.flatMap((p) => {
     const pos = positions.get(p.id);
@@ -392,7 +394,7 @@ export function disposerArbre(donnees: Donnees, moi: string): Disposition {
     branches: branches(d, visibles, positions, blocDe, deLignee),
     amities: amitiesHorsCadres(gr, dansBulle, positions),
     groupes: cadresDeGroupes(gr, dansBulle, positions),
-    etiquettes: etiquettes(personnes, positions, blocDe, pl.tousParents, deLignee),
+    etiquettes: etiquettes(personnes, positions, blocDe, pl.tousParents, deLignee, donnees),
     anneaux: anneauxDeGroupe(gr, places),
   };
 }
@@ -437,6 +439,7 @@ function etiquettes(
   blocDe: Map<string, Bloc>,
   tousParents: Map<string, string[]>,
   couleur: Map<string, number>,
+  donnees: Donnees,
 ): EtiquetteFamille[] {
   const res: EtiquetteFamille[] = [];
   const sansParent = (id: string) => (tousParents.get(id) ?? []).length === 0;
@@ -479,27 +482,37 @@ function etiquettes(
       return { nom, ps, x: (Math.min(...xs) + Math.max(...xs)) / 2 };
     });
     entrees.sort((u, v) => u.x - v.x);
-    // Deux noms au-dessus d'un même couple : écartés l'un de l'autre pour ne pas se recouvrir.
+    // Deux noms au-dessus d'un même couple : calés de part et d'autre de son milieu, quelle que soit leur longueur.
+    const milieu = (entrees[0].x + entrees[entrees.length - 1].x) / 2;
     entrees.forEach((e, i) => {
-      const decal = entrees.length === 1 ? 0 : i === 0 ? -0.35 : i === entrees.length - 1 ? 0.35 : 0;
-      res.push({ x: e.x + decal, y: positions.get(e.ps[0].id)!.y, lignee: couleur.get(e.ps[0].id), texte: `Famille ${e.nom}` });
+      const bout = entrees.length > 1 && (i === 0 || i === entrees.length - 1);
+      res.push({
+        x: bout ? milieu + (i === 0 ? -0.08 : 0.08) : e.x,
+        y: positions.get(e.ps[0].id)!.y,
+        lignee: couleur.get(e.ps[0].id),
+        texte: `Famille ${e.nom}`,
+        ...(bout ? { ancre: i === 0 ? ('fin' as const) : ('debut' as const) } : {}),
+      });
     });
   }
   // Frères et sœurs sans parent connu (parent inconnu caché) : un nom par fratrie et par nom, centré sur elle.
   const fratries = new Map<string, Personne[]>();
   for (const [enfant, ps] of tousParents) {
     const e = personnes.get(enfant)!;
-    if (e.inconnu || !positions.has(enfant) || !e.nom.trim()) continue;
-    for (const x of ps) if (personnes.get(x)?.inconnu) fratries.set(`${x}|${e.nom.trim()}`, [...(fratries.get(`${x}|${e.nom.trim()}`) ?? []), e]);
+    // Le nom de naissance d'abord : une sœur mariée porte le nom de son mari, pas celui de sa fratrie.
+    const nom = (e.nomNaissance || e.nom).trim();
+    if (e.inconnu || !positions.has(enfant) || !nom) continue;
+    for (const x of ps) if (personnes.get(x)?.inconnu) fratries.set(`${x}|${nom}`, [...(fratries.get(`${x}|${nom}`) ?? []), e]);
   }
-  for (const fr of fratries.values()) {
+  for (const [cle, fr] of fratries) {
     if (fr.length < 2) continue;
+    const nom = cle.slice(cle.indexOf('|') + 1);
     const xs = fr.map((e) => positions.get(e.id)!.x);
     res.push({
       x: (Math.min(...xs) + Math.max(...xs)) / 2,
       y: positions.get(fr[0].id)!.y,
-      lignee: couleur.get(fr[0].id),
-      texte: `Famille ${fr[0].nom.trim()}`,
+      lignee: couleurFamille({ nom }, donnees),
+      texte: `Famille ${nom}`,
       fratrie: true,
     });
   }
@@ -563,7 +576,8 @@ function branches(d: Donnees, visibles: Set<string>, positions: Map<string, Poin
       enfants: enfants.map((e) => ({ ...e, ...positions.get(e.id)! })).sort((x, y) => x.x - y.x),
     };
   });
-  etagerBus(res);
+  const parentsDe = new Map(res.map((b, i) => [b, [...paires.values()][i].parents]));
+  etagerBus(res, parentsDe);
   return res;
 }
 
@@ -576,18 +590,23 @@ function portee(b: Branche): [number, number] {
 /**
  * Deux traits communs de la même ligne qui se chevauchent se confondraient : chacun prend alors sa hauteur
  * (coloration d'intervalles). Une branche seule sur sa portée garde la hauteur d'origine.
+ * Deux fratries sans parent commun à moins de `ECART_FAMILLES` l'une de l'autre (point 13) prennent aussi deux
+ * hauteurs : au même niveau, leurs traits paraîtraient n'en faire qu'un.
  */
-function etagerBus(brs: Branche[]): void {
+function etagerBus(brs: Branche[], parentsDe: Map<Branche, string[]>): void {
+  const collees = (a: Branche, b: Branche) =>
+    !parentsDe.get(a)!.some((p) => parentsDe.get(b)!.includes(p)) &&
+    Math.min(...b.enfants.map((e) => e.x)) - Math.max(...a.enfants.map((e) => e.x)) < ECART_FAMILLES - 1e-6;
   const parLigne = new Map<number, Branche[]>();
   for (const b of brs) parLigne.set(b.bus, [...(parLigne.get(b.bus) ?? []), b]);
   for (const [base, ligne] of parLigne) {
-    const niveaux: number[] = [];
+    const niveaux: { fin: number; derniere: Branche }[] = [];
     const niveauDe = new Map<Branche, number>();
     for (const b of [...ligne].sort((p, q) => portee(p)[0] - portee(q)[0])) {
       const [lo, hi] = portee(b);
-      let k = niveaux.findIndex((fin) => fin < lo - MARGE_BUS);
+      let k = niveaux.findIndex((n) => n.fin < lo - MARGE_BUS && !collees(n.derniere, b));
       if (k < 0) k = niveaux.length;
-      niveaux[k] = hi;
+      niveaux[k] = { fin: hi, derniere: b };
       niveauDe.set(b, k);
     }
     if (niveaux.length < 2) continue;
@@ -597,11 +616,11 @@ function etagerBus(brs: Branche[]): void {
 }
 
 /** Couleur de famille de chaque personne placée (la même que dans la liste et la fiche). */
-function couleursParNom(personnes: Map<string, Personne>, positions: Map<string, Point>): Map<string, number> {
+function couleursParNom(personnes: Map<string, Personne>, positions: Map<string, Point>, d: Donnees): Map<string, number> {
   const res = new Map<string, number>();
   for (const id of positions.keys()) {
     const p = personnes.get(id);
-    const k = p && !p.inconnu ? couleurFamille(p) : undefined;
+    const k = p && !p.inconnu ? couleurFamille(p, d) : undefined;
     if (k !== undefined) res.set(id, k);
   }
   return res;

@@ -5,7 +5,7 @@
 import type { Disposition } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { annees } from '../modele/familleProche';
-import { couleurFamille, initiales } from '../modele/liste';
+import { couleurFamille, initiales, mentionNaissance } from '../modele/liste';
 import { estDecede } from '../modele/modele';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
@@ -116,8 +116,11 @@ function dessinerTrait(ctx: CanvasRenderingContext2D, d: string, classe: string,
   if (ami) {
     ctx.globalAlpha = 0.75;
     ctx.setLineDash([0.5, 6]);
-  } else if (classe.includes('pointille')) ctx.setLineDash([3, 4]);
-  else if (classe.includes('libre')) ctx.setLineDash([5, 4]);
+  } else if (ex) ctx.setLineDash([0.1, 5]);
+  else if (classe.includes('adoption')) {
+    ctx.lineCap = 'butt';
+    ctx.setLineDash([9, 5]);
+  } else if (classe.includes('libre')) ctx.setLineDash([5, 4]);
   ctx.stroke(new Path2D(d));
   ctx.restore();
 }
@@ -172,12 +175,19 @@ function dessinerNoeud(
     ctx.textBaseline = 'top';
     const lignes = lignesNom(ctx, p.prenom || p.nom, 104);
     lignes.forEach((l, i) => ctx.fillText(l, x, y + R + 8 + i * 16));
-    // Années sous le nom : la place existe déjà (SOUS_NOM réserve une 3e ligne, comme à l'écran).
+    // « née X » puis les années sous le nom : la place existe déjà (SOUS_NOM la réserve, comme à l'écran).
+    let bas = y + R + 8 + lignes.length * 16 + 1;
+    const naissance = mentionNaissance(p);
+    ctx.fillStyle = COULEURS.secondaire;
+    if (naissance) {
+      ctx.font = `italic 11px ${POLICE}`;
+      ctx.fillText(lignesNom(ctx, naissance, 104)[0], x, bas);
+      bas += 14;
+    }
     const an = annees(p);
     if (an) {
-      ctx.fillStyle = COULEURS.secondaire;
       ctx.font = `11px ${POLICE}`;
-      ctx.fillText(an, x, y + R + 8 + lignes.length * 16 + 1);
+      ctx.fillText(an, x, bas);
     }
   }
 }
@@ -251,7 +261,7 @@ export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition,
     const c = pos.px(e);
     ctx.fillStyle = e.lignee !== undefined ? teinte(e.lignee) : COULEURS.secondaire;
     ctx.font = `600 10.5px ${POLICE}`;
-    ctx.textAlign = 'center';
+    ctx.textAlign = e.ancre === 'fin' ? 'right' : e.ancre === 'debut' ? 'left' : 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(e.texte.toLocaleUpperCase('fr').split('').join(' '), c.x, hautEtiquette(disp, pos.px, e) + 8);
   }
@@ -264,7 +274,7 @@ export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition,
   }
   for (const pl of disp.places) {
     const c = pos.centres.get(pl.personne.id)!;
-    const k = pl.lignee !== undefined ? pl.lignee : anneaux.has(pl.personne.id) ? undefined : couleurFamille(pl.personne);
+    const k = pl.lignee !== undefined ? pl.lignee : anneaux.has(pl.personne.id) ? undefined : couleurFamille(pl.personne, d);
     const couleur =
       pl.lignee !== undefined ? pastel(pl.lignee) : anneaux.has(pl.personne.id) ? anneaux.get(pl.personne.id) : k !== undefined ? pastel(k) : undefined;
     dessinerNoeud(ctx, pl.personne, c.x, c.y, couleur, pl.personne.id === moi.id, anneaux.get(pl.personne.id));

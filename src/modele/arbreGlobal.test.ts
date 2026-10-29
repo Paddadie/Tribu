@@ -4,6 +4,7 @@ import { isotone } from './partie';
 import { couleurFamille } from './liste';
 import { ajouterFiliation, ajouterFrereSansParent, ajouterUnion, creerGroupe, creerPersonne, donneesVides, separerUnion } from './modele';
 import { estVirtuel } from './parentSansNom';
+import { martinezVasseur, rochefort } from './test/familles';
 import type { Donnees, Sexe, TypeFiliation } from './types';
 
 /** Petit atelier de données : personnes par prénom, liens par prénoms. */
@@ -457,6 +458,26 @@ describe('disposerArbre : groupes d’amis et étiquettes', () => {
     expect(couple?.texte).toBe('Famille X');
     expect(couple?.y).toBe(place('PereA').y);
   });
+
+  it('cale deux noms au-dessus d’un même couple de part et d’autre de son milieu (V4, défaut du lot 4)', () => {
+    const f = martinezVasseur();
+    const disp = disposerArbre(f.donnees, f.moi);
+    const fins = disp.etiquettes.filter((e) => e.ancre === 'fin');
+    expect(fins.length).toBeGreaterThan(0);
+    for (const g of fins) {
+      const dr = disp.etiquettes.find((e) => e.ancre === 'debut' && e.y === g.y && Math.abs(e.x - g.x - 0.16) < 1e-9);
+      expect(dr, g.texte).toBeDefined();
+    }
+    expect(disp.etiquettes.filter((e) => !e.ancre).every((e) => !disp.etiquettes.some((o) => o !== e && o.y === e.y && Math.abs(o.x - e.x) < 0.5))).toBe(true);
+  });
+
+  it('nomme une fratrie par son nom de naissance, dans sa couleur, pas par celui du mari d’une sœur', () => {
+    const f = rochefort();
+    const disp = disposerArbre(f.donnees, f.moi);
+    const fr = disp.etiquettes.find((e) => e.fratrie && e.texte === 'Famille Noiraud');
+    expect(fr).toBeDefined();
+    expect(fr!.lignee).toBe(couleurFamille({ nom: 'Noiraud' }, f.donnees));
+  });
 });
 
 describe('disposerArbre : couleurs par nom de famille', () => {
@@ -674,5 +695,35 @@ describe('disposerArbre : anneau de groupe (UX-21)', () => {
     const disp = disposerArbre(a.d, a.id.Paul);
     const dansUnCadre = new Set(disp.groupes.flatMap((g) => g.membres));
     for (const r of disp.anneaux) expect(dansUnCadre.has(r.id)).toBe(false);
+  });
+});
+
+describe('disposerArbre : fratries collées (V4, point 13)', () => {
+  it('deux fratries mariées entre elles, côte à côte, ont des traits communs à deux hauteurs', () => {
+    const a = atelier();
+    for (const [p, s, an] of [
+      ['Arnaud', 'M', '1930'],
+      ['Berthe', 'F', '1932'],
+      ['Anatole', 'M', '1960'],
+      ['Barnabé', 'M', '1962'],
+      ['Cyrille', 'M', '1931'],
+      ['Denise', 'F', '1933'],
+      ['Claire', 'F', '1961'],
+      ['Diane', 'F', '1963'],
+    ] as const)
+      a.pers(p, s, an);
+    a.union('Arnaud', 'Berthe');
+    a.union('Cyrille', 'Denise');
+    a.union('Anatole', 'Claire');
+    a.enfant('Anatole', ['Arnaud', 'Berthe']);
+    a.enfant('Barnabé', ['Arnaud', 'Berthe']);
+    a.enfant('Claire', ['Cyrille', 'Denise']);
+    a.enfant('Diane', ['Cyrille', 'Denise']);
+    const disp = disposerArbre(a.d, a.id.Anatole);
+    const de = (prenom: string) => disp.branches.find((b) => b.enfants.some((e) => e.id === a.id[prenom]))!;
+    const [anatole, claire] = [de('Anatole'), de('Claire')];
+    const ecart = Math.abs(Math.min(...claire.enfants.map((e) => e.x)) - Math.max(...anatole.enfants.map((e) => e.x)));
+    expect(ecart).toBeLessThan(2);
+    expect(anatole.bus).not.toBe(claire.bus);
   });
 });

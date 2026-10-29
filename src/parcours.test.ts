@@ -8,7 +8,8 @@ import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVide
 import { charger, exporterJson, sauvegarder } from './modele/stockage';
 import { entreesCalendrier } from './modele/fetes';
 import type { Donnees, Sexe } from './modele/types';
-import { dupontel } from './modele/test/familles';
+import { dupontel, extremes } from './modele/test/familles';
+import { couleurFamille } from './modele/liste';
 import { chemin } from './modele/deductions';
 import { dessinChemin } from './ui/arbre';
 
@@ -1111,6 +1112,10 @@ describe('mémo : décès, âge et anniversaires', () => {
     expect(ligne.textContent).toBe('Décédé');
     await toucher(bascule);
     expect(date.hidden).toBe(false);
+    // Interrupteur, date et lieu, puis réglages : un même bloc espacé (V4, point 19).
+    expect(date.classList.contains('date-deces')).toBe(true);
+    expect(date.parentElement!.classList.contains('bloc-deces')).toBe(true);
+    expect(date.parentElement!.querySelector('#rappels')).not.toBeNull();
   });
 
   it('allumé sans date : décédée sans date, affichée « Décédée », sans âge', async () => {
@@ -1620,5 +1625,18 @@ describe('Lien avec toi : chemin composé (V4, lot 3)', () => {
     const el = dessinChemin(etapes, f.moi, f.donnees);
     expect(el.querySelector('.legende')?.textContent).toBe('Toi → ton père');
     expect(el.querySelector('.bouton-detail')).toBeNull();
+  });
+});
+
+describe('couleurs des familles (V4, point 16)', () => {
+  it('une famille déplacée sur une autre couleur a la même dans la liste et dans l’arbre', async () => {
+    const f = extremes();
+    const p = f.donnees.personnes.find((q) => !q.inconnu && couleurFamille(q, f.donnees) !== couleurFamille(q))!;
+    const k = couleurFamille(p, f.donnees);
+    await demarrer(f.donnees, '#/personnes', { moi: f.moi });
+    const ligne = ecran().querySelector<HTMLElement>(`a[href="#/personne/${p.id}"]`)!;
+    expect(ligne.querySelector('.avatar')!.getAttribute('style')).toContain(`var(--c${k})`);
+    await demarrer(f.donnees, '#/arbre', { moi: f.moi });
+    expect(ecran().querySelector(`.calque a[href="#/personne/${p.id}"]`)!.outerHTML).toContain(`var(--c${k})`);
   });
 });

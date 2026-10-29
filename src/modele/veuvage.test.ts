@@ -75,7 +75,7 @@ describe('veuvage', () => {
     expect(f.conjoint?.id).toBe(henri);
     expect(f.partenaires).toEqual([{ id: pierre, statut: 'actuelle' }]);
     const dis = disposerFoyer(f, 294);
-    expect(dis.traits.filter((t) => t.pointille)).toEqual([]);
+    expect(dis.traits.filter((t) => t.style === 'ex')).toEqual([]);
   });
 
   it('ne fête que la nouvelle union', () => {

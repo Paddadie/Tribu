@@ -26,8 +26,9 @@ export interface FautesDisposition {
   /** Deux traits communs à la même hauteur qui se touchent ou se chevauchent (point 13). */
   busCollés: string[];
   /**
-   * Deux fratries de parents différents voisines sur une ligne (personne entre elles), à moins de `ECART_FAMILLES` :
-   * des cousins qui paraissent frères (point 13), surtout avec le même bus et la même couleur (« même bus, même lignée »).
+   * Deux fratries sans parent commun voisines sur une ligne (personne entre elles), à moins de `ECART_FAMILLES`, et
+   * dont les traits communs sont à la même hauteur : le trait paraît continu, des cousins ou des alliés semblent frères
+   * (point 13). Les demi-fratries, qui partagent un parent, ne comptent pas.
    */
   fratriesCollees: string[];
   /** Personne visible reliée à Moi mais absente de l'arbre. */
@@ -59,6 +60,7 @@ export function fautesDisposition(d: Donnees, moi: string, disp: Disposition): F
   const busCollés: string[] = [];
   const fratriesCollees: string[] = [];
   const cle = (b: Branche) => b.enfants.map((e) => e.id).join(',');
+  const parentsDe = (b: Branche) => new Set(d.filiations.filter((f) => f.enfant === b.enfants[0]?.id).map((f) => f.parent));
   for (let i = 0; i < disp.branches.length; i++) {
     for (let j = i + 1; j < disp.branches.length; j++) {
       const [a, b] = [disp.branches[i], disp.branches[j]];
@@ -79,8 +81,10 @@ export function fautesDisposition(d: Donnees, moi: string, disp: Disposition): F
       const [gauche, droite] = Math.max(...ea) < Math.min(...eb) ? [ea, eb] : [eb, ea];
       const [de, a2] = [Math.max(...gauche), Math.min(...droite)];
       const entre = disp.places.some((p) => ligne(p.y) === ligne(y) && p.x > de + EPS && p.x < a2 - EPS);
-      if (!entre && a2 - de < ECART_FAMILLES - EPS) {
-        fratriesCollees.push(`${cle(a)} | ${cle(b)} : écart ${(a2 - de).toFixed(2)}${memeBus && a.lignee === b.lignee ? ', même bus, même lignée' : ''}`);
+      const parentsA = parentsDe(a);
+      const commun = [...parentsDe(b)].some((p) => parentsA.has(p));
+      if (!entre && !commun && memeBus && a2 - de < ECART_FAMILLES - EPS) {
+        fratriesCollees.push(`${cle(a)} | ${cle(b)} : écart ${(a2 - de).toFixed(2)}${a.lignee === b.lignee ? ', même lignée' : ''}`);
       }
     }
   }
@@ -111,6 +115,8 @@ export interface Metriques {
   ecartMoyen: number;
   /** Traits parent → bus → enfant qui ne sont pas droits : aucun départ juste au-dessus de l'enfant (point 15). */
   coudes: number;
+  /** Coudes de moins d'une demi-place : un enfant presque, mais pas tout à fait, à l'aplomb d'un départ (point 15). */
+  petitsCoudes: number;
   /** Paires de branches dont un trait vertical traverse le trait commun de l'autre (point 15). */
   croisements: number;
 }
@@ -125,6 +131,15 @@ export function metriques(disp: Disposition): Metriques {
       ? 0
       : avecDeparts.reduce((s, b) => s + Math.abs(milieu(b.origines.map((o) => o.x)) - milieu(b.enfants.map((e) => e.x))), 0) / avecDeparts.length;
   const coudes = disp.branches.reduce((s, b) => s + b.enfants.filter((e) => !b.origines.some((o) => Math.abs(o.x - e.x) < EPS)).length, 0);
+  const petitsCoudes = disp.branches.reduce(
+    (s, b) =>
+      s +
+      b.enfants.filter((e) => {
+        const ecart = Math.min(...b.origines.map((o) => Math.abs(o.x - e.x)));
+        return ecart > EPS && ecart < 0.5;
+      }).length,
+    0,
+  );
 
   const verticaux = (b: Branche) => [
     ...b.origines.map((o) => ({ x: o.x, haut: o.y, bas: b.bus })),
@@ -140,5 +155,5 @@ export function metriques(disp: Disposition): Metriques {
       if (traverse(disp.branches[i], disp.branches[j]) || traverse(disp.branches[j], disp.branches[i])) croisements++;
     }
   }
-  return { largeur, ecartMoyen, coudes, croisements };
+  return { largeur, ecartMoyen, coudes, petitsCoudes, croisements };
 }

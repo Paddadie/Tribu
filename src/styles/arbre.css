@@ -52,8 +52,9 @@ button.bouton-icone {
   stroke-width: calc(1.5px / var(--s));
 }
 
-.traits-arbre .trait.pointille {
-  stroke-dasharray: calc(3px / var(--s)) calc(4px / var(--s));
+/* Mêmes styles que la fiche (V4, point 18) : adoption en tirets longs, ex en points ronds. */
+.traits-arbre .trait.adoption {
+  stroke-dasharray: calc(9px / var(--s)) calc(5px / var(--s));
 }
 
 .traits-arbre .couple {
@@ -64,9 +65,11 @@ button.bouton-icone {
   stroke-dasharray: calc(5px / var(--s)) calc(4px / var(--s));
 }
 
-/* Séparés : gris plein (les autres couples prennent la couleur de la lignée). */
+/* Séparés : points ronds gris, même non mariés (les autres couples prennent la couleur de la lignée). */
 .traits-arbre .couple.ex {
   stroke: var(--trait-ex);
+  stroke-width: calc(2px / var(--s));
+  stroke-dasharray: calc(0.1px / var(--s)) calc(5px / var(--s));
 }
 
 .traits-arbre .ami {
@@ -144,6 +147,17 @@ button.bouton-icone {
   opacity: 0.8;
 }
 
+/* Deux noms au-dessus d'un couple : l'un finit au milieu, l'autre y commence. */
+.etiquette-famille.fin {
+  translate: -100% 0;
+  transform-origin: 100% 100%;
+}
+
+.etiquette-famille.debut {
+  translate: 0 0;
+  transform-origin: 0 100%;
+}
+
 /* Avatar teinté par la lignée ; les membres d'un groupe d'amis ont en plus un anneau de la couleur du cadre. */
 .calque .noeud.lignee .avatar {
   background: var(--cc);
@@ -213,6 +227,7 @@ button.bouton-icone {
    les noms de famille restent, à taille fixe (UX-16). */
 .vue-arbre.loin .noeud .nom,
 .vue-arbre.loin .noeud .an,
+.vue-arbre.loin .noeud .naissance,
 .vue-arbre.loin .noeud .avatar .anneau-groupe,
 .vue-arbre.loin .noeud .avatar.decede::after {
   visibility: hidden;

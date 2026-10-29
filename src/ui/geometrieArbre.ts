@@ -2,16 +2,19 @@
 // (arbreImage.ts) : positions, cadres des groupes, zone de la bulle, passage vers la bulle et tracés des traits.
 
 import type { Disposition, GroupeDessine, Point } from '../modele/arbreGlobal';
-import { LIGNE_EN_PLUS } from './arbre';
 
 /** Pixels entre deux places voisines, et entre deux générations (à l'échelle 1). */
 export const PAS_X = 80;
-export const PAS_Y = 140;
+export const PAS_Y = 154;
+/** Hauteur d'une 2e ligne de nom (prénom composé) : réservée sous chaque nom, pour que ni trait ni rang suivant ne la touche. */
+export const LIGNE_EN_PLUS = 16;
+/** Ligne « née X » sous le nom, dans l'arbre principal (V4, point 17) : réservée elle aussi. */
+export const LIGNE_NAISSANCE = 14;
 /** Rayon de l'avatar, largeur d'un nœud. */
 export const R = 19;
 export const LARG = 76;
-/** Sous l'avatar, le nom (sur 2 lignes si besoin) et l'année : un trait qui part d'un parent seul commence en dessous. */
-export const SOUS_NOM = R + 40 + LIGNE_EN_PLUS;
+/** Sous l'avatar, le nom (sur 2 lignes si besoin), « née X » et l'année : un trait qui part d'un parent seul commence en dessous. */
+export const SOUS_NOM = R + 40 + LIGNE_EN_PLUS + LIGNE_NAISSANCE;
 export const MARGE = 70;
 
 /** Cadre d'un groupe d'amis, en pixels : de l'étiquette (haut) au nom de la dernière ligne (bas). */
@@ -133,7 +136,7 @@ export function traitsArbre(disp: Disposition, p: Positions, bulle: ZoneBulle | 
     const [a, b] = [centre(c.a), centre(c.b)].sort((u, v) => u.x - v.x);
     // Même ligne : trait droit, même quand l'écart est grand (chaîne d'ex). Lignes différentes : courbe.
     const d = a.y === b.y ? `M ${a.x + R} ${a.y} H ${b.x - R}` : `M ${a.x} ${a.y - R} C ${a.x} ${a.y - R - 46}, ${b.x} ${b.y - R - 46}, ${b.x} ${b.y - R}`;
-    // Marié(e) : trait plein ; en couple : pointillé court ; séparé(e) : gris.
+    // Marié(e) : trait plein ; en couple : tirets courts ; séparé(e) : points ronds gris.
     traits.push({ d, classe: `trait couple${c.marie ? '' : ' libre'}${c.separe ? ' ex' : ''}`, lignee: c.separe ? undefined : c.lignee });
   }
 
@@ -142,11 +145,12 @@ export function traitsArbre(disp: Disposition, p: Positions, bulle: ZoneBulle | 
     // Un parent inconnu n'a ni nom ni trait : seul le trait commun relie les frères et sœurs.
     const origines = br.origines.filter((o) => !o.inconnu).map((o) => ({ ...px(o), seul: o.parent !== undefined }));
     const enfants = br.enfants.map((e) => ({ ...px(e), adoptif: e.adoptif }));
-    const classe = enfants.every((e) => e.adoptif) ? 'trait pointille' : 'trait';
+    // Tous adoptés : toute la branche en tirets longs ; sinon tronc plein et chaque descente selon son type.
+    const classe = enfants.every((e) => e.adoptif) ? 'trait adoption' : 'trait';
     for (const o of origines) traits.push({ d: `M ${o.x} ${o.seul ? o.y + SOUS_NOM : o.y} V ${bus}`, classe, lignee: br.lignee });
     const xs = [...origines, ...enfants].map((q) => q.x);
     if (Math.max(...xs) - Math.min(...xs) > 0.5) traits.push({ d: `M ${Math.min(...xs)} ${bus} H ${Math.max(...xs)}`, classe, lignee: br.lignee });
-    for (const e of enfants) traits.push({ d: `M ${e.x} ${bus} V ${e.y - R - 3}`, classe: e.adoptif ? 'trait pointille' : 'trait', lignee: br.lignee });
+    for (const e of enfants) traits.push({ d: `M ${e.x} ${bus} V ${e.y - R - 3}`, classe: e.adoptif ? 'trait adoption' : 'trait', lignee: br.lignee });
   }
 
   const courbe = (a: Point, b: Point) => {
@@ -163,18 +167,29 @@ export function traitsArbre(disp: Disposition, p: Positions, bulle: ZoneBulle | 
   return traits;
 }
 
+/** Largeur estimée d'un nom de famille (capitales espacées de 10,5 px), pour savoir ce qu'il recouvre. */
+export const largeurEtiquette = (texte: string) => texte.length * 9.5 + 8;
+
 /**
  * Ordonnée du haut du nom de famille d'une lignée. Une fratrie reliée par un trait commun (parents non renseignés) :
- * le nom se met au-dessus du trait, pas dessous.
+ * le nom se met au-dessus du trait, pas dessous, sauf s'il y recouvrirait le nom ou l'année de la ligne du dessus
+ * et que, dessous, aucun trait vers un enfant ne le traverse.
  */
 export function hautEtiquette(disp: Disposition, px: (p: Point) => Point, e: Disposition['etiquettes'][number]): number {
   const c = px(e);
-  let haut = c.y - R - 24;
+  const dessous = c.y - R - 24;
+  const demi = largeurEtiquette(e.texte) / 2;
   for (const br of e.fratrie ? disp.branches : []) {
     const bus = px({ x: 0, y: br.bus }).y;
     const xs = br.enfants.map((f) => px(f).x);
-    if (bus >= c.y - R - 24 || bus < c.y - PAS_Y || !br.enfants.some((f) => px(f).y === c.y)) continue;
-    if (c.x >= Math.min(...xs) - 1 && c.x <= Math.max(...xs) + 1) haut = Math.min(haut, bus - 24);
+    if (bus >= dessous || bus < c.y - PAS_Y || !br.enfants.some((f) => px(f).y === c.y)) continue;
+    if (c.x < Math.min(...xs) - 1 || c.x > Math.max(...xs) + 1) continue;
+    const recouvre = disp.places.some((p) => {
+      const q = px(p);
+      return Math.abs(q.y - (c.y - PAS_Y)) < 1 && Math.abs(q.x - c.x) < demi + LARG / 2 && q.y + SOUS_NOM > bus - 24;
+    });
+    const traverse = xs.some((x) => Math.abs(x - c.x) < demi + 4);
+    if (!recouvre || traverse) return bus - 24;
   }
-  return haut;
+  return dessous;
 }

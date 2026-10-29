@@ -16,9 +16,13 @@ import {
   nomsConnus,
   lieuxConnus,
   couleurFamille,
+  couleursDesFamilles,
+  couleursProches,
+  mentionNaissance,
   NB_COULEURS,
 } from './liste';
-import type { Personne } from './types';
+import { creerPersonne, donneesVides } from './modele';
+import type { Donnees, Personne } from './types';
 
 let n = 0;
 function p(prenom: string, nom: string, naissance?: string): Personne {
@@ -85,7 +89,64 @@ describe('couleurFamille', () => {
   it('répartit des noms variés sur plusieurs couleurs', () => {
     const noms = ['Martin', 'Roux', 'Benali', 'Lefèvre', 'Moreau', 'Dubois', 'Girard', 'Bernard', 'Petit', 'Durand'];
     expect(new Set(noms.map((n) => c(n))).size).toBeGreaterThanOrEqual(5);
+  });});
+
+describe('mentionNaissance', () => {
+  it('accorde selon le sexe', () => {
+    expect(mentionNaissance({ nom: 'Lambert', nomNaissance: 'Kervadec', sexe: 'F' })).toBe('née Kervadec');
+    expect(mentionNaissance({ nom: 'Lambert', nomNaissance: 'Kervadec', sexe: 'M' })).toBe('né Kervadec');
+    expect(mentionNaissance({ nom: 'Lambert', nomNaissance: 'Kervadec' })).toBe('né(e) Kervadec');
   });
+  it('ne dit rien sans nom de naissance ou s’il est le même que le nom actuel', () => {
+    expect(mentionNaissance({ nom: 'Lambert', sexe: 'F' })).toBeUndefined();
+    expect(mentionNaissance({ nom: 'Lambert', nomNaissance: ' lambert ', sexe: 'F' })).toBeUndefined();
+  });
+});
+
+describe('couleursDesFamilles', () => {
+  const personne = (id: string, nom: string, nomNaissance?: string): Personne => ({ ...creerPersonne(donneesVides(), { prenom: id, nom }).personne, id, ...(nomNaissance ? { nomNaissance } : {}) });
+  const donnees = (personnes: Personne[], unions: [string, string][] = []): Donnees => ({
+    ...donneesVides(),
+    personnes,
+    unions: unions.map(([a, b], i) => ({ id: `u${i}`, personneA: a, personneB: b, marie: true, statut: 'actuelle' })),
+  });
+  // Deux noms que le hachage met sur la même couleur.
+  const [nomA, nomB] = (() => {
+    const vus = new Map<number, string>();
+    for (let i = 0; ; i++) {
+      const nom = `Nom${i}`;
+      const k = couleurFamille({ nom })!;
+      if (vus.has(k)) return [vus.get(k)!, nom];
+      vus.set(k, nom);
+    }
+  })();
+
+  it('garde la couleur du nom quand rien ne la gêne', () => {
+    const d = donnees([personne('a', 'Martin')]);
+    expect(couleurFamille({ nom: 'Martin' }, d)).toBe(couleurFamille({ nom: 'Martin' }));
+  });
+  it('sépare deux familles de couleurs trop proches, la plus grande garde la sienne', () => {
+    const d = donnees([personne('a', nomA), personne('b', nomA), personne('c', nomB)], [['a', 'c']]);
+    const [ka, kb] = [couleurFamille({ nom: nomA }, d)!, couleurFamille({ nom: nomB }, d)!];
+    expect(ka).toBe(couleurFamille({ nom: nomA }));
+    expect(couleursProches(ka, kb)).toBe(false);
+  });
+  it('donne la même couleur à toute une famille, nom de naissance compris pour une personne sans nom actuel', () => {
+    const d = donnees([personne('a', nomA), personne('b', nomA), personne('c', nomB), personne('d', '', nomB)]);
+    expect(couleurFamille(d.personnes[3], d)).toBe(couleurFamille(d.personnes[2], d));
+  });
+  it('quand la palette ne suffit plus, garde distinctes les familles liées', () => {
+    const noms = Array.from({ length: 30 }, (_, i) => `Famille${i}`);
+    const ps = noms.flatMap((n, i) => Array.from({ length: 30 - i }, (_, j) => personne(`${n}-${j}`, n)));
+    const unions: [string, string][] = noms.slice(1).map((n, i) => [`${noms[i]}-0`, `${n}-0`]);
+    const d = donnees(ps, unions);
+    for (const [a, b] of unions) expect(couleursProches(couleurFamille(d.personnes.find((p) => p.id === a)!, d)!, couleurFamille(d.personnes.find((p) => p.id === b)!, d)!)).toBe(false);
+  });
+  it('est mémorisée par objet de données', () => {
+    const d = donnees([personne('a', 'Martin')]);
+    expect(couleursDesFamilles(d)).toBe(couleursDesFamilles(d));
+  });
+
 });
 
 describe('tri par nom', () => {

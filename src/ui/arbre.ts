@@ -3,12 +3,14 @@
 // le dessin se fait une fois l'écran inséré dans la page, puis à chaque changement de largeur.
 
 import type { Etape } from '../modele/deductions';
-import { annees, disposerFoyer, type FamilleProche } from '../modele/familleProche';
+import { annees, disposerFoyer, type FamilleProche, type StyleTrait } from '../modele/familleProche';
 import { estDecede } from '../modele/modele';
+import { mentionNaissance } from '../modele/liste';
 import { motsChemin } from '../modele/parente';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
 import { h } from './dom';
+import { LIGNE_EN_PLUS } from './geometrieArbre';
 import { avatarPersonne } from './lignePersonne';
 import { faireApparaitre } from './surbrillance';
 
@@ -16,13 +18,11 @@ const SVG = 'http://www.w3.org/2000/svg';
 
 interface Trait {
   d: string;
-  pointille?: boolean;
+  style?: StyleTrait;
   /** Passe sur d'autres traits : un halo couleur de carte le détache. */
   halo?: boolean;
 }
 
-/** Hauteur d'une 2e ligne de nom (prénom composé) : réservée sous chaque nom, pour que ni trait ni rang suivant ne la touche. */
-export const LIGNE_EN_PLUS = 16;
 
 interface OptionsNoeud {
   /** Personne de la fiche : pas de lien, nœud plus grand. */
@@ -31,6 +31,8 @@ interface OptionsNoeud {
   annee?: boolean;
   /** Case « + Parent » : lien vers l'ajout d'un parent à cette personne. */
   manque?: string;
+  /** « née Kervadec » sous le nom quand le nom de naissance diffère (arbre principal, V4 point 17). */
+  naissance?: boolean;
 }
 
 export function noeud(p: Personne | undefined, moi: string | undefined, x: number, y: number, r: number, o: OptionsNoeud = {}): HTMLElement {
@@ -51,6 +53,7 @@ export function noeud(p: Personne | undefined, moi: string | undefined, x: numbe
   const contenu = [
     avatar,
     sansNom ? undefined : p.id === moi ? h('span', { class: 'nom toi' }, 'Toi') : h('span', { class: 'nom' }, p.prenom || p.nom),
+    o.naissance && !sansNom && mentionNaissance(p) && h('span', { class: 'naissance' }, mentionNaissance(p)),
     an && h('span', { class: 'an' }, an),
   ];
   // Nom complet au survol (et à l'appui long dans « Famille proche ») : le nom affiché peut être coupé.
@@ -78,7 +81,7 @@ function svg(l: number, haut: number, traits: Trait[]): SVGSVGElement {
       s.append(halo);
     }
     const chemin = document.createElementNS(SVG, 'path');
-    chemin.setAttribute('class', t.pointille ? 'trait pointille' : 'trait');
+    chemin.setAttribute('class', !t.style || t.style === 'plein' ? 'trait' : `trait ${t.style}`);
     chemin.setAttribute('d', t.d);
     s.append(chemin);
   }
@@ -166,11 +169,6 @@ export function dessinFoyer(f: FamilleProche): HTMLElement {
   const cles = h('div', { class: 'cles', hidden: true });
   const barre = h('b');
   const indice = h('p', { class: 'indice', hidden: true }, h('i', {}, barre), 'Glisse pour voir toute la famille');
-  const adoption =
-    f.couples.some((K) => K.adoptif) ||
-    f.freres.some((x) => x.adoptif) ||
-    f.autresCouples.some((a) => a.enfants.some((e) => e.adoptif)) ||
-    f.enfants.some((e) => e.adoptif);
   const el = bloc(
     'foyer',
     disposerFoyer(f, 294).hauteur,
@@ -210,11 +208,15 @@ export function dessinFoyer(f: FamilleProche): HTMLElement {
       indice.hidden = !dis.defile;
       faireApparaitre(arbre);
       const deces = dis.noeuds.some((n) => n.personne && estDecede(n.personne));
+      // La légende suit les traits dessinés.
+      const ex = dis.traits.some((t) => t.style === 'ex');
+      const adoption = dis.traits.some((t) => t.style === 'adoption');
       cles.replaceChildren(
-        ...(adoption ? [h('span', {}, h('i', { class: 'cle-pointille' }), 'adoption')] : []),
+        ...(ex ? [h('span', {}, h('i', { class: 'cle-ex' }), 'ex')] : []),
+        ...(adoption ? [h('span', {}, h('i', { class: 'cle-adoption' }), 'adoption')] : []),
         ...(deces ? [h('span', {}, h('i', { class: 'cle-decede' }), 'décédé(e)')] : []),
       );
-      cles.hidden = !adoption && !deces;
+      cles.hidden = !ex && !adoption && !deces;
     },
     indice,
     cles,

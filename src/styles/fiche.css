@@ -187,6 +187,18 @@
   display: none;
 }
 
+/* Interrupteur « Décédé », sa date et son lieu, puis les réglages de la fiche : séparés de 12 px (V4, point 19). */
+.bloc-deces,
+.date-deces {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.date-deces[hidden] {
+  display: none;
+}
+
 .champ label {
   padding: 0 4px;
   font-size: var(--t2);
@@ -1028,8 +1040,17 @@ fieldset.champ legend {
   stroke-linejoin: round;
 }
 
-.trait.pointille {
-  stroke-dasharray: 3 4;
+/* Ex (séparés ou sans union) : points ronds espacés ; adoption : tirets longs (V4, point 18). */
+.trait.ex {
+  stroke-width: 2;
+  stroke-dasharray: 0.1 5;
+}
+
+.trait.adoption {
+  stroke-dasharray: 9 5;
+  /* Le motif part d'un blanc : la courte branche d'un adopté (10 px) se détache de la barre au lieu de paraître pleine. */
+  stroke-dashoffset: 11;
+  stroke-linecap: butt;
 }
 
 /* Sous un trait qui en croise d'autres (descente vers une 2e ligne, union par une voie) : il s'en détache. */
@@ -1087,6 +1108,22 @@ fieldset.champ legend {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--secondaire);
+}
+
+.noeud .naissance {
+  margin-top: -4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--t1);
+  font-style: italic;
+  line-height: 14px;
+  white-space: nowrap;
+  color: var(--secondaire);
+}
+
+.noeud .naissance + .an {
+  margin-top: 0;
 }
 
 .noeud.ici .avatar {
@@ -1299,9 +1336,18 @@ a.noeud:active .avatar {
   gap: 8px;
 }
 
-.cle-pointille {
-  width: 18px;
-  border-top: 1.5px dashed var(--trait);
+.cle-ex,
+.cle-adoption {
+  width: 24px;
+  height: 2px;
+}
+
+.cle-ex {
+  background: radial-gradient(circle, var(--trait) 1px, transparent 1.2px) 0 50% / 5px 2px repeat-x;
+}
+
+.cle-adoption {
+  background: linear-gradient(90deg, var(--trait) 9px, transparent 9px) 0 0 / 14px 1.5px repeat-x;
 }
 
 .cle-decede {

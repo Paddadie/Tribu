@@ -111,7 +111,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   const motDecede = h('span', { class: 'ligne-nom' });
   const dateDeces = h(
     'div',
-    { hidden: !decede.checked },
+    { class: 'date-deces', hidden: !decede.checked },
     h('div', { class: 'champ' }, deces.groupe),
     champ('Lieu du décès (facultatif)', 'lieu-deces', lieuDeces),
   );
@@ -177,7 +177,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
     ],
     noeudDeces: h(
       'div',
-      {},
+      { class: 'bloc-deces' },
       h('label', { class: 'carte interrupteur', for: 'decede' }, h('span', { class: 'ligne-texte' }, motDecede), decede),
       dateDeces,
       ...reglages,

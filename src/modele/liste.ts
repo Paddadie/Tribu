@@ -2,7 +2,7 @@
 // lettre et filtre. Fonctions pures, testables sans navigateur.
 
 import { MOTIF_DATE, MOTIF_SANS_ANNEE } from './modele';
-import type { Personne, Sexe, Union } from './types';
+import type { Donnees, Personne, Sexe, Union } from './types';
 
 export interface Groupe {
   lettre: string;
@@ -33,16 +33,77 @@ export function initiales(p: Pick<Personne, 'prenom' | 'nom'>): string {
 /** Nombre de couleurs de famille (pastels --c0 à --c11 de style.css). */
 export const NB_COULEURS = 12;
 
-/**
- * Couleur de famille (0 à 11), la même partout (liste, fiche, dessins, arbre) : hachée sur le nom actuel,
- * le nom de naissance à défaut, sans tenir compte des accents, de la casse ni de la ponctuation. Aucune sans nom.
- */
-export function couleurFamille(p: Pick<Personne, 'nom'> & { nomNaissance?: string }): number | undefined {
-  const cle = simplifier(p.nom.trim() || (p.nomNaissance ?? '')).replace(/[^a-z0-9]/g, '');
-  if (!cle) return undefined;
+/** Clé de famille d'une personne : nom actuel, nom de naissance à défaut, sans accents, casse ni ponctuation. */
+function cleFamille(p: Pick<Personne, 'nom'> & { nomNaissance?: string }): string {
+  return simplifier(p.nom.trim() || (p.nomNaissance ?? '')).replace(/[^a-z0-9]/g, '');
+}
+
+/** Couleur tirée du nom seul (0 à 11). */
+function couleurDuNom(cle: string): number {
   let somme = 0;
   for (const c of cle) somme = (somme * 31 + c.charCodeAt(0)) >>> 0;
   return somme % NB_COULEURS;
+}
+
+/** Paires de pastels trop proches à l'œil, en clair ou en sombre (écart OKLab sous 0,065, V4 point 16). */
+const PROCHES = new Set(['0-9', '1-5', '1-6', '2-4', '2-7', '3-5', '3-10', '4-9', '6-11']);
+export const couleursProches = (a: number, b: number) => a === b || PROCHES.has(a < b ? `${a}-${b}` : `${b}-${a}`);
+
+const attributions = new WeakMap<Donnees, Map<string, number>>();
+
+/**
+ * Couleur de chaque famille des données (V4, point 16). Une famille garde la couleur de son nom si aucune autre
+ * n'en a une trop proche ; sinon elle prend la suivante qui convient. Les grandes familles choisissent d'abord.
+ * Quand la palette ne suffit plus, seules les familles liées (union, filiation, nom de naissance) restent distinctes.
+ * Mémorisé par objet `Donnees` : chaque modification en crée un nouveau.
+ */
+export function couleursDesFamilles(d: Donnees): Map<string, number> {
+  const deja = attributions.get(d);
+  if (deja) return deja;
+  const personnes = d.personnes.filter((p) => !p.inconnu && cleFamille(p));
+  const cleDe = new Map(personnes.map((p) => [p.id, cleFamille(p)]));
+  const taille = new Map<string, number>();
+  for (const k of cleDe.values()) taille.set(k, (taille.get(k) ?? 0) + 1);
+  const liees = new Map<string, Set<string>>();
+  const lier = (a?: string, b?: string) => {
+    if (!a || !b || a === b || !taille.has(a) || !taille.has(b)) return;
+    for (const [x, y] of [[a, b], [b, a]]) liees.set(x, (liees.get(x) ?? new Set()).add(y));
+  };
+  for (const u of d.unions) lier(cleDe.get(u.personneA), cleDe.get(u.personneB));
+  for (const f of d.filiations) lier(cleDe.get(f.parent), cleDe.get(f.enfant));
+  for (const p of personnes) if (p.nomNaissance) lier(cleDe.get(p.id), cleFamille({ nom: p.nomNaissance }));
+
+  const res = new Map<string, number>();
+  const libre = (depart: number, prises: number[]) => {
+    for (let i = 0; i < NB_COULEURS; i++) {
+      const k = (depart + i) % NB_COULEURS;
+      if (!prises.some((x) => couleursProches(k, x))) return k;
+    }
+    return undefined;
+  };
+  for (const cle of [...taille.keys()].sort((a, b) => taille.get(b)! - taille.get(a)! || (a < b ? -1 : 1))) {
+    const h = couleurDuNom(cle);
+    const voisines = [...(liees.get(cle) ?? [])].filter((x) => res.has(x)).map((x) => res.get(x)!);
+    res.set(cle, libre(h, [...res.values()]) ?? libre(h, voisines) ?? h);
+  }
+  attributions.set(d, res);
+  return res;
+}
+
+/**
+ * Couleur de famille (0 à 11), la même partout (liste, fiche, dessins, arbre) : celle que `couleursDesFamilles`
+ * donne au nom actuel, au nom de naissance à défaut ; sans données, celle du nom seul. Aucune sans nom.
+ */
+export function couleurFamille(p: Pick<Personne, 'nom'> & { nomNaissance?: string }, d?: Donnees): number | undefined {
+  const cle = cleFamille(p);
+  if (!cle) return undefined;
+  return (d && couleursDesFamilles(d).get(cle)) ?? couleurDuNom(cle);
+}
+
+/** « née Kervadec », « né Roux » : le nom de naissance s'il diffère du nom actuel (nœuds de l'arbre principal). */
+export function mentionNaissance(p: Pick<Personne, 'nom' | 'sexe'> & { nomNaissance?: string }): string | undefined {
+  const n = p.nomNaissance?.trim();
+  return n && !memeNom(n, p.nom) ? `${accorder(p.sexe, 'né', 'née', 'né(e)')} ${n}` : undefined;
 }
 
 /** Minuscules, sans accents : « Éloïse » → « eloise ». */

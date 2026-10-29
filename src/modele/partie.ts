@@ -467,7 +467,12 @@ export class Lignes {
         const delta = this.decaler(ligne, i, j, voulu);
         // Enfants à court de place : un couple seul dans son bloc (sans ex ni beau-parent) fait le reste du chemin.
         const bp = this.blocDe.get(u)!;
-        if (Math.abs(voulu - delta) > EPSILON && bp.membres.length === 2) {
+        // Sauf si l'un d'eux est l'enfant unique d'un couple : il quitterait l'aplomb de ses parents (un coude).
+        const unique = bp.membres.some((m) => {
+          const c = this.coupleDe(m);
+          return c !== undefined && new Set(this.liens.parents(m).flatMap(this.liens.enfants)).size === 1;
+        });
+        if (Math.abs(voulu - delta) > EPSILON && bp.membres.length === 2 && !unique) {
           const haut = this.lignes.get(bp.g)!;
           this.decaler(haut, haut.indexOf(bp), haut.indexOf(bp), delta - voulu);
         }

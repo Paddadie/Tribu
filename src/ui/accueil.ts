@@ -265,7 +265,7 @@ type Familles = ReturnType<typeof resumesFamilles>;
 
 /** Familles de l'arbre autour de Moi, séparées entre la famille et les amis (nom porté seulement dans la bulle des amis). */
 function famillesDe(d: Donnees, moi: Personne | undefined): { famille: Familles; amis: Familles } {
-  const toutes = moi ? resumesFamilles(disposerArbre(d, moi.id)) : [];
+  const toutes = moi ? resumesFamilles(disposerArbre(d, moi.id), d) : [];
   return { famille: toutes.filter((f) => !f.amis), amis: toutes.filter((f) => f.amis) };
 }
 

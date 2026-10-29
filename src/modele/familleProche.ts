@@ -183,9 +183,12 @@ export interface NoeudFoyer {
   annees: string;
 }
 
+/** Plein ; ex (couple séparé ou sans union) : points ronds ; adoption : tirets longs. Communs à la fiche, à l'arbre et au PNG. */
+export type StyleTrait = 'plein' | 'ex' | 'adoption';
+
 export interface TraitFoyer {
   d: string;
-  pointille: boolean;
+  style: StyleTrait;
   /** Passe sur d'autres traits : un halo couleur de carte le détache. */
   halo: boolean;
 }
@@ -405,7 +408,7 @@ export function disposerFoyer(f: FamilleProche, budget: number): DispositionFoye
     return N.get(id)!;
   };
   const traits: TraitFoyer[] = [];
-  const trait = (d: string, pointille = false, halo = false) => traits.push({ d, pointille, halo });
+  const trait = (d: string, style: StyleTrait = 'plein', halo = false) => traits.push({ d, style, halo });
   const rayon = (x: NoeudFoyer) => x.rayon;
 
   // Rangée des parents : une chaîne par couple, ses autres partenaires de part et d'autre.
@@ -626,22 +629,25 @@ export function disposerFoyer(f: FamilleProche, budget: number): DispositionFoye
     let yb = yLigne - rL - 14;
     while (gene(yb, g, d)) yb -= 9;
     barres.push({ y: yb, g, d });
-    if (x !== undefined) trait(`M${x} ${yDe}V${yb}`, false, depuisSous);
-    if (g < d) trait(`M${g} ${yb}H${d}`);
+    // Tous adoptés : tout le trait en tirets ; fratrie mixte : tronc plein, chaque branche selon son type.
+    const tronc: StyleTrait = vers.length && vers.every((e) => e.adoptif) ? 'adoption' : 'plein';
+    if (x !== undefined) trait(`M${x} ${yDe}V${yb}`, tronc, depuisSous);
+    if (g < d) trait(`M${g} ${yb}H${d}`, tronc);
     for (const e of vers) {
       const E = n(e.id);
-      trait(`M${E.x} ${yb}V${E.y - E.rayon - 4}`, e.adoptif);
+      trait(`M${E.x} ${yb}V${E.y - E.rayon - 4}`, e.adoptif ? 'adoption' : 'plein');
     }
   };
-  // Couple séparé ou sans union enregistrée : pointillé ; union actuelle (même avec un défunt) : trait plein.
+  // Couple séparé ou sans union enregistrée : points (ex) ; union actuelle (même avec un défunt) : trait plein.
+  const styleUnion = (statut: Statut): StyleTrait => (statut === 'actuelle' ? 'plein' : 'ex');
   const union = (A: NoeudFoyer, B: NoeudFoyer, statut: Statut) => {
     const [g, d] = A.x < B.x ? [A, B] : [B, A];
-    trait(`M${g.x + g.rayon + 4} ${g.y}H${d.x - d.rayon - 4}`, statut !== 'actuelle');
+    trait(`M${g.x + g.rayon + 4} ${g.y}H${d.x - d.rayon - 4}`, styleUnion(statut));
   };
   const voie = (A: NoeudFoyer, B: NoeudFoyer, yv: number, statut: Statut) => {
     trait(`M${A.x} ${A.y + bas(A) + 2}V${yv}`);
     trait(`M${B.x} ${B.y + bas(B) + 2}V${yv}`);
-    trait(`M${Math.min(A.x, B.x)} ${yv}H${Math.max(A.x, B.x)}`, statut !== 'actuelle', true);
+    trait(`M${Math.min(A.x, B.x)} ${yv}H${Math.max(A.x, B.x)}`, styleUnion(statut), true);
   };
 
   // Parents et leurs autres partenaires.
@@ -684,7 +690,7 @@ export function disposerFoyer(f: FamilleProche, budget: number): DispositionFoye
     let yb = I.y - RG - 23;
     while (yb < I.y - RG - 8 && gene(yb, g, d)) yb += 5;
     barres.push({ y: yb, g, d });
-    trait(`M${j.x} ${j.y}V${yb}H${I.x}V${I.y - RG - 4}`, true);
+    trait(`M${j.x} ${j.y}V${yb}H${I.x}V${I.y - RG - 4}`, 'adoption');
   });
   for (const [cle, j] of jonctionsG1) {
     if (cle === null) continue;

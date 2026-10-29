@@ -8,7 +8,7 @@ import { prochesDeFamille } from '../modele/filtres';
 import { couleurFamille, filtrerParNom, nomComplet, simplifier } from '../modele/liste';
 import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
-import type { Personne } from '../modele/types';
+import type { Donnees, Personne } from '../modele/types';
 import { noeud } from './arbre';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
@@ -69,13 +69,13 @@ export interface ResumeFamille {
 }
 
 /** Une entrée par nom de famille présent sur l'arbre (amis compris), par ordre alphabétique. */
-export function resumesFamilles(disp: Disposition): ResumeFamille[] {
+export function resumesFamilles(disp: Disposition, d: Donnees): ResumeFamille[] {
   const parNom = new Map<string, ResumeFamille>();
   for (const p of disp.places) {
     const nom = p.personne.nom.trim();
     if (!nom || estVirtuel(p.personne.id)) continue;
     const cle = simplifier(nom);
-    const f = parNom.get(cle) ?? { nom: `Famille ${nom}`, cle, couleur: couleurFamille(p.personne), n: 0, ids: [], amis: true };
+    const f = parNom.get(cle) ?? { nom: `Famille ${nom}`, cle, couleur: couleurFamille(p.personne, d), n: 0, ids: [], amis: true };
     f.n++;
     f.ids.push(p.personne.id);
     if (!p.bulle) f.amis = false;
@@ -155,7 +155,7 @@ class Carte {
   private cadres: Cadre[] = [];
   private familles: FamilleListee[] = [];
   /** Noms de famille posés sur le calque (centre et bas en pixels, effectif de la lignée, largeur mesurée une fois). */
-  private readonly etiquettes: { el: HTMLElement; x: number; bas: number; poids: number; l?: number }[] = [];
+  private readonly etiquettes: { el: HTMLElement; x: number; bas: number; poids: number; l?: number; ancre?: 'fin' | 'debut' }[] = [];
   /** Échelle pour laquelle les chevauchements d'étiquettes ont été réglés (0 : de près, toutes visibles). */
   private echelleEtiquettes = 0;
   /** Liste ouverte par « Familles » ou « Amis », posée au-dessus des commandes : elle en glisse et s'y replie (CSS). */
@@ -180,7 +180,7 @@ class Carte {
 
     const noeuds = disp.places.map((pl) => {
       const c = this.centres.get(pl.personne.id)!;
-      const n = noeud(pl.personne, moi.id, c.x, c.y, R, { annee: true, larg: LARG });
+      const n = noeud(pl.personne, moi.id, c.x, c.y, R, { annee: true, naissance: true, larg: LARG });
       n.dataset.id = pl.personne.id;
       n.setAttribute('draggable', 'false');
       if (pl.personne.id === moi.id) n.classList.add('moi');
@@ -317,7 +317,7 @@ class Carte {
       const cle = simplifier(nom);
       membres.set(cle, [...(membres.get(cle) ?? []), { ...c, id: p.personne.id }]);
     }
-    return resumesFamilles(this.disp)
+    return resumesFamilles(this.disp, lireDonnees())
       .filter((r) => membres.has(r.cle))
       .map((r) => {
         const porteurs = membres.get(r.cle)!;
@@ -441,12 +441,12 @@ class Carte {
     const familles = this.disp.etiquettes.map((e) => {
       const c = px(e);
       const haut = hautEtiquette(this.disp, px, e);
-      const el = placer(h('div', { class: 'etiquette-famille' }, e.texte), c.x, haut);
+      const el = placer(h('div', { class: `etiquette-famille${e.ancre ? ` ${e.ancre}` : ''}` }, e.texte), c.x, haut);
       if (e.lignee !== undefined) el.style.setProperty('--cc', couleurTrait(e.lignee));
       // Dans la bulle, de loin, les titres des groupes suffisent.
       if (bulle && c.y > bulle.ha) el.classList.add('dans-bulle');
       const poids = this.disp.places.filter((p) => e.lignee !== undefined && p.lignee === e.lignee).length;
-      this.etiquettes.push({ el, x: c.x, bas: haut + HAUT_ETIQUETTE, poids });
+      this.etiquettes.push({ el, x: c.x, bas: haut + HAUT_ETIQUETTE, poids, ancre: e.ancre });
       return el;
     });
     return [...titres, ...familles];
@@ -498,7 +498,9 @@ class Carte {
     for (const e of [...this.etiquettes].filter((x) => !x.el.classList.contains('dans-bulle')).sort((a, b) => b.poids - a.poids)) {
       e.l ??= e.el.offsetWidth || undefined;
       // À l'écran, de loin : la largeur mesurée, le bas de l'étiquette reste à sa place (origine du changement d'échelle).
-      const r = { g: e.x * s - (e.l ?? 0) / 2, d: e.x * s + (e.l ?? 0) / 2, ba: e.bas * s, ha: e.bas * s - HAUT_ETIQUETTE };
+      const l = e.l ?? 0;
+      const g = e.x * s - (e.ancre === 'fin' ? l : e.ancre === 'debut' ? 0 : l / 2);
+      const r = { g, d: g + l, ba: e.bas * s, ha: e.bas * s - HAUT_ETIQUETTE };
       const masquee = s > 0 && gardees.some((o) => r.g < o.d + 8 && o.g < r.d + 8 && r.ha < o.ba + 4 && o.ha < r.ba + 4);
       e.el.classList.toggle('masquee', masquee);
       if (!masquee) gardees.push(r);

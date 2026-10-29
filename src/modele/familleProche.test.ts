@@ -82,16 +82,62 @@ describe('familleProche : qui dessiner', () => {
 });
 
 describe('disposerFoyer : où dessiner', () => {
-  it('relie un couple sans union enregistrée en pointillé droit, comme un couple séparé', () => {
+  it('relie un couple sans union enregistrée en points (ex) droits, comme un couple séparé', () => {
     const dis = disposerFoyer(familleProche(fixture('07-parents-sans-union'), 'centre'), 360);
-    expect(unionEntre(dis, 'pere', 'mere')?.pointille).toBe(true);
+    expect(unionEntre(dis, 'pere', 'mere')?.style).toBe('ex');
+    const d = famille().p('pere', '1960').p('mere', '1962').p('centre', '1990').union('pere', 'mere', 'separee').enfant(['pere', 'mere'], 'centre').d;
+    expect(unionEntre(disposerFoyer(familleProche(d, 'centre'), 360), 'pere', 'mere')?.style).toBe('ex');
+  });
+
+  it('met en tirets toute la descente d’un couple qui n’a que des enfants adoptés (point 18)', () => {
+    const d = famille()
+      .p('centre', '1970')
+      .p('conj', '1971')
+      .p('k1', '2000')
+      .p('k2', '2003')
+      .union('centre', 'conj', 'actuelle')
+      .enfant(['centre', 'conj'], 'k1', 'adoptif')
+      .enfant(['centre', 'conj'], 'k2', 'adoptif').d;
+    const dis = disposerFoyer(familleProche(d, 'centre'), 360);
+    expect(unionEntre(dis, 'centre', 'conj')?.style).toBe('plein');
+    // Sous le couple (au-dessus : le trait de la case « + Parent »).
+    const yCouple = noeud(dis, 'centre')!.y;
+    const autres = dis.traits.filter((t) => t !== unionEntre(dis, 'centre', 'conj') && Number(t.d.split(/[ HV]/)[1]) >= yCouple);
+    expect(autres.length).toBeGreaterThanOrEqual(3);
+    expect(autres.every((t) => t.style === 'adoption')).toBe(true);
+  });
+
+  it('garde le tronc plein d’une fratrie mixte, seule la branche de l’adopté en tirets (point 18)', () => {
+    const d = famille()
+      .p('centre', '1970')
+      .p('conj', '1971')
+      .p('k1', '2000')
+      .p('k2', '2003')
+      .union('centre', 'conj', 'actuelle')
+      .enfant(['centre', 'conj'], 'k1')
+      .enfant(['centre', 'conj'], 'k2', 'adoptif').d;
+    const dis = disposerFoyer(familleProche(d, 'centre'), 360);
+    const adoption = dis.traits.filter((t) => t.style === 'adoption');
+    expect(adoption).toHaveLength(1);
+    expect(adoption[0].d.startsWith(`M${noeud(dis, 'k2')!.x} `)).toBe(true);
+    expect(dis.traits.some((t) => t.style === 'ex')).toBe(false);
+  });
+
+  it('dessine l’adoption en tirets, jamais avec le style des ex (cas 13, 19 et 20)', () => {
+    for (const nom of ['13-adoption', '19-frere-adopte-avec-bio', '20-demi-par-parent-adoptif']) {
+      const dis = disposerFoyer(familleProche(fixture(nom), 'centre'), 360);
+      expect(
+        dis.traits.some((t) => t.style === 'adoption'),
+        nom,
+      ).toBe(true);
+    }
   });
 
   it('garde un trait plein avec un conjoint décédé', () => {
     const d = famille().p('centre', '1950').p('conj', '1948', { deces: '2020' }).union('centre', 'conj', 'actuelle').enfant(['centre', 'conj'], 'k1').d;
     d.personnes.push({ id: 'k1', prenom: 'Kim', nom: 'Martin', naissance: '1980', note: '' });
     const dis = disposerFoyer(familleProche(d, 'centre'), 360);
-    expect(unionEntre(dis, 'centre', 'conj')?.pointille).toBe(false);
+    expect(unionEntre(dis, 'centre', 'conj')?.style).toBe('plein');
   });
 
   it('met l’ex co-parent du côté opposé au conjoint (cas 10)', () => {

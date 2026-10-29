@@ -359,7 +359,10 @@ export class Famille {
     const generation = cles.map((c) => this.generation(c)).find((g) => g !== undefined) ?? 0;
     const inconnu = `${this.prefixe}-inconnu-${++this.inconnus}`;
     this.personnes.set(inconnu, { id: inconnu, prenom: '', nom: '', note: '', inconnu: true });
-    for (const cle of cles) this.relier(inconnu, this.assurer(cle, { generation }), 'biologique');
+    // Les nouveaux venus portent le nom de naissance de la fratrie (celui d'une sœur mariée, pas son nom d'usage).
+    const deja = cles.filter((c) => this.existe(c)).map((c) => this.personnes.get(this.id(c))!);
+    const nom = deja.map((p) => p.nomNaissance || p.nom).find(Boolean);
+    for (const cle of cles) this.relier(inconnu, this.assurer(cle, { generation, ...(nom ? { nom } : {}) }), 'biologique');
     return this;
   }
 
