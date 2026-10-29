@@ -62,7 +62,8 @@ export interface OptionsEvenements {
  * - Décès : date de décès complète, au moins 1 an.
  */
 export function evenementsAVenir(d: Donnees, aujourdhui: Date, horizon: number, options: OptionsEvenements = {}): Evenement[] {
-  const listees = personnesListees(d);
+  // Une personne sans rappel n'en donne aucun : ni anniversaire, ni fête, ni décès, ni union où elle figure.
+  const listees = personnesListees(d).filter((p) => !p.sansRappel);
   const parId = new Map(listees.map((p) => [p.id, p]));
   const trouves: Evenement[] = [];
   const ajouter = (genre: GenreEvenement, personnes: Personne[], mois: number, jour: number, depuis?: number, extra: Partial<Evenement> = {}) => {

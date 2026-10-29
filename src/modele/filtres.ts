@@ -95,7 +95,9 @@ export function filtrerListe(d: Donnees, personnes: Personne[], critere: Critere
     }
     case 'acompleter': {
       const voulus = critere.manques;
+      // « Ne plus me la signaler » : la fiche garde ses manques, seul ce filtre l'écarte.
       return personnes.filter((p) => {
+        if (p.ignorerIncomplet) return false;
         const m = manquesDe(p);
         return voulus && voulus.size > 0 ? m.some((x) => voulus.has(x)) : m.length > 0;
       });

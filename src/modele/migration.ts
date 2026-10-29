@@ -3,6 +3,9 @@
 // Elle ne vérifie rien et ne lève jamais d'erreur : un contenu inconnu ressort tel quel et c'est
 // la validation qui le refuse.
 
+import { estSansNomVide } from './modele';
+import type { Personne } from './types';
+
 function estObjet(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -71,11 +74,49 @@ function v4versV5(v: Record<string, unknown>): Record<string, unknown> {
   return { ...v, version: 5, personnes: migrees };
 }
 
+/**
+ * v5 → v6 : un parent « ? » enregistré sans aucune information (ni note, ni date, ni lieu, ni sexe, ni union, ni groupe)
+ * redevient virtuel : il est supprimé, et `avecParentsSansNom` le recalcule à l'identique. Il n'est supprimé que si chacun
+ * de ses enfants garde exactement un autre parent, réel et du même type de lien : sinon le « ? » ne reviendrait pas.
+ * Idempotente ; les nouveaux champs (lieux, `ignorerIncomplet`, `sansRappel`) sont facultatifs et ne demandent rien.
+ */
+function v5versV6(v: Record<string, unknown>): Record<string, unknown> {
+  const personnes = Array.isArray(v.personnes) ? v.personnes : [];
+  const unions = Array.isArray(v.unions) ? v.unions.filter(estObjet) : [];
+  const filiations = Array.isArray(v.filiations) ? v.filiations.filter(estObjet) : [];
+  const groupes = Array.isArray(v.groupes) ? v.groupes.filter(estObjet) : [];
+  const parId = new Map(personnes.filter(estObjet).map((p) => [p.id, p]));
+  const reel = (id: unknown) => {
+    const p = parId.get(id);
+    return !!p && !p.inconnu && !p.sansNom;
+  };
+  const redevientVirtuel = (p: Record<string, unknown>): boolean => {
+    if (typeof p.note !== 'string' || !estSansNomVide(p as unknown as Personne)) return false;
+    if (unions.some((u) => u.personneA === p.id || u.personneB === p.id)) return false;
+    if (groupes.some((g) => Array.isArray(g.membres) && g.membres.includes(p.id))) return false;
+    if (filiations.some((f) => f.enfant === p.id)) return false;
+    return filiations
+      .filter((f) => f.parent === p.id)
+      .every((f) => {
+        const autres = filiations.filter((g) => g.enfant === f.enfant && g.parent !== p.id);
+        return autres.length === 1 && reel(autres[0].parent) && autres[0].type === f.type;
+      });
+  };
+  const retires = new Set(personnes.filter((p) => estObjet(p) && redevientVirtuel(p)).map((p) => (p as Record<string, unknown>).id));
+  return {
+    ...v,
+    version: 6,
+    personnes: personnes.filter((p) => !(estObjet(p) && retires.has(p.id))),
+    ...(Array.isArray(v.filiations) ? { filiations: v.filiations.filter((f) => !(estObjet(f) && retires.has(f.parent))) } : {}),
+  };
+}
+
 export function migrer(brut: unknown): unknown {
   let v = brut;
   if (estObjet(v) && v.version === 1) v = v1versV2(v);
   if (estObjet(v) && v.version === 2) v = v2versV3(v);
   if (estObjet(v) && v.version === 3) v = v3versV4(v);
   if (estObjet(v) && v.version === 4) v = v4versV5(v);
+  if (estObjet(v) && v.version === 5) v = v5versV6(v);
   return v;
 }

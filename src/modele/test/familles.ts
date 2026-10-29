@@ -395,7 +395,7 @@ export class Famille {
   construire(): FamilleFictive {
     if (!this.cleMoi) throw new Error(`${this.nom} : « moi » manquant`);
     const donnees: Donnees = {
-      version: 5,
+      version: 6,
       personnes: [...this.personnes.values()],
       unions: [...this.unions],
       filiations: [...this.filiations],

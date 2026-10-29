@@ -78,7 +78,7 @@ export function anonymiser(d: Donnees, moi: string): Donnees {
   });
   const connu = (...xs: string[]) => xs.every((x) => ids.has(x));
   return {
-    version: 5,
+    version: 6,
     personnes,
     unions: d.unions
       .filter((u) => connu(u.personneA, u.personneB))

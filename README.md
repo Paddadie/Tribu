@@ -46,15 +46,15 @@ Export depuis Réglages, dans un fichier `tribu-AAAA-MM-JJ.json` :
 
 ```json
 {
-  "version": 5,
+  "version": 6,
   "personnes": [
-    { "id": "…", "prenom": "Anne", "nom": "Martin", "nomNaissance": "Roux", "sexe": "F", "naissance": "1950-05", "deces": "2020", "note": "" },
-    { "id": "…", "prenom": "Louis", "nom": "Martin", "sexe": "M", "naissance": "--10-24", "decede": true, "note": "" },
+    { "id": "…", "prenom": "Anne", "nom": "Martin", "nomNaissance": "Roux", "sexe": "F", "naissance": "1950-05", "lieuNaissance": "Nantes", "deces": "2020", "lieuDeces": "Brest", "note": "" },
+    { "id": "…", "prenom": "Louis", "nom": "Martin", "sexe": "M", "naissance": "--10-24", "decede": true, "note": "", "sansRappel": true, "ignorerIncomplet": true },
     { "id": "…", "prenom": "", "nom": "", "note": "", "inconnu": true },
     { "id": "…", "prenom": "Parent inconnu", "nom": "", "note": "", "sansNom": true }
   ],
   "unions": [
-    { "id": "…", "personneA": "…", "personneB": "…", "marie": true, "statut": "actuelle", "date": "2010-06-12" },
+    { "id": "…", "personneA": "…", "personneB": "…", "marie": true, "statut": "actuelle", "date": "2010-06-12", "lieu": "Valbrume" },
     { "id": "…", "personneA": "…", "personneB": "…", "marie": false, "statut": "separee" }
   ],
   "filiations": [
@@ -69,19 +69,24 @@ Export depuis Réglages, dans un fichier `tribu-AAAA-MM-JJ.json` :
 - `naissance` et `deces` (facultatifs) : `AAAA`, `AAAA-MM`, `AAAA-MM-JJ`, ou `--MM-JJ`
   (jour et mois sans année).
 - `decede: true` : décès sans date connue (absent quand `deces` est rempli).
-- `nomNaissance` (facultatif) : nom de jeune fille ; `nom` est alors le nom d'épouse.
+- `nomNaissance` (facultatif) : nom de naissance, pour tous (« nom de jeune fille » pour une femme) ; jamais égal à `nom`, qui est le nom d'usage.
+- `lieuNaissance`, `lieuDeces` (facultatifs) : texte libre ; `lieuDeces` seulement pour une personne décédée.
+- `ignorerIncomplet: true` : la personne ne figure plus dans « À compléter ». `sansRappel: true` : aucun rappel de ses dates
+  (anniversaire, fête, décès, unions).
 - `sexe` (facultatif) : `F` ou `M`.
 - `inconnu: true` : parent inconnu, créé en coulisse pour relier des frères et sœurs
   dont on ignore les parents ; jamais affiché.
 - `sansNom: true` : parent sans nom enregistré (le « ? » de l'arbre), affiché comme une personne.
 - Unions : `date` (facultative) : `AAAA`, `AAAA-MM`, `AAAA-MM-JJ` ou `--MM-JJ` ; `statut` vaut `actuelle` (une seule avec un vivant par personne : un veuf ou
-  une veuve remarié garde aussi son union avec le défunt) ou `separee` (un ex, sans limite de nombre).
+  une veuve remarié garde aussi son union avec le défunt) ou `separee` (un ex, sans limite de nombre) ; `lieu` (facultatif)
+  seulement pour un mariage.
 - `type` d'une filiation : `biologique` ou `adoptif` ; au plus deux parents par type.
 - Groupes d'amis : au moins deux membres, tous amis entre eux ; une personne dans un
   seul groupe ; `nom` peut être vide.
 
 L'import est fusionné avec les données existantes (questions en cas de conflit ou de doute), après validation complète du fichier. Un export
-plus ancien (version 1 à 3) est converti à l'import, sans perte.
+plus ancien (version 1 à 5) est converti à l'import, sans perte ; seul disparaît, en version 6, un « ? » vide dont chaque enfant
+a déjà un autre parent. Au premier chargement en version 6, une copie des données v5 est gardée sous `tribu:donnees:v5`.
 Les réglages (tri, thème, « Moi », date du dernier export) ne font pas partie de la sauvegarde.
 
 Si les données stockées deviennent illisibles, l'appli ne les écrase pas : elle

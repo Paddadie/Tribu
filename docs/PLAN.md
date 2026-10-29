@@ -498,7 +498,7 @@ L'ordre suit ta demande : 0, 1, 2, 3, 4, 5. En option, le lot 5, qui est indépe
 
 **Suivi** (une session par lot ; le lot 4 peut en demander deux : 13 à 15, puis 16 et 17) :
 - [x] Lot 0 — outillage de test (29/10) : src/modele/test/ (générateur, invariants, scénarios, séquences, mesures de disposition), arbreGlobal.invariants.test.ts (seuils d'aujourd'hui), `npm run familles`, `npm run captures -- --familles`
-- [ ] Lot 1 — modèle et liaison
+- [x] Lot 1 — modèle et liaison (29/10) : types et migration v6, `remplacerParent`, `reprendreNomDeNaissance` / `prendreLeNom`, `fratriePresumee`, lieux, `ignorerIncomplet`, `sansRappel` ; src/modele/v6.test.ts, L2, L3, L5 au vert, séquences avec remplacement de « ? »
 - [ ] Lot 2 — écrans de saisie (maquette d'abord)
 - [ ] Lot 3 — nommage
 - [ ] Lot 4 — arbre principal (maquette d'abord)

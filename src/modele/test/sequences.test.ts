@@ -12,7 +12,7 @@ import {
   separerUnion,
   supprimerPersonne,
 } from '../modele';
-import { avecParentsSansNom, enregistrerParentSansNom } from '../parentSansNom';
+import { avecParentsSansNom, enregistrerParentSansNom, remplacerParent } from '../parentSansNom';
 import type { Donnees, TypeFiliation } from '../types';
 import { aleatoire, entre, NOMS, PRENOMS_F, PRENOMS_M } from './familles';
 import { verifierInvariants } from './invariants';
@@ -22,7 +22,7 @@ const OPERATIONS = 30;
 
 type Operation = { nom: string; jouer: (d: Donnees) => Donnees };
 
-/** Tire une opération ; `remplacer un « ? »` attendra `remplacerParent` (lot 1, point 5). */
+/** Tire une opération au hasard parmi celles qui créent, lient, remplacent ou suppriment. */
 function tirer(d: Donnees, h: () => number): Operation {
   const choisir = <T>(xs: T[]): T | undefined => (xs.length === 0 ? undefined : xs[entre(h, 0, xs.length - 1)]);
   const gens = d.personnes.filter((p) => !p.inconnu).map((p) => p.id);
@@ -58,6 +58,16 @@ function tirer(d: Donnees, h: () => number): Operation {
   if (r < 0.84) {
     const [a, b] = [qui(), qui()];
     return { nom: `frère ${a} de ${b}`, jouer: (x) => ajouterFrereSansParent(x, a, b) };
+  }
+  if (r < 0.87) {
+    // Remplacer un « ? » (virtuel, enregistré ou parent inconnu caché) par une personne.
+    const cible = choisir(
+      avecParentsSansNom(d)
+        .personnes.filter((p) => p.sansNom || p.inconnu)
+        .map((p) => p.id),
+    );
+    const par = qui();
+    return { nom: `remplacer ${cible} par ${par}`, jouer: (x) => (cible ? remplacerParent(x, cible, par) : x) };
   }
   if (r < 0.9) {
     const virtuel = choisir(

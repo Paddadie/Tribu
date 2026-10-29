@@ -116,6 +116,8 @@ export async function fusionner(actuelles: Donnees, importees: Donnees, demander
     const deces = await fusionTexte(sujet('décès'), c.deces, p.deces, true);
     const sexe = (await fusionTexte(sujet('sexe'), c.sexe, p.sexe)) as Personne['sexe'];
     const nomNaissance = await fusionTexte(sujet('nom de naissance'), c.nomNaissance, p.nomNaissance);
+    const lieuNaissance = await fusionTexte(sujet('lieu de naissance'), c.lieuNaissance, p.lieuNaissance);
+    const lieuDeces = await fusionTexte(sujet('lieu de décès'), c.lieuDeces, p.lieuDeces);
     const note = (await fusionTexte(sujet('note'), c.note, p.note, false, true)) ?? '';
     const fusion: Personne = { id: c.id, prenom, nom, note };
     if (naissance !== undefined) fusion.naissance = naissance;
@@ -123,6 +125,11 @@ export async function fusionner(actuelles: Donnees, importees: Donnees, demander
     if (c.decede || p.decede) fusion.decede = true;
     if (sexe !== undefined) fusion.sexe = sexe;
     if (nomNaissance !== undefined) fusion.nomNaissance = nomNaissance;
+    if (lieuNaissance !== undefined) fusion.lieuNaissance = lieuNaissance;
+    if (lieuDeces !== undefined) fusion.lieuDeces = lieuDeces;
+    // Ne plus signaler, ne plus rappeler : un choix fait d'un côté vaut pour les deux.
+    if (c.ignorerIncomplet || p.ignorerIncomplet) fusion.ignorerIncomplet = true;
+    if (c.sansRappel || p.sansRappel) fusion.sansRappel = true;
     // Un « inconnu » ou un « ? » qui reçoit un nom de l'autre côté n'en est plus un.
     if (c.inconnu && p.inconnu) fusion.inconnu = true;
     if (c.sansNom && p.sansNom) fusion.sansNom = true;
@@ -203,6 +210,9 @@ export async function fusionner(actuelles: Donnees, importees: Donnees, demander
     const date = await fusionTexte(`${couple}, date de l’union`, existante.date, u.date, true);
     if (date === undefined) delete existante.date;
     else existante.date = date;
+    const lieu = existante.marie ? await fusionTexte(`${couple}, lieu du mariage`, existante.lieu, u.lieu) : undefined;
+    if (lieu === undefined) delete existante.lieu;
+    else existante.lieu = lieu;
   }
 
   // --- Filiations ------------------------------------------------------------------------------
@@ -279,7 +289,7 @@ export async function fusionner(actuelles: Donnees, importees: Donnees, demander
     existant.nom = (await fusionTexte(`Groupe d’amis « ${existant.nom || 'sans nom'} », nom`, existant.nom, g.nom)) ?? '';
   }
 
-  const donnees: Donnees = { version: 5, personnes, unions, filiations, groupes };
+  const donnees: Donnees = { version: 6, personnes, unions, filiations, groupes };
   if (!estDonneesValides(donnees)) throw new Error('La fusion produirait des données incohérentes. Tes données n’ont pas été modifiées');
   return { donnees, ajoutees, fusionnees, ignores };
 }

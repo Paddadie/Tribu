@@ -105,7 +105,7 @@ describe('validation des données', () => {
 
   it('refuse une mauvaise version', () => {
     expect(estDonneesValides({ ...donneesVides(), version: 2 })).toBe(false);
-    expect(estDonneesValides({ ...donneesVides(), version: 6 })).toBe(false);
+    expect(estDonneesValides({ ...donneesVides(), version: 7 })).toBe(false);
   });
 
   it('refuse un lien vers une personne inexistante', () => {

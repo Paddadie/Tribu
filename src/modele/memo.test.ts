@@ -32,7 +32,7 @@ function avec(...noms: string[]): { d: Donnees; ids: string[] } {
 /** Date locale, comme `new Date()` sur le téléphone. */
 const le = (annee: number, mois: number, jour: number) => new Date(annee, mois - 1, jour);
 
-describe('migration v1 → v2 → v3 → v4 → v5', () => {
+describe('migration v1 → v2 → v3 → v4 → v5 → v6', () => {
   const v1 = {
     version: 1,
     personnes: [
@@ -44,9 +44,9 @@ describe('migration v1 → v2 → v3 → v4 → v5', () => {
     filiations: [{ id: 'f1', parent: 'a', enfant: 'c', type: 'biologique' }],
   };
 
-  it('donne le statut « actuelle » aux unions, aucun groupe d’amis, et passe en version 5, sans rien perdre', () => {
+  it('donne le statut « actuelle » aux unions, aucun groupe d’amis, et passe en version 6, sans rien perdre', () => {
     const v3 = migrer(v1) as Donnees;
-    expect(v3.version).toBe(5);
+    expect(v3.version).toBe(6);
     expect(v3.unions).toEqual([{ id: 'u1', personneA: 'a', personneB: 'b', marie: true, statut: 'actuelle' }]);
     expect(v3.personnes).toEqual(v1.personnes);
     expect(v3.filiations).toEqual(v1.filiations);
@@ -57,7 +57,7 @@ describe('migration v1 → v2 → v3 → v4 → v5', () => {
   it('un contenu v2 reçoit une liste de groupes vide, sans rien perdre', () => {
     const v2 = { version: 2, personnes: v1.personnes, unions: [], filiations: v1.filiations };
     const v3 = migrer(v2) as Donnees;
-    expect(v3).toEqual({ ...v2, version: 5, groupes: [] });
+    expect(v3).toEqual({ ...v2, version: 6, groupes: [] });
     expect(estDonneesValides(v3)).toBe(true);
     expect(v2.version).toBe(2);
   });
@@ -68,19 +68,19 @@ describe('migration v1 → v2 → v3 → v4 → v5', () => {
     expect(v1.unions[0]).not.toHaveProperty('statut');
   });
 
-  it('laisse un contenu v5 ou inconnu tel quel', () => {
+  it('laisse un contenu v6 ou inconnu tel quel', () => {
     const v5 = donneesVides();
     expect(migrer(v5)).toBe(v5);
     expect(migrer(null)).toBeNull();
     expect(migrer('x')).toBe('x');
-    expect(migrer({ version: 6 })).toEqual({ version: 6 });
+    expect(migrer({ version: 7 })).toEqual({ version: 7 });
   });
 
   it('v4 → v5 : le parent sans nom reçoit `sansNom`, rien d’autre ne change', () => {
     const v4 = {
       version: 4,
       personnes: [
-        { id: 'a', prenom: 'Parent inconnu', nom: '', note: '' },
+        { id: 'a', prenom: 'Parent inconnu', nom: '', note: '', naissance: '1950' },
         { id: 'b', prenom: 'Parent inconnu', nom: 'Martin', note: '' },
         { id: 'c', prenom: 'Parent inconnu', nom: '', note: '', inconnu: true },
         { id: 'd', prenom: 'Anne', nom: 'X', note: '' },
@@ -90,7 +90,7 @@ describe('migration v1 → v2 → v3 → v4 → v5', () => {
       groupes: [],
     };
     const v5 = migrer(v4) as Donnees;
-    expect(v5.version).toBe(5);
+    expect(v5.version).toBe(6);
     expect(v5.personnes.map((p) => !!p.sansNom)).toEqual([true, false, false, false]);
     expect(v5.unions).toEqual(v4.unions);
     expect(estDonneesValides(v5)).toBe(true);
@@ -106,7 +106,7 @@ describe('migration v1 → v2 → v3 → v4 → v5', () => {
 
   it('un ancien export s’importe', () => {
     const d = importerJson(JSON.stringify(v1, null, 2));
-    expect(d.version).toBe(5);
+    expect(d.version).toBe(6);
     expect(d.unions[0].statut).toBe('actuelle');
   });
 
@@ -138,7 +138,7 @@ describe('migration v3 → v4 : amitiés en groupes', () => {
 
   it('réunit les amis d’amis en un groupe sans nom, sans toucher aux autres', () => {
     const d = migrer(v3) as Donnees;
-    expect(d.version).toBe(5);
+    expect(d.version).toBe(6);
     expect(d).not.toHaveProperty('amities');
     expect(d.groupes.map((g) => [...g.membres].sort())).toEqual([
       ['a', 'b', 'c'],

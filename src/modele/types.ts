@@ -17,9 +17,19 @@ export interface Personne {
   /** Décédée sans date de décès connue (la date seule suffit sinon, voir `estDecede`). Absents tous deux = vivante. */
   decede?: true;
   sexe?: Sexe;
-  /** Nom de jeune fille d'une femme mariée (`nom` est alors son nom d'épouse). */
+  /**
+   * Nom de naissance (« nom de jeune fille » pour une femme), quand le nom d'usage `nom` en diffère (mariage) ; jamais égal à `nom`.
+   */
   nomNaissance?: string;
+  /** Lieu de naissance, texte libre facultatif. */
+  lieuNaissance?: string;
+  /** Lieu de décès, texte libre facultatif ; seulement pour une personne décédée. */
+  lieuDeces?: string;
   note: string;
+  /** Ne plus la signaler dans « À compléter » (le filtre seulement : `manquesDe` reste vrai). */
+  ignorerIncomplet?: true;
+  /** Aucun rappel (anniversaire, fête, décès, unions où elle figure). */
+  sansRappel?: true;
   /**
    * Parent inconnu : personne sans nom créée en coulisse pour relier des frères et sœurs dont on ignore les parents.
    * Elle compte dans les déductions mais n'apparaît jamais (listes, fiches, arbres) ; voir `estInconnu`.
@@ -44,6 +54,8 @@ export interface Union {
   statut: StatutUnion;
   /** Date de l'union (mariage ou début du couple) facultative : « AAAA », « AAAA-MM », « AAAA-MM-JJ » ou « --MM-JJ » (sans année). */
   date?: string;
+  /** Lieu du mariage, texte libre facultatif ; seulement pour une union mariée. */
+  lieu?: string;
 }
 
 /** Lien parent → enfant. */
@@ -66,7 +78,7 @@ export interface GroupeAmis {
 }
 
 export interface Donnees {
-  version: 5;
+  version: 6;
   personnes: Personne[];
   unions: Union[];
   filiations: Filiation[];

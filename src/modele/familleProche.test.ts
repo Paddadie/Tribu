@@ -7,7 +7,7 @@ const fixture = (nom: string): Donnees => JSON.parse(readFileSync(`tests/fixture
 
 /** Petite famille d'emprunt : `p('a', 1980)`, `union('a', 'b', 'actuelle')`, `enfant(['a', 'b'], 'c')`. */
 function famille() {
-  const d: Donnees = { version: 5, personnes: [], unions: [], filiations: [], groupes: [] };
+  const d: Donnees = { version: 6, personnes: [], unions: [], filiations: [], groupes: [] };
   const f = {
     d,
     p(id: string, naissance = '1980', plus: Partial<Personne> = {}) {

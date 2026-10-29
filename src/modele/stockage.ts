@@ -8,6 +8,8 @@ import type { Donnees, Filiation, Personne, Union } from './types';
 export const CLE_STOCKAGE = 'tribu:donnees';
 /** Copie d'un contenu illisible trouvé sous CLE_STOCKAGE. */
 export const CLE_SECOURS = 'tribu:secours';
+/** Copie des données v5 telles qu'elles étaient avant leur passage en v6 (retour arrière possible). */
+export const CLE_AVANT_V6 = 'tribu:donnees:v5';
 
 type Magasin = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -36,7 +38,7 @@ function aBoucleDeFiliation(filiations: Filiation[]): boolean {
  * liens pointant vers des personnes existantes, règles de filiation, groupes d'amis cohérents.
  */
 export function estDonneesValides(v: unknown): v is Donnees {
-  if (!estObjet(v) || v.version !== 5) return false;
+  if (!estObjet(v) || v.version !== 6) return false;
   const { personnes, unions, filiations, groupes } = v;
   if (!Array.isArray(personnes) || !Array.isArray(unions) || !Array.isArray(filiations) || !Array.isArray(groupes)) return false;
 
@@ -51,6 +53,10 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (p.sexe !== undefined && p.sexe !== 'F' && p.sexe !== 'M') return false;
     if (p.inconnu !== undefined && p.inconnu !== true) return false;
     if (p.sansNom !== undefined && p.sansNom !== true) return false;
+    if (p.lieuNaissance !== undefined && typeof p.lieuNaissance !== 'string') return false;
+    if (p.lieuDeces !== undefined && typeof p.lieuDeces !== 'string') return false;
+    if (p.ignorerIncomplet !== undefined && p.ignorerIncomplet !== true) return false;
+    if (p.sansRappel !== undefined && p.sansRappel !== true) return false;
     ids.add(p.id);
   }
 
@@ -60,6 +66,7 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (typeof u.marie !== 'boolean') return false;
     if (u.statut !== 'actuelle' && u.statut !== 'separee') return false;
     if (typeof u.personneA !== 'string' || typeof u.personneB !== 'string') return false;
+    if (u.lieu !== undefined && typeof u.lieu !== 'string') return false;
     if (u.date !== undefined && (typeof u.date !== 'string' || !(estDateValide(u.date) || estDateSansAnneeValide(u.date)))) return false;
     if (!ids.has(u.personneA) || !ids.has(u.personneB) || u.personneA === u.personneB) return false;
     idsLiens.add(u.id);
@@ -116,13 +123,26 @@ export function charger(magasin: Magasin): Chargement {
   const brut = magasin.getItem(CLE_STOCKAGE);
   if (brut === null) return { lisible: true, donnees: donneesVides() };
   const donnees = lire(brut);
-  if (donnees) return { lisible: true, donnees };
+  if (donnees) {
+    garderCopieV5(magasin, brut);
+    return { lisible: true, donnees };
+  }
   try {
     magasin.setItem(CLE_SECOURS, brut);
   } catch {
     // Copie impossible (stockage plein) : l'original reste sous CLE_STOCKAGE, non écrasé.
   }
   return { lisible: false, brut };
+}
+
+/** Données encore en v5 : leur copie brute est gardée une fois, avant que la première sauvegarde v6 ne les remplace. */
+function garderCopieV5(magasin: Magasin, brut: string): void {
+  try {
+    if (magasin.getItem(CLE_AVANT_V6) !== null || (JSON.parse(brut) as { version?: unknown }).version !== 5) return;
+    magasin.setItem(CLE_AVANT_V6, brut);
+  } catch {
+    // Copie impossible (stockage plein) : la migration ne perd rien, la copie n'est qu'une précaution.
+  }
 }
 
 export function sauvegarder(magasin: Magasin, donnees: Donnees): void {

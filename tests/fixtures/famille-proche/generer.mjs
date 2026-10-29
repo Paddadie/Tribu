@@ -10,7 +10,7 @@ const ici = dirname(fileURLToPath(import.meta.url));
 
 /** Petit constructeur : personnes, unions et filiations d'une famille. */
 function famille() {
-  const d = { version: 5, personnes: [], unions: [], filiations: [], groupes: [] };
+  const d = { version: 6, personnes: [], unions: [], filiations: [], groupes: [] };
   const api = {
     /** `p('mere', 'Nadia Roux F 1962', { deces: '2015' })` : prénom, nom, sexe (F, M ou -), naissance (ou -). */
     p(id, desc, extra = {}) {

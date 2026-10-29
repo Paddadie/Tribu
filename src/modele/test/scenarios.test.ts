@@ -1,9 +1,22 @@
 // Scénarios de liaison L1 à L5 (V4, lot 0), joués dans tous les ordres de leurs étapes indépendantes :
 // les invariants tiennent après chaque étape et l'état final ne dépend pas de l'ordre (à l'identifiant près).
-// Un `it.fails` signale un défaut connu, corrigé dans un lot suivant : il passera au vert sans `fails` ce jour-là.
+// Un `it.fails` signale un défaut connu, corrigé dans un lot suivant : il passera au vert sans `fails` ce jour-là (aucun depuis le lot 1).
 import { describe, expect, it } from 'vitest';
 import { fratrie } from '../deductions';
-import { ajouterFiliations, ajouterFrereSansParent, ajouterUnion, creerPersonne, donneesVides, separerUnion } from '../modele';
+import {
+  ajouterFiliations,
+  ajouterFrereSansParent,
+  ajouterUnion,
+  creerPersonne,
+  definirMariageParents,
+  donneesVides,
+  modifierPersonne,
+  prendreLeNom,
+  quiPeutReprendreSonNom,
+  reprendreNomDeNaissance,
+  separerUnion,
+} from '../modele';
+import { enregistrerParentSansNom, PARENT_INCONNU, PREFIXE_VIRTUEL, remplacerParent } from '../parentSansNom';
 import type { Donnees, Sexe } from '../types';
 import { canonique, finsSelonLOrdre, jouer, type Etape } from './outils';
 
@@ -81,14 +94,14 @@ describe('L2 : frère sans parent, puis les parents', () => {
     expect(prenoms(fratrie(fin, lison).freresSoeurs)).toEqual(['Arthur', 'Noé']);
   });
 
-  // Point 6 (lot 1) : le second parent ajouté ensuite ne va qu'à l'enfant de la fiche, les autres deviennent ses demis.
-  it.fails('puis le second parent : la fratrie entière doit suivre', () => {
+  // Point 6 : présomption de fratrie, le second parent va aussi aux frères et sœurs qui n'avaient que le premier.
+  it('puis le second parent : la fratrie entière doit suivre', () => {
     const fin = jouer(d, [...fratrieSansParents, enfantDe([henri], arthur), enfantDe([jeanne], arthur)]);
     expect(prenoms(fratrie(fin, noe).freresSoeurs)).toEqual(['Arthur', 'Lison']);
   });
 
-  // Point 6 (lot 1) : même défaut vu par l'ordre des étapes ; un frère ajouté après les deux parents, lui, les reçoit.
-  it.fails('parents et frère dans tous les ordres : même état final', () => {
+  // Point 6 : même règle vue par l'ordre des étapes ; un frère ajouté après les deux parents les reçoit aussi.
+  it('parents et frère dans tous les ordres : même état final', () => {
     expect(finsSelonLOrdre(d, [enfantDe([henri], arthur), enfantDe([jeanne], arthur), frere(lison, arthur)]).size).toBe(1);
   });
 });
@@ -108,7 +121,67 @@ describe('L3 : parent, ex, enfant de l’ex', () => {
     expect([...fins.keys()][0]).toContain('Aurélie > Théo biologique');
   });
 
-  it.todo('« ? » remplacé par l’ex, puis par une personne nouvelle (`remplacerParent`, lot 1, point 5)');
+  describe('« ? » remplacé (`remplacerParent`, point 5)', () => {
+    const plus = depart([
+      ['Marc', 'M', 'Lambert'],
+      ['Aurélie', 'F', 'Kervadec'],
+      ['Théo', 'M', 'Lambert'],
+      ['Léa', 'F', 'Lambert'],
+      ['Inès', 'F', 'Roussel'],
+    ]);
+    const [m, a, t, l, i] = ['Marc', 'Aurélie', 'Théo', 'Léa', 'Inès'].map(plus.id);
+    // Marc, son ex Aurélie, deux enfants qui n'ont que Marc : un seul « ? » virtuel pour les deux.
+    const base = jouer(plus.d, [unir(m, a, false, 'separee'), enfantDe([m], t), enfantDe([m], l)]);
+    const virtuel = `${PREFIXE_VIRTUEL}${m}`;
+    const enregistre = enregistrerParentSansNom(base, virtuel)!;
+    const attendu = canonique(jouer(base, [enfantDe([m, a], t, 'biologique')])).join('\n');
+    const remplacer =
+      (qui: string, par: string): Etape =>
+      (x) =>
+        remplacerParent(x, qui, par);
+
+    it('par l’ex, depuis le « ? » virtuel ou enregistré, ou en l’ajoutant comme parent : même état, aucune union en plus', () => {
+      const fins = [
+        jouer(base, [remplacer(virtuel, a)]),
+        jouer(enregistre.donnees, [remplacer(enregistre.personne.id, a)]),
+        jouer(enregistre.donnees, [enfantDe([a], t)]),
+      ].map((x) => canonique(x).join('\n'));
+      expect(new Set(fins)).toEqual(new Set([attendu]));
+      expect(attendu).toContain('Aurélie > Léa biologique');
+      expect(attendu).toContain('Aurélie + Marc en couple separee');
+    });
+
+    it('par une personne nouvelle : elle devient parent des deux enfants, le « ? » disparaît', () => {
+      const fin = jouer(enregistre.donnees, [remplacer(enregistre.personne.id, i)]);
+      expect(fin.personnes.some((p) => p.sansNom)).toBe(false);
+      expect(prenoms(fratrie(fin, t).freresSoeurs)).toEqual(['Léa']);
+      expect(canonique(fin)).toContain('Inès > Théo biologique');
+    });
+
+    it('un parent inconnu caché se remplace aussi, pour toute la fratrie', () => {
+      const freres = jouer(plus.d, [frere(t, l)]);
+      const inconnu = freres.personnes.find((p) => p.inconnu)!.id;
+      const fin = jouer(freres, [remplacer(inconnu, a)]);
+      expect(canonique(fin)).toEqual(expect.arrayContaining(['Aurélie > Léa biologique', 'Aurélie > Théo biologique']));
+      expect(fin.personnes.some((p) => p.inconnu)).toBe(false);
+    });
+
+    it('refuse le parent lui-même, un enfant (boucle) ou un « ? » ; un « ? » annoté garde sa place', () => {
+      expect(() => remplacerParent(base, virtuel, m)).toThrow('déjà un parent');
+      expect(() => remplacerParent(base, virtuel, t)).toThrow('boucle');
+      expect(() => remplacerParent(base, m, a)).toThrow('Seul un parent inconnu');
+      const annote = modifierPersonne(enregistre.donnees, enregistre.personne.id, { prenom: PARENT_INCONNU, nom: '', note: 'rencontré à Valbrume' });
+      expect(() => ajouterFiliations(annote, [a], t, 'biologique')).toThrow('au plus 2 parents');
+      const remplace = remplacerParent(annote, enregistre.personne.id, a);
+      expect(remplace.personnes.find((p) => p.id === a)!.note).toBe('rencontré à Valbrume');
+    });
+
+    it('reporte l’union du « ? » sur la personne, sans doublon', () => {
+      const marie = definirMariageParents(enregistre.donnees, m, enregistre.personne.id, true);
+      expect(canonique(jouer(marie, [remplacer(enregistre.personne.id, i)]))).toContain('Inès + Marc mariés separee');
+      expect(canonique(jouer(marie, [remplacer(enregistre.personne.id, a)])).filter((x) => x.includes(' + '))).toEqual(['Aurélie + Marc en couple separee']);
+    });
+  });
 });
 
 describe('L4 : famille recomposée, adoption, inconnus fusionnés', () => {
@@ -167,5 +240,18 @@ describe('L5 : mariage, divorce, remariage', () => {
     expect(nomDe(remariee)).toMatchObject({ nom: 'Garnier', nomNaissance: 'Martinez' });
   });
 
-  it.todo('reprise du nom de naissance proposée à la séparation (`reprendreNomDeNaissance`, lot 1, point 2)');
+  it('reprise du nom de naissance proposée à la séparation, puis remariage (`reprendreNomDeNaissance`, point 2)', () => {
+    const separee = jouer(d, [unir(hubert, lucia, true), (x) => separerUnion(x, x.unions[0].id)]);
+    expect(quiPeutReprendreSonNom(separee, separee.unions[0].id).map((p) => p.prenom)).toEqual(['Lucia']);
+    const reprise = jouer(separee, [(x) => reprendreNomDeNaissance(x, lucia)]);
+    expect(nomDe(reprise).nom).toBe('Martinez');
+    expect(nomDe(reprise).nomNaissance).toBeUndefined();
+    expect(nomDe(jouer(reprise, [unir(romain, lucia, true)]))).toMatchObject({ nom: 'Garnier', nomNaissance: 'Martinez' });
+  });
+
+  it('mariage saisi sans la case, puis « prend le nom » : même état qu’avec la case', () => {
+    const sansCase: Etape = (x) => ajouterUnion(x, hubert, lucia, true, 'actuelle', undefined, false).donnees;
+    const fin = jouer(d, [sansCase, (x) => prendreLeNom(x, x.unions[0].id)]);
+    expect(canonique(fin)).toEqual(canonique(jouer(d, [unir(hubert, lucia, true)])));
+  });
 });

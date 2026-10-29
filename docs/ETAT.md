@@ -1,14 +1,14 @@
 # État en cours
 
-**Non commité** (à commiter par Paul) : lot 0 de V4. Dernier commit : c1e18f1. Tests, `tsc` et build verts au 29/10.
+Dernier commit : 772d204 (lot 0 de V4). Lot 1 fait, non commité : 939 tests, `tsc` et build verts au 29/10.
 
 ## Plan V4 : liaison, nommage, arbre (19 points)
 - Plan détaillé, lots et suivi : docs/PLAN.md, section « V4 » (ne lire que l'architecture, le lot en cours, ses points, la stratégie de test et les décisions).
-- Questions tranchées le 29/10 et décisions du lot 0 : DECISIONS.md. Ordre : lot 0 (fait), 1, 2, 3, 4, 5 ; lots 2, 4 et 5 : maquette validée avant le code.
-- Données de test : toutes fictives (src/modele/test/, 5 familles à graine, `npm run familles`, `npm run captures -- --familles`). Export réel : structures seulement (context.md, Pièges).
-- Pour le lot 1 : `it.fails` L2 (second parent, point 6), `it.todo` L3 (`remplacerParent`) et L5 (`reprendreNomDeNaissance`) à passer au vert. « Prend le nom » : sonde du 29/10, seul trou l'union déjà mariée (point 2). Lot 4 : point 13 = « fratries collées », seuils de l'arbre à ne faire que baisser.
+- Questions tranchées le 29/10 et décisions des lots 0 et 1 : DECISIONS.md. Ordre : lots 0 et 1 (faits), 2, 3, 4, 5 ; lots 2, 4 et 5 : maquette validée avant le code.
+- Données de test : toutes fictives (src/modele/test/, 5 familles à graine, `npm run familles`, `npm run captures -- --familles`). Export réel : structures seulement (context.md, Pièges) ; avant de rendre la main, script jetable qui compte (sans les afficher) les noms de l'export présents dans les fichiers touchés, accents repliés.
+- Lot 1 (v6) : la présomption de fratrie s'applique d'office, sans case à décocher avant le lot 2 ; lieux, `ignorerIncomplet`, `sansRappel`, `reprendreNomDeNaissance` / `prendreLeNom` existent dans le modèle seulement. Migration v6 : un « ? » vide disparaît (capture Lambert). Lot 4 : point 13 = « fratries collées », seuils de l'arbre à ne faire que baisser.
 
-**Prochaine étape** : lot 1 (modèle et liaison), dès le feu vert de Paul.
+**Prochaine étape** : lot 2 (écrans de saisie), maquette d'abord, dès le feu vert de Paul.
 
 ## Reste à faire (audit UX/UI, hors V4)
 - D, non fait : pile d'avatars « Neveux et nièces » / « Belle-famille » ; âge sous les nœuds ; astuce de l'arbre avec « Compris » ; zoom en un bloc.

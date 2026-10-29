@@ -15,7 +15,7 @@ const copine = p('copine', { naissance: undefined });
 const voisin = p('voisin', { decede: true, naissance: '--03-12' });
 const tous = [moi, mere, conjointe, ami, copine, voisin];
 const d: Donnees = {
-  version: 5,
+  version: 6,
   personnes: tous,
   unions: [{ id: 'u1', personneA: 'moi', personneB: 'conjointe', marie: true, statut: 'actuelle' }],
   filiations: [{ id: 'f1', parent: 'mere', enfant: 'moi', type: 'biologique' }],
@@ -44,7 +44,7 @@ describe('prochesDeFamille', () => {
   const f = (parent: string, enfant: string) => ({ id: `${parent}-${enfant}`, parent, enfant, type: 'biologique' as const });
   const u = (a: string, b: string, statut: 'actuelle' | 'separee') => ({ id: `${a}-${b}`, personneA: a, personneB: b, marie: false, statut });
   const dd: Donnees = {
-    version: 5,
+    version: 6,
     personnes: [],
     unions: [u('a', 'actuel', 'actuelle'), u('exAvecEnfant', 'a', 'separee'), u('a', 'exSansEnfant', 'separee')],
     filiations: [f('a', 'fils'), f('exAvecEnfant', 'fils'), f('a', 'fille'), f('fille', 'petit'), f('a', 'fille2'), f('coParent', 'fille2')],

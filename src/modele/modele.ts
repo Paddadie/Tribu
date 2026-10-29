@@ -7,7 +7,7 @@ import type { Donnees, Filiation, GroupeAmis, Personne, Sexe, StatutUnion, TypeF
 export const MAX_PARENTS_PAR_TYPE = 2;
 
 export function donneesVides(): Donnees {
-  return { version: 5, personnes: [], unions: [], filiations: [], groupes: [] };
+  return { version: 6, personnes: [], unions: [], filiations: [], groupes: [] };
 }
 
 export function nouvelId(): string {
@@ -32,7 +32,15 @@ export interface ChampsPersonne {
   sexe?: Sexe;
   nomNaissance?: string;
   note?: string;
+  lieuNaissance?: string;
+  /** Ignoré pour une personne vivante. */
+  lieuDeces?: string;
+  ignorerIncomplet?: boolean;
+  sansRappel?: boolean;
 }
+
+/** Champs que les écrans de saisie ne remplissent pas encore : absents de `ChampsPersonne`, `modifierPersonne` les garde. */
+const CHAMPS_GARDES = ['lieuNaissance', 'lieuDeces', 'ignorerIncomplet', 'sansRappel'] as const;
 
 /** Décédée : interrupteur allumé, ou date de décès connue (données d'avant l'interrupteur). */
 export function estDecede(p: Pick<Personne, 'deces' | 'decede'>): boolean {
@@ -92,6 +100,24 @@ export function estInconnu(p: Pick<Personne, 'inconnu'>): boolean {
   return !!p.inconnu;
 }
 
+/**
+ * Parent « ? » enregistré sans aucune information saisie (note, dates, lieux, sexe, nom de naissance) : il ne tient lieu
+ * que d'un « ? » virtuel. Ses liens (unions, groupes) ne sont pas regardés ici.
+ */
+export function estSansNomVide(p: Personne): boolean {
+  return (
+    p.sansNom === true &&
+    !p.note.trim() &&
+    !p.naissance &&
+    !p.deces &&
+    !p.decede &&
+    !p.sexe &&
+    !p.nomNaissance &&
+    !p.lieuNaissance &&
+    !p.lieuDeces
+  );
+}
+
 /** Les personnes à montrer (listes, recherche, compteurs) : sans les parents inconnus. */
 export function personnesVisibles(d: Donnees): Personne[] {
   return d.personnes.filter((p) => !p.inconnu);
@@ -121,6 +147,10 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
   if (champs.sexe !== undefined && champs.sexe !== 'F' && champs.sexe !== 'M') {
     throw new Error('Sexe invalide');
   }
+  // Nom de naissance pour tous ; inutile s'il ne diffère pas du nom d'usage.
+  const nomNaissance = champs.nomNaissance?.trim();
+  const lieuNaissance = champs.lieuNaissance?.trim();
+  const lieuDeces = decede ? champs.lieuDeces?.trim() : undefined;
   return {
     prenom,
     nom,
@@ -129,8 +159,12 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
     // La date suffit à dire le décès : le drapeau ne sert qu'en son absence.
     ...(decede && !deces ? { decede: true as const } : {}),
     ...(champs.sexe ? { sexe: champs.sexe } : {}),
-    ...(champs.sexe === 'F' && champs.nomNaissance?.trim() ? { nomNaissance: champs.nomNaissance.trim() } : {}),
+    ...(nomNaissance && nomNaissance !== nom ? { nomNaissance } : {}),
+    ...(lieuNaissance ? { lieuNaissance } : {}),
+    ...(lieuDeces ? { lieuDeces } : {}),
     note: champs.note ?? '',
+    ...(champs.ignorerIncomplet ? { ignorerIncomplet: true as const } : {}),
+    ...(champs.sansRappel ? { sansRappel: true as const } : {}),
   };
 }
 
@@ -142,7 +176,9 @@ export function creerPersonne(d: Donnees, champs: ChampsPersonne): { donnees: Do
 export function modifierPersonne(d: Donnees, id: string, champs: ChampsPersonne): Donnees {
   exigerPersonne(d, id);
   const avant = d.personnes.find((p) => p.id === id)!;
-  const champsNormalises = normaliser(champs);
+  const gardes: Partial<ChampsPersonne> = {};
+  for (const cle of CHAMPS_GARDES) if (!(cle in champs) && avant[cle] !== undefined) Object.assign(gardes, { [cle]: avant[cle] });
+  const champsNormalises = normaliser({ ...gardes, ...champs });
   // Un parent sans nom le reste tant qu'on ne lui a donné ni prénom ni nom.
   const resteSansNom = avant.sansNom && champsNormalises.prenom === avant.prenom && !champsNormalises.nom;
   const maj: Personne = { id, ...champsNormalises, ...(resteSansNom ? { sansNom: true as const } : {}) };
@@ -214,16 +250,7 @@ export function supprimerPersonne(d: Donnees, id: string): Donnees {
  * n'a plus de raison d'être : il est retiré. Avec une note, une date ou un sexe, il reste (Paul l'a renseigné).
  */
 function retirerSansNomOrphelins(d: Donnees, candidats: Set<string>): Donnees {
-  const orphelin = (p: Personne) =>
-    p.sansNom === true &&
-    candidats.has(p.id) &&
-    !aDesLiens(d, p.id) &&
-    !p.note.trim() &&
-    !p.naissance &&
-    !p.deces &&
-    !p.decede &&
-    !p.sexe &&
-    !p.nomNaissance;
+  const orphelin = (p: Personne) => estSansNomVide(p) && candidats.has(p.id) && !aDesLiens(d, p.id);
   return d.personnes.some(orphelin) ? { ...d, personnes: d.personnes.filter((p) => !orphelin(p)) } : d;
 }
 
@@ -258,6 +285,21 @@ export function modifierDateUnion(d: Donnees, id: string, date: string | undefin
       if (u.id !== id) return u;
       const { date: _ancienne, ...reste } = u;
       return propre ? { ...reste, date: propre } : reste;
+    }),
+  };
+}
+
+/** Fixe, change ou efface (`undefined` ou vide) le lieu d'un mariage ; refusé pour une union non mariée. */
+export function modifierLieuUnion(d: Donnees, id: string, lieu: string | undefined): Donnees {
+  const union = exigerUnion(d, id);
+  const propre = lieu?.trim();
+  if (propre && !union.marie) throw new Error('Le lieu ne se note que pour un mariage');
+  return {
+    ...d,
+    unions: d.unions.map((u) => {
+      if (u.id !== id) return u;
+      const { lieu: _ancien, ...reste } = u;
+      return propre ? { ...reste, lieu: propre } : reste;
     }),
   };
 }
@@ -301,6 +343,51 @@ function prendreNomDuConjoint(d: Donnees, union: Union): Donnees {
   return { ...d, personnes: d.personnes.map((p) => (p.id === a.id ? a2 : p.id === b.id ? b2 : p)) };
 }
 
+/** L'autre personne de l'union. */
+function partenaire(d: Donnees, u: Union, id: string): Personne | undefined {
+  return d.personnes.find((p) => p.id === (u.personneA === id ? u.personneB : u.personneA));
+}
+
+/**
+ * Épouse d'un mariage actuel femme-homme qui ne porte pas encore le nom de son mari (mariage saisi sans la case, ou
+ * importé) : c'est à elle que « Elle prend le nom de X » s'adresse. `undefined` si personne ne changerait de nom.
+ */
+export function epouseSansLeNom(d: Donnees, idUnion: string): Personne | undefined {
+  const u = exigerUnion(d, idUnion);
+  if (!u.marie || u.statut !== 'actuelle') return undefined;
+  const apres = prendreNomDuConjoint(d, u);
+  return apres.personnes.find((p) => (p.id === u.personneA || p.id === u.personneB) && p !== d.personnes.find((x) => x.id === p.id));
+}
+
+/** L'épouse d'un mariage actuel prend le nom de son mari ; son nom actuel passe en nom de jeune fille s'il est libre. */
+export function prendreLeNom(d: Donnees, idUnion: string): Donnees {
+  const u = exigerUnion(d, idUnion);
+  if (!u.marie || u.statut !== 'actuelle') throw new Error('Seul un mariage actuel fait prendre le nom');
+  return prendreNomDuConjoint(d, u);
+}
+
+/**
+ * Les personnes de l'union qui portent encore le nom de l'autre et ont un nom de naissance : à la séparation, à la
+ * suppression de l'union ou au passage à « non marié », l'écran leur propose de le reprendre (sans l'imposer).
+ */
+export function quiPeutReprendreSonNom(d: Donnees, idUnion: string): Personne[] {
+  const u = exigerUnion(d, idUnion);
+  return [u.personneA, u.personneB].flatMap((id) => {
+    const p = d.personnes.find((x) => x.id === id);
+    const autre = partenaire(d, u, id);
+    return p?.nomNaissance && autre?.nom && p.nom === autre.nom ? [p] : [];
+  });
+}
+
+/** Reprise du nom de naissance : il redevient le nom d'usage, et le champ du nom de naissance est vidé. */
+export function reprendreNomDeNaissance(d: Donnees, id: string): Donnees {
+  exigerPersonne(d, id);
+  const p = d.personnes.find((x) => x.id === id)!;
+  if (!p.nomNaissance) throw new Error('Aucun nom de naissance à reprendre');
+  const { nomNaissance, ...reste } = p;
+  return { ...d, personnes: d.personnes.map((x) => (x.id === id ? { ...reste, nom: nomNaissance } : x)) };
+}
+
 function exigerUnion(d: Donnees, id: string): Union {
   const union = d.unions.find((u) => u.id === id);
   if (!union) throw new Error(`Union introuvable : ${id}`);
@@ -309,7 +396,9 @@ function exigerUnion(d: Donnees, id: string): Union {
 
 export function modifierUnion(d: Donnees, id: string, marie: boolean, prendLeNom = true): Donnees {
   const avant = exigerUnion(d, id);
-  const maj = { ...d, unions: d.unions.map((u) => (u.id === id ? { ...u, marie } : u)) };
+  // Le lieu ne se note que pour un mariage : une union qui n'est plus mariée le perd.
+  const sansLieu = ({ lieu: _lieu, ...reste }: Union): Union => reste;
+  const maj = { ...d, unions: d.unions.map((u) => (u.id === id ? (marie ? { ...u, marie } : { ...sansLieu(u), marie }) : u)) };
   // Seul le passage à « marié » d'un couple actuel change les noms, et seulement si la case « Prend le nom » reste cochée.
   return marie && !avant.marie && avant.statut === 'actuelle' && prendLeNom ? prendreNomDuConjoint(maj, { ...avant, marie }) : maj;
 }
@@ -340,7 +429,10 @@ export function ajouterFiliation(d: Donnees, parent: string, enfant: string, typ
   if (d.filiations.some((f) => f.parent === parent && f.enfant === enfant)) {
     throw new Error('Ce lien parent-enfant existe déjà');
   }
-  const base = reprendreParentsInconnus(d, parent, enfant);
+  const base = reprendreSansNomVide(reprendreParentsInconnus(d, parent, enfant), parent, enfant, type);
+  // Le « ? » vide remplacé était le parent de cet enfant : le lien vient d'être fait.
+  const repris = base.filiations.find((f) => f.parent === parent && f.enfant === enfant);
+  if (repris) return { donnees: base, filiation: repris };
   exigerPlaceParent(base, enfant, type);
   if (estDescendant(base, parent, enfant)) {
     throw new Error('Ce lien créerait une boucle : le parent descend déjà de cet enfant');
@@ -377,13 +469,116 @@ function reprendreParentsInconnus(d: Donnees, parent: string, enfant: string): D
 }
 
 /**
+ * Un vrai parent ajouté à un enfant dont l'autre parent du même type est un « ? » sans information remplace ce « ? »
+ * pour tous ses enfants : le « ? » ne bloque plus la place, et la fratrie qu'il reliait reste entière.
+ */
+function reprendreSansNomVide(d: Donnees, parent: string, enfant: string, type: TypeFiliation): Donnees {
+  if (!estReel(d, parent)) return d;
+  const vide = d.filiations.find((f) => f.enfant === enfant && f.type === type && estSansNomRemplacable(d, f.parent));
+  return vide ? reporterParent(d, vide.parent, parent, false) : d;
+}
+
+/** « ? » vide qui n'a lui-même ni parent ni groupe d'amis (ses unions, elles, se reportent) : il ne compte pas comme parent. */
+function estSansNomRemplacable(d: Donnees, id: string): boolean {
+  const p = d.personnes.find((x) => x.id === id);
+  return !!p && estSansNomVide(p) && !d.filiations.some((f) => f.enfant === id) && !d.groupes.some((g) => g.membres.includes(id));
+}
+
+/** Ni parent inconnu caché, ni « ? ». */
+function estReel(d: Donnees, id: string): boolean {
+  const p = d.personnes.find((x) => x.id === id);
+  return !!p && !p.inconnu && !p.sansNom;
+}
+
+/**
+ * Reporte tout ce qui touche le parent inconnu ou « ? » `ancien` sur la personne réelle `nouveau`, puis supprime `ancien` :
+ * ses filiations (type gardé), les parents qu'on lui avait donnés, ses unions, ses groupes d'amis et sa note.
+ * `strict` : refuse si `nouveau` est déjà parent de l'un des enfants (sinon ce lien-là est simplement gardé).
+ * Refuse aussi une boucle, un troisième parent et un second conjoint actuel vivant.
+ */
+export function reporterParent(d: Donnees, ancien: string, nouveau: string, strict = true): Donnees {
+  exigerPersonne(d, ancien);
+  exigerPersonne(d, nouveau);
+  const vieux = d.personnes.find((p) => p.id === ancien)!;
+  if (!vieux.inconnu && !vieux.sansNom) throw new Error('Seul un parent inconnu ou « ? » se remplace');
+  if (!estReel(d, nouveau)) throw new Error('Choisis une personne connue pour remplacer ce parent');
+  const enfants = d.filiations.filter((f) => f.parent === ancien).map((f) => f.enfant);
+  const dejaParent = (e: string) => d.filiations.some((f) => f.parent === nouveau && f.enfant === e);
+  if (strict && enfants.some(dejaParent)) throw new Error('Cette personne est déjà un parent de l’un de ses enfants');
+  if (enfants.some((e) => e === nouveau || estDescendant(d, nouveau, e))) {
+    throw new Error('Ce lien créerait une boucle : cette personne descend déjà de l’un de ses enfants');
+  }
+  const filiations = d.filiations.flatMap((f): Filiation[] => {
+    if (f.parent === ancien) return dejaParent(f.enfant) ? [] : [{ ...f, parent: nouveau }];
+    if (f.enfant !== ancien) return [f];
+    // Les parents qu'on avait donnés au « ? » deviennent ceux de la personne, sauf s'ils le sont déjà.
+    if (f.parent === nouveau || d.filiations.some((g) => g.parent === f.parent && g.enfant === nouveau)) return [];
+    if (estDescendant(d, f.parent, nouveau)) throw new Error('Ce lien créerait une boucle : un parent de ce « ? » descend de cette personne');
+    return [{ ...f, enfant: nouveau }];
+  });
+  const memePaire = (u: Union, a: string, b: string) => (u.personneA === a && u.personneB === b) || (u.personneA === b && u.personneB === a);
+  const unions = d.unions.flatMap((u): Union[] => {
+    if (u.personneA !== ancien && u.personneB !== ancien) return [u];
+    const autre = u.personneA === ancien ? u.personneB : u.personneA;
+    // Une union avec la personne elle-même, ou en double d'une union qu'elle a déjà, n'a plus lieu d'être.
+    if (autre === nouveau || d.unions.some((v) => memePaire(v, nouveau, autre))) return [];
+    return [u.personneA === ancien ? { ...u, personneA: nouveau } : { ...u, personneB: nouveau }];
+  });
+  const note = vieux.note.trim();
+  const personnes = d.personnes
+    .filter((p) => p.id !== ancien)
+    .map((p) => (p.id === nouveau && note ? { ...p, note: [p.note.trim(), note].filter((n) => n).join('\n\n') } : p));
+  const groupes = d.groupes.map((g) => (g.membres.includes(ancien) ? { ...g, membres: [...new Set(g.membres.map((m) => (m === ancien ? nouveau : m)))] } : g));
+  const apres: Donnees = { ...d, personnes, unions, filiations, groupes: groupes.filter((g) => g.membres.length >= 2) };
+  for (const e of [nouveau, ...enfants]) {
+    for (const t of ['biologique', 'adoptif'] as const) {
+      if (apres.filiations.filter((f) => f.enfant === e && f.type === t).length > MAX_PARENTS_PAR_TYPE) throw new Error(messagePlace(t));
+    }
+  }
+  if (conjointEnTrop(apres.personnes, apres.unions)) throw new Error('Une personne ne peut avoir qu’un seul conjoint à la fois');
+  // Un parent inconnu qui reliait le « ? » à la personne n'a plus qu'un enfant.
+  return retirerInconnusOrphelins(apres);
+}
+
+/** Parents de `enfant` pour un type, sans les parents inconnus cachés ni les « ? » vides (qui ne comptent pas). */
+function parentsConnus(d: Donnees, enfant: string, type: TypeFiliation): string[] {
+  return d.filiations
+    .filter((f) => f.enfant === enfant && f.type === type)
+    .map((f) => f.parent)
+    .filter((id) => !d.personnes.find((x) => x.id === id)?.inconnu && !estSansNomRemplacable(d, id));
+}
+
+/**
+ * Présomption de fratrie : les enfants qui partagent l'unique parent connu de `enfant` (même type de lien), sans autre
+ * parent connu de ce type, sont présumés ses frères et sœurs complets. Un parent ajouté à `enfant` leur est proposé
+ * (cases cochées d'office). Les demis (autre parent connu et différent) et les liens d'un autre type n'y sont jamais.
+ */
+export function fratriePresumee(d: Donnees, enfant: string, type: TypeFiliation): Personne[] {
+  const miens = parentsConnus(d, enfant, type);
+  if (miens.length !== 1) return [];
+  const [seul] = miens;
+  const ids = new Set(
+    d.filiations
+      .filter((f) => f.parent === seul && f.type === type && f.enfant !== enfant)
+      .map((f) => f.enfant)
+      .filter((e) => {
+        const siens = parentsConnus(d, e, type);
+        return siens.length === 1 && siens[0] === seul;
+      }),
+  );
+  return d.personnes.filter((p) => ids.has(p.id));
+}
+
+/**
  * Relie `enfant` à plusieurs parents d'un coup (enfant d'un couple, frère ou sœur), avec le même type.
  * Un parent déjà relié à l'enfant est passé ; au moins un parent est demandé.
- * Si l'enfant avait des frères et sœurs sans parent connu, les parents sont aussi les leurs.
+ * Si l'enfant avait des frères et sœurs sans parent connu, les parents sont aussi les leurs. `freres` : les frères et
+ * sœurs présumés qui reçoivent aussi ces parents (les cases cochées de l'écran) ; par défaut, toute la `fratriePresumee`.
  */
-export function ajouterFiliations(d: Donnees, parents: string[], enfant: string, type: TypeFiliation): Donnees {
+export function ajouterFiliations(d: Donnees, parents: string[], enfant: string, type: TypeFiliation, freres?: string[]): Donnees {
   if (parents.length === 0) throw new Error('Coche au moins un parent');
-  const fratrie = [enfant, ...new Set(groupeInconnu(d, enfant).freres.map((f) => f.enfant))];
+  const presumes = freres ?? fratriePresumee(d, enfant, type).map((p) => p.id);
+  const fratrie = [enfant, ...new Set([...groupeInconnu(d, enfant).freres.map((f) => f.enfant), ...presumes])];
   const relier = (x: Donnees, parent: string, e: string) =>
     x.filiations.some((f) => f.parent === parent && f.enfant === e) ? x : ajouterFiliation(x, parent, e, type).donnees;
   return parents.reduce((x, parent) => fratrie.reduce((y, e) => relier(y, parent, e), x), d);
@@ -436,9 +631,11 @@ export function modifierFiliation(d: Donnees, id: string, type: TypeFiliation): 
 
 function exigerPlaceParent(d: Donnees, enfant: string, type: TypeFiliation): void {
   const memeType = d.filiations.filter((f) => f.enfant === enfant && f.type === type);
-  if (memeType.length >= MAX_PARENTS_PAR_TYPE) {
-    throw new Error(`Un enfant a au plus ${MAX_PARENTS_PAR_TYPE} parents ${type === 'biologique' ? 'biologiques' : 'adoptifs'}`);
-  }
+  if (memeType.length >= MAX_PARENTS_PAR_TYPE) throw new Error(messagePlace(type));
+}
+
+function messagePlace(type: TypeFiliation): string {
+  return `Un enfant a au plus ${MAX_PARENTS_PAR_TYPE} parents ${type === 'biologique' ? 'biologiques' : 'adoptifs'}`;
 }
 
 /** Vrai si `id` descend (à n'importe quel degré) de `ancetre`. */

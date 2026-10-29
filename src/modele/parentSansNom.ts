@@ -1,7 +1,7 @@
 // Parent sans nom : l'autre parent d'un enfant qui n'en a qu'un seul. L'arbre global le dessine en « ? » ;
 // il n'est enregistré que lorsque Paul le touche pour y ajouter des informations (note, décès, union...).
 
-import { nouvelId } from './modele';
+import { nouvelId, reporterParent } from './modele';
 import type { Donnees, Filiation, Personne } from './types';
 
 /** Prénom affiché d'un parent sans nom : une personne ordinaire, que Paul renomme quand il connaît son nom. */
@@ -48,4 +48,16 @@ export function enregistrerParentSansNom(d: Donnees, idVirtuel: string): { donne
   const personne: Personne = { id: nouvelId(), prenom: PARENT_INCONNU, nom: '', note: '', sansNom: true };
   const liens = seules.map((f): Filiation => ({ id: nouvelId(), parent: personne.id, enfant: f.enfant, type: f.type }));
   return { donnees: { ...d, personnes: [...d.personnes, personne], filiations: [...d.filiations, ...liens] }, personne };
+}
+
+/**
+ * « Qui est ce parent ? » : remplace le « ? » `idInconnu` (virtuel, enregistré, ou parent inconnu caché) par la personne
+ * `idPersonne`, déjà dans Tribu ou tout juste créée. Elle devient parent de tous ses enfants, avec le même type de lien,
+ * et reprend ses unions ; le « ? » disparaît. Refusé si elle est déjà parent de l'un d'eux, ou si le lien ferait une boucle.
+ */
+export function remplacerParent(d: Donnees, idInconnu: string, idPersonne: string): Donnees {
+  if (!estVirtuel(idInconnu)) return reporterParent(d, idInconnu, idPersonne);
+  const enregistre = enregistrerParentSansNom(d, idInconnu);
+  if (!enregistre) throw new Error('Ce parent « ? » n’existe plus');
+  return reporterParent(enregistre.donnees, enregistre.personne.id, idPersonne);
 }
