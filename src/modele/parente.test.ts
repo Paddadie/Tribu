@@ -219,7 +219,11 @@ describe('ami et sa copine dans le même groupe', () => {
   function groupe(avecUnion: boolean) {
     let d: Donnees = donneesVides();
     const id: Record<string, string> = {};
-    for (const [prenom, sexe, n] of [['Moi', 'M', '1995'], ['Karim', 'M', '1995'], ['Inès', 'F', '1996']] as const) {
+    for (const [prenom, sexe, n] of [
+      ['Moi', 'M', '1995'],
+      ['Karim', 'M', '1995'],
+      ['Inès', 'F', '1996'],
+    ] as const) {
       const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: n });
       d = r.donnees;
       id[prenom] = r.personne.id;
@@ -238,12 +242,26 @@ describe('fiancés : union à date future', () => {
   function cas(date: string | undefined, marie = true) {
     let d: Donnees = donneesVides();
     const id: Record<string, string> = {};
-    for (const [prenom, sexe] of [['Papa', 'M'], ['Oncle', 'M'], ['Moi', 'M'], ['Rémi', 'M'], ['Ondine', 'F'], ['Léa', 'F'], ['Grand-père', 'M']] as const) {
+    for (const [prenom, sexe] of [
+      ['Papa', 'M'],
+      ['Oncle', 'M'],
+      ['Moi', 'M'],
+      ['Rémi', 'M'],
+      ['Ondine', 'F'],
+      ['Léa', 'F'],
+      ['Grand-père', 'M'],
+    ] as const) {
       const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: '1995' });
       d = r.donnees;
       id[prenom] = r.personne.id;
     }
-    for (const [e, p] of [['Papa', 'Grand-père'], ['Oncle', 'Grand-père'], ['Moi', 'Papa'], ['Rémi', 'Oncle']]) d = ajouterFiliation(d, id[p], id[e], 'biologique').donnees;
+    for (const [e, p] of [
+      ['Papa', 'Grand-père'],
+      ['Oncle', 'Grand-père'],
+      ['Moi', 'Papa'],
+      ['Rémi', 'Oncle'],
+    ])
+      d = ajouterFiliation(d, id[p], id[e], 'biologique').donnees;
     d = ajouterUnion(d, id.Rémi, id.Léa, marie, 'actuelle', date).donnees;
     d = ajouterUnion(d, id.Moi, id.Ondine, marie, 'actuelle', date).donnees;
     return (vers: string) => ({ lien: lienAvecMoi(d, id.Moi, id[vers], aujourdhui), etiq: etiquette(d, id.Moi, id[vers], aujourdhui) });
@@ -273,7 +291,13 @@ describe('copine ou compagne, belle-sœur ou non', () => {
       d = r.donnees;
       id[prenom] = r.personne.id;
     };
-    for (const [p, s] of [['Papa', 'M'], ['Oncle', 'M'], ['Moi', 'M'], ['Rémi', 'M']] as const) pers(p, s);
+    for (const [p, s] of [
+      ['Papa', 'M'],
+      ['Oncle', 'M'],
+      ['Moi', 'M'],
+      ['Rémi', 'M'],
+    ] as const)
+      pers(p, s);
     pers('Zoé', 'F');
     pers('Léa', 'F', naissance);
     pers('Ondine', 'F', naissance);

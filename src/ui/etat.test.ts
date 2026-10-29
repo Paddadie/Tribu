@@ -30,9 +30,7 @@ describe('chargement illisible', () => {
     expect(etat.lireBrutIllisible()).toBe(ILLISIBLE);
     expect(etat.lireDonnees()).toEqual(donneesVides());
 
-    expect(() => etat.modifierDonnees((d) => creerPersonne(d, { prenom: 'Bob', nom: 'Martin' }).donnees)).toThrow(
-      'Données illisibles',
-    );
+    expect(() => etat.modifierDonnees((d) => creerPersonne(d, { prenom: 'Bob', nom: 'Martin' }).donnees)).toThrow('Données illisibles');
     expect(magasin.get(CLE_STOCKAGE)).toBe(ILLISIBLE);
     expect(magasin.get(CLE_SECOURS)).toBe(ILLISIBLE);
   });
@@ -91,9 +89,7 @@ describe('stockage plein', () => {
         throw new DOMException('quota', 'QuotaExceededError');
       },
     });
-    expect(() => etat.modifierDonnees((d) => creerPersonne(d, { prenom: 'Bob', nom: 'Martin' }).donnees)).toThrow(
-      'Stockage du téléphone plein',
-    );
+    expect(() => etat.modifierDonnees((d) => creerPersonne(d, { prenom: 'Bob', nom: 'Martin' }).donnees)).toThrow('Stockage du téléphone plein');
     expect(etat.lireDonnees().personnes).toHaveLength(0);
   });
 });

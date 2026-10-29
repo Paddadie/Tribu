@@ -35,8 +35,7 @@ export interface ChampsIdentite {
   modifie: () => boolean;
 }
 
-const champ = (libelle: string, id: string, controle: HTMLElement) =>
-  h('div', { class: 'champ' }, h('label', { for: id }, libelle), controle);
+const champ = (libelle: string, id: string, controle: HTMLElement) => h('div', { class: 'champ' }, h('label', { for: id }, libelle), controle);
 
 /**
  * Jour, mois et année d'une date partielle possible (année seule, mois + année, ou date complète).
@@ -46,14 +45,32 @@ const champ = (libelle: string, id: string, controle: HTMLElement) =>
 /** `passee` refuse une date entièrement à venir (naissance, décès) ; une union peut être annoncée. */
 export function champDate(suffixe: string, de: string, valeur: string | undefined, sansAnnee = false, passee = false) {
   const date = decouperDate(valeur);
-  const jour = h('input', { id: `jour${suffixe}`, type: 'text', inputmode: 'numeric', maxlength: 2, placeholder: 'JJ', value: date.jour, autocomplete: 'off', 'aria-label': `Jour ${de}` });
+  const jour = h('input', {
+    id: `jour${suffixe}`,
+    type: 'text',
+    inputmode: 'numeric',
+    maxlength: 2,
+    placeholder: 'JJ',
+    value: date.jour,
+    autocomplete: 'off',
+    'aria-label': `Jour ${de}`,
+  });
   const mois = h(
     'select',
     { id: `mois${suffixe}`, 'aria-label': `Mois ${de}` },
     h('option', { value: '' }, 'Mois'),
     ...MOIS.map((m, i) => h('option', { value: String(i + 1), selected: date.mois === String(i + 1) }, m)),
   );
-  const annee = h('input', { id: `annee${suffixe}`, type: 'text', inputmode: 'numeric', maxlength: 4, placeholder: 'AAAA', value: date.annee, autocomplete: 'off', 'aria-label': `Année ${de}` });
+  const annee = h('input', {
+    id: `annee${suffixe}`,
+    type: 'text',
+    inputmode: 'numeric',
+    maxlength: 4,
+    placeholder: 'AAAA',
+    value: date.annee,
+    autocomplete: 'off',
+    'aria-label': `Année ${de}`,
+  });
   return {
     groupe: h('div', { class: 'date-groupe' }, jour, mois, annee),
     valeurs: () => [jour.value, mois.value, annee.value],
@@ -67,14 +84,34 @@ export function champDate(suffixe: string, de: string, valeur: string | undefine
 }
 
 /** `existante` préremplit les champs ; `avecNote` ajoute la note libre ; `nomInitial` et `prenomInitial` préremplissent une création. */
-export function champsIdentite(existante: Personne | undefined, avecNote: boolean, sexeParDefaut: Sexe = 'M', nomInitial = '', prenomInitial = ''): ChampsIdentite {
+export function champsIdentite(
+  existante: Personne | undefined,
+  avecNote: boolean,
+  sexeParDefaut: Sexe = 'M',
+  nomInitial = '',
+  prenomInitial = '',
+): ChampsIdentite {
   const prenom = h('input', { id: 'prenom', type: 'text', value: existante?.prenom ?? prenomInitial, autocomplete: 'off', autocapitalize: 'words' });
   // Propositions : les noms de famille déjà saisis (liste native, filtrée par le navigateur pendant la frappe).
   const donnees = lireDonnees();
   const propositions = h('datalist', { id: 'noms-connus' }, ...nomsConnus(personnesVisibles(donnees)).map((n) => h('option', { value: n })));
   const lieux = h('datalist', { id: 'lieux-connus' }, ...lieuxConnus(personnesVisibles(donnees), donnees.unions).map((n) => h('option', { value: n })));
-  const lieuNaissance = h('input', { id: 'lieu-naissance', type: 'text', value: existante?.lieuNaissance ?? '', autocomplete: 'off', autocapitalize: 'words', list: 'lieux-connus' });
-  const lieuDeces = h('input', { id: 'lieu-deces', type: 'text', value: existante?.lieuDeces ?? '', autocomplete: 'off', autocapitalize: 'words', list: 'lieux-connus' });
+  const lieuNaissance = h('input', {
+    id: 'lieu-naissance',
+    type: 'text',
+    value: existante?.lieuNaissance ?? '',
+    autocomplete: 'off',
+    autocapitalize: 'words',
+    list: 'lieux-connus',
+  });
+  const lieuDeces = h('input', {
+    id: 'lieu-deces',
+    type: 'text',
+    value: existante?.lieuDeces ?? '',
+    autocomplete: 'off',
+    autocapitalize: 'words',
+    list: 'lieux-connus',
+  });
   const nom = h('input', { id: 'nom', type: 'text', value: existante?.nom ?? nomInitial, autocomplete: 'off', autocapitalize: 'words', list: 'noms-connus' });
   const naissance = champDate('', 'de naissance', existante?.naissance, true, true);
   const deces = champDate('-deces', 'de décès', existante?.deces, true, true);
@@ -96,7 +133,14 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   const sexeCoche = () => radios.find((r) => r.radio.checked)?.valeur;
 
   // Nom de naissance : « de jeune fille » pour une femme ; à la création, proposé pour une femme seulement.
-  const nomNaissance = h('input', { id: 'nom-naissance', type: 'text', value: existante?.nomNaissance ?? '', autocomplete: 'off', autocapitalize: 'words', list: 'noms-connus' });
+  const nomNaissance = h('input', {
+    id: 'nom-naissance',
+    type: 'text',
+    value: existante?.nomNaissance ?? '',
+    autocomplete: 'off',
+    autocapitalize: 'words',
+    list: 'noms-connus',
+  });
   const libelleNomNaissance = h('label', { for: 'nom-naissance' });
   const champNomNaissance = h('div', { class: 'champ' }, libelleNomNaissance, nomNaissance);
   const accorderNomNaissance = () => {
@@ -130,7 +174,9 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
   const signaler = h('input', { id: 'signaler', type: 'checkbox', class: 'bascule', checked: !existante?.ignorerIncomplet });
   const interrupteur = (id: string, libelle: string, caseACocher: HTMLElement) =>
     h('label', { class: 'carte interrupteur', for: id }, h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, libelle)), caseACocher);
-  const reglages = existante ? [interrupteur('rappels', 'Rappels (anniversaire, fête…)', rappels), interrupteur('signaler', 'Signaler dans « À compléter »', signaler)] : [];
+  const reglages = existante
+    ? [interrupteur('rappels', 'Rappels (anniversaire, fête…)', rappels), interrupteur('signaler', 'Signaler dans « À compléter »', signaler)]
+    : [];
   const champNom = champ('Nom', 'nom', nom);
   champNom.append(propositions);
 
@@ -166,12 +212,7 @@ export function champsIdentite(existante: Personne | undefined, avecNote: boolea
       champNom,
       h('fieldset', { class: 'champ' }, h('legend', {}, 'Sexe'), h('div', { class: 'choix-groupe' }, ...choixSexe)),
       champNomNaissance,
-      h(
-        'fieldset',
-        { class: 'champ' },
-        h('legend', {}, 'Date de naissance'),
-        naissance.groupe,
-      ),
+      h('fieldset', { class: 'champ' }, h('legend', {}, 'Date de naissance'), naissance.groupe),
       h('div', { class: 'champ' }, h('label', { for: 'lieu-naissance' }, 'Lieu de naissance'), lieuNaissance, lieux),
       ...(avecNote ? [champ('Note', 'note', note)] : []),
     ],

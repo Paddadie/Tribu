@@ -37,7 +37,11 @@ function ecrire(d: Donnees): void {
     sauvegarder(localStorage, d);
   } catch (e) {
     const plein = e instanceof Error && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED');
-    throw new Error(plein ? 'Stockage du téléphone plein : la modification n’a pas été enregistrée' : 'Enregistrement impossible sur ce téléphone : la modification n’a pas été enregistrée');
+    throw new Error(
+      plein
+        ? 'Stockage du téléphone plein : la modification n’a pas été enregistrée'
+        : 'Enregistrement impossible sur ce téléphone : la modification n’a pas été enregistrée',
+    );
   }
 }
 

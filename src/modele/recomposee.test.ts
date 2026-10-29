@@ -10,7 +10,14 @@ import type { Donnees } from './types';
 function famille() {
   let d: Donnees = donneesVides();
   const id: Record<string, string> = {};
-  for (const [prenom, sexe] of [['AlainB', 'M'], ['Isabelle', 'F'], ['AlainD', 'M'], ['Nicolas', 'M'], ['Julien', 'M'], ['Antoine', 'M']] as const) {
+  for (const [prenom, sexe] of [
+    ['AlainB', 'M'],
+    ['Isabelle', 'F'],
+    ['AlainD', 'M'],
+    ['Nicolas', 'M'],
+    ['Julien', 'M'],
+    ['Antoine', 'M'],
+  ] as const) {
     const r = creerPersonne(d, { prenom, nom: 'X', sexe, naissance: prenom === 'Antoine' ? '1996' : '1990' });
     d = r.donnees;
     id[prenom] = r.personne.id;

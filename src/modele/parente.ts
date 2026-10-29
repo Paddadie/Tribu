@@ -72,7 +72,12 @@ const collateral = (s: Sang) => s.montee >= 1 && s.descente >= 1;
 
 function formes(r: Relation, o: OptionsLien = {}): Formes | undefined {
   if (r.type === 'soi') return undefined;
-  if (r.type === 'conjoint') return r.fiance ? partenaireNonMarie('', '', undefined, true) : r.marie ? { m: 'époux', f: 'épouse', neutre: 'conjoint' } : partenaireNonMarie('compagnon', 'compagne', o.jeune);
+  if (r.type === 'conjoint')
+    return r.fiance
+      ? partenaireNonMarie('', '', undefined, true)
+      : r.marie
+        ? { m: 'époux', f: 'épouse', neutre: 'conjoint' }
+        : partenaireNonMarie('compagnon', 'compagne', o.jeune);
   if (r.type === 'alliance' && r.cote === 'sien' && r.marie === false && collateral(r.base) && o.partenaire) {
     return { ...partenaireNonMarie('compagnon', 'compagne', o.jeune, r.fiance), neutre: undefined, suffixe: ` ${avecDe(o.partenaire)}`, sansPossessif: true };
   }
@@ -156,7 +161,9 @@ function lienEx(d: Donnees, moi: string, vers: string): { avec: string; court: s
   const proches = exConjoints(d, vers).flatMap(({ personne: proche }) => {
     const r = relation(d, moi, proche.id);
     const f = r && formes(r);
-    return f && !f.sansPossessif && r.type !== 'soi' ? [{ proche, f, distance: r.type === 'sang' ? r.montee + r.descente : r.type === 'conjoint' ? 0 : 1 + r.base.montee + r.base.descente }] : [];
+    return f && !f.sansPossessif && r.type !== 'soi'
+      ? [{ proche, f, distance: r.type === 'sang' ? r.montee + r.descente : r.type === 'conjoint' ? 0 : 1 + r.base.montee + r.base.descente }]
+      : [];
   });
   const plusProche = proches.sort((a, b) => a.distance - b.distance)[0];
   return plusProche && { avec: `l’ex de ${avecPossessif(plusProche.f, plusProche.proche.sexe)}`, court: `Ex ${avecDe(nomUsuel(plusProche.proche))}` };
@@ -285,7 +292,7 @@ export function composer(d: Donnees, etapes: Etape[], aujourdhui = new Date()): 
   moins[n - 1] = 0;
   for (let i = n - 2; i >= 0; i--) for (let j = i + 1; j < n; j++) if (nommable(i, j)) moins[i] = Math.min(moins[i], 1 + moins[j]);
   const mots: string[] = [];
-  for (let i = 0; i < n - 1; ) {
+  for (let i = 0; i < n - 1;) {
     let j = i + 1;
     while (!nommable(i, j) || 1 + moins[j] !== moins[i]) j++;
     // Une étape seule prend aussi son nom de famille quand il en a un : « ton demi-frère », « sa fille adoptive ».

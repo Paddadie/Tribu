@@ -11,7 +11,7 @@ function magasin(contenu?: string) {
 }
 
 describe('réglages', () => {
-  it('donne les valeurs par défaut quand rien n\'est stocké', () => {
+  it("donne les valeurs par défaut quand rien n'est stocké", () => {
     expect(chargerReglages(magasin())).toEqual({ tri: 'prenom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
   });
   it('relit ce qui a été sauvegardé', () => {
@@ -20,9 +20,23 @@ describe('réglages', () => {
     sauvegarderReglages(m, r);
     expect(chargerReglages(m)).toEqual(r);
   });
-  it('remplace chaque valeur inconnue par son défaut, sans toucher à l\'autre', () => {
-    expect(chargerReglages(magasin('{"tri":"age","theme":"clair"}'))).toEqual({ tri: 'prenom', theme: 'clair', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
-    expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({ tri: 'nom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
+  it("remplace chaque valeur inconnue par son défaut, sans toucher à l'autre", () => {
+    expect(chargerReglages(magasin('{"tri":"age","theme":"clair"}'))).toEqual({
+      tri: 'prenom',
+      theme: 'clair',
+      dernierExport: null,
+      moi: null,
+      fetes: true,
+      fetesDansIcs: false,
+    });
+    expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({
+      tri: 'nom',
+      theme: 'auto',
+      dernierExport: null,
+      moi: null,
+      fetes: true,
+      fetesDansIcs: false,
+    });
   });
   it('ignore une date de dernier export invalide', () => {
     expect(chargerReglages(magasin('{"dernierExport":"hier"}')).dernierExport).toBeNull();
@@ -35,13 +49,18 @@ describe('réglages', () => {
     expect(chargerReglages(magasin('{"moi":42}')).moi).toBeNull();
     expect(chargerReglages(magasin('{"moi":""}')).moi).toBeNull();
   });
-  it('tolère un contenu illisible ou d\'un autre type', () => {
+  it("tolère un contenu illisible ou d'un autre type", () => {
     expect(chargerReglages(magasin('{pas du json'))).toEqual(REGLAGES_PAR_DEFAUT);
     expect(chargerReglages(magasin('null'))).toEqual(REGLAGES_PAR_DEFAUT);
     expect(chargerReglages(magasin('[1,2]'))).toEqual(REGLAGES_PAR_DEFAUT);
   });
   it('tolère un localStorage inaccessible', () => {
-    const casse = { getItem: () => { throw new Error('refusé'); }, setItem: () => {} };
+    const casse = {
+      getItem: () => {
+        throw new Error('refusé');
+      },
+      setItem: () => {},
+    };
     expect(chargerReglages(casse)).toEqual(REGLAGES_PAR_DEFAUT);
   });
 });

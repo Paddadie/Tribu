@@ -76,7 +76,14 @@ export function evenementsAgenda(d: Donnees, options: { fetes?: boolean } = {}):
     }
     const fete = options.fetes && !estDecede(p) && !p.sansNom ? feteDuPrenom(p.prenom) : undefined;
     if (fete) {
-      evenements.push({ uid: `${p.id}-fete@${DOMAINE_UID}`, type: 'fete', titre: `Fête de ${nom}`, description: `${fete.saint}.`, mois: fete.mois, jour: fete.jour });
+      evenements.push({
+        uid: `${p.id}-fete@${DOMAINE_UID}`,
+        type: 'fete',
+        titre: `Fête de ${nom}`,
+        description: `${fete.saint}.`,
+        mois: fete.mois,
+        jour: fete.jour,
+      });
     }
   }
 

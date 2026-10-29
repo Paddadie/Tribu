@@ -70,7 +70,12 @@ export function ecranLien(idFiliation: string, depuis: Personne): HTMLElement {
       'div',
       { class: 'contenu' },
       h('p', { class: 'resume-union' }, `${nomComplet(parent)}, parent de ${nomComplet(enfant)}`),
-      h('fieldset', { class: 'champ' }, h('legend', {}, 'Type de lien'), h('div', { class: 'choix-groupe' }, onglet('biologique', 'Biologique'), onglet('adoptif', 'Adoptif'))),
+      h(
+        'fieldset',
+        { class: 'champ' },
+        h('legend', {}, 'Type de lien'),
+        h('div', { class: 'choix-groupe' }, onglet('biologique', 'Biologique'), onglet('adoptif', 'Adoptif')),
+      ),
       erreur,
       h('button', { type: 'button', class: 'bouton bouton-plein', onclick: enregistrer }, 'Enregistrer'),
       h('button', { type: 'button', class: 'bouton bouton-danger', onclick: retirer }, 'Retirer ce lien'),

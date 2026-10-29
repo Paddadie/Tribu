@@ -106,17 +106,7 @@ export function estInconnu(p: Pick<Personne, 'inconnu'>): boolean {
  * que d'un « ? » virtuel. Ses liens (unions, groupes) ne sont pas regardés ici.
  */
 export function estSansNomVide(p: Personne): boolean {
-  return (
-    p.sansNom === true &&
-    !p.note.trim() &&
-    !p.naissance &&
-    !p.deces &&
-    !p.decede &&
-    !p.sexe &&
-    !p.nomNaissance &&
-    !p.lieuNaissance &&
-    !p.lieuDeces
-  );
+  return p.sansNom === true && !p.note.trim() && !p.naissance && !p.deces && !p.decede && !p.sexe && !p.nomNaissance && !p.lieuNaissance && !p.lieuDeces;
 }
 
 /** Les personnes à montrer (listes, recherche, compteurs) : sans les parents inconnus. */

@@ -138,8 +138,7 @@ export interface Suggestion {
 const appel = (p: Personne) => p.prenom || p.nom;
 
 /** Au moins un nom en commun, nom actuel ou nom de naissance : un lien de famille possible. */
-const partageNom = (a: Personne, b: Personne) =>
-  [a.nom, a.nomNaissance ?? ''].some((x) => [b.nom, b.nomNaissance ?? ''].some((y) => memeNom(x, y)));
+const partageNom = (a: Personne, b: Personne) => [a.nom, a.nomNaissance ?? ''].some((x) => [b.nom, b.nomNaissance ?? ''].some((y) => memeNom(x, y)));
 
 /**
  * Personnes probables pour le lien à créer depuis la fiche `id` :
@@ -211,7 +210,7 @@ function ascendanceEtDescendance(d: Donnees, id: string): Set<string> {
     const vus = new Set<string>();
     const pile = [depart];
     for (let x = pile.pop(); x !== undefined; x = pile.pop()) {
-      for (const v of voisins(x)) if (!vus.has(v)) vus.add(v), pile.push(v);
+      for (const v of voisins(x)) if (!vus.has(v)) (vus.add(v), pile.push(v));
     }
     return vus;
   };

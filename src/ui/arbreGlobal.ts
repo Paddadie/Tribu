@@ -13,17 +13,7 @@ import { noeud } from './arbre';
 import { h, icone } from './dom';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
-import {
-  calculerCadres,
-  hautEtiquette,
-  LARG,
-  positions,
-  R,
-  SOUS_NOM,
-  traitsArbre,
-  zoneBulle,
-  type Cadre,
-} from './geometrieArbre';
+import { calculerCadres, hautEtiquette, LARG, positions, R, SOUS_NOM, traitsArbre, zoneBulle, type Cadre } from './geometrieArbre';
 import { lienRetour } from './navigation';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -303,7 +293,8 @@ class Carte {
       }
     }
 
-    for (const t of traitsArbre(this.disp, { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres }, bulle, this.moi.id)) trait(t.d, t.classe, t.lignee);
+    for (const t of traitsArbre(this.disp, { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres }, bulle, this.moi.id))
+      trait(t.d, t.classe, t.lignee);
     return s;
   }
 
@@ -323,7 +314,12 @@ class Carte {
         const porteurs = membres.get(r.cle)!;
         // Le zoom englobe aussi les proches directs de nom différent (enfants, conjoint, ex avec enfant).
         const proches = prochesDeFamille(lireDonnees(), new Set(porteurs.map((p) => p.id)));
-        const pts = [...porteurs, ...this.disp.places.filter((p) => proches.has(p.personne.id) && this.centres.has(p.personne.id)).map((p) => ({ ...this.centres.get(p.personne.id)!, id: p.personne.id }))];
+        const pts = [
+          ...porteurs,
+          ...this.disp.places
+            .filter((p) => proches.has(p.personne.id) && this.centres.has(p.personne.id))
+            .map((p) => ({ ...this.centres.get(p.personne.id)!, id: p.personne.id })),
+        ];
         const x = Math.min(...pts.map((p) => p.x)) - LARG / 2;
         const y = Math.min(...pts.map((p) => p.y)) - R - 24;
         const l = Math.max(...pts.map((p) => p.x)) + LARG / 2 - x;
@@ -371,11 +367,13 @@ class Carte {
       );
     const lignes =
       quoi === 'familles'
-        ? this.familles.filter((f) => !f.amis).map((f) => {
-            const pastille = h('span', { class: 'pastille-feuille' });
-            if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
-            return ligne(pastille, f.nom, `${f.n} pers.`, f.zone, f.cibles);
-          })
+        ? this.familles
+            .filter((f) => !f.amis)
+            .map((f) => {
+              const pastille = h('span', { class: 'pastille-feuille' });
+              if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
+              return ligne(pastille, f.nom, `${f.n} pers.`, f.zone, f.cibles);
+            })
         : this.cadres.map((c, i) => {
             const d = lireDonnees();
             const pastille = h('span', { class: 'pastille-feuille anneau' });

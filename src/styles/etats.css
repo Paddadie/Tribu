@@ -42,4 +42,3 @@ button.ligne:active,
 .option:active {
   background: color-mix(in srgb, var(--accent) 9%, transparent);
 }
-

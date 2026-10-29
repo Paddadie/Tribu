@@ -79,7 +79,12 @@ export function ajoutAmi(p: Personne): HTMLElement {
                 'button',
                 { type: 'button', class: 'ligne ligne-choix', onclick: () => rejoindre(g) },
                 icone('ami', 24),
-                h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, nomGroupe(depart, g)), h('span', { class: 'secondaire' }, resume(depart, g))),
+                h(
+                  'span',
+                  { class: 'ligne-texte' },
+                  h('span', { class: 'ligne-nom' }, nomGroupe(depart, g)),
+                  h('span', { class: 'secondaire' }, resume(depart, g)),
+                ),
               ),
             ),
           ),
@@ -87,7 +92,11 @@ export function ajoutAmi(p: Personne): HTMLElement {
       : null;
 
   const intro = groupe
-    ? h('p', { class: 'secondaire' }, `${appel(p)} est dans « ${nomGroupe(depart, groupe)} » (${resume(depart, groupe, p.id)}). Les amis ajoutés rejoignent ce groupe.`)
+    ? h(
+        'p',
+        { class: 'secondaire' },
+        `${appel(p)} est dans « ${nomGroupe(depart, groupe)} » (${resume(depart, groupe, p.id)}). Les amis ajoutés rejoignent ce groupe.`,
+      )
     : null;
 
   const champNom = groupe

@@ -48,7 +48,12 @@ describe('Parent sans nom (enfant à parent seul)', () => {
     const deux = ajouterFiliation(frere.donnees, florence, frere.personne.id, 'biologique').donnees;
     const r = enregistrerParentSansNom(deux, `virtuel:${florence}`)!;
     expect(r.personne.prenom).toBe(PARENT_INCONNU);
-    expect(r.donnees.filiations.filter((f) => f.parent === r.personne.id).map((f) => f.enfant).sort()).toEqual([sabine, frere.personne.id].sort());
+    expect(
+      r.donnees.filiations
+        .filter((f) => f.parent === r.personne.id)
+        .map((f) => f.enfant)
+        .sort(),
+    ).toEqual([sabine, frere.personne.id].sort());
     // Plus aucun « ? » virtuel : les enfants ont maintenant deux parents.
     expect(avecParentsSansNom(r.donnees)).toBe(r.donnees);
   });
@@ -66,7 +71,11 @@ describe('Parent sans nom (enfant à parent seul)', () => {
   it('n’apparaît pas dans la liste tant qu’il n’a pas de nom', () => {
     const { d, florence } = seul();
     const r = enregistrerParentSansNom(d, `virtuel:${florence}`)!;
-    expect(personnesListees(r.donnees).map((p) => p.prenom).sort()).toEqual(['Florence', 'Sabine']);
+    expect(
+      personnesListees(r.donnees)
+        .map((p) => p.prenom)
+        .sort(),
+    ).toEqual(['Florence', 'Sabine']);
     expect(personnesVisibles(r.donnees)).toHaveLength(3);
     const nomme = modifierPersonne(r.donnees, r.personne.id, { prenom: 'Jean', nom: 'D', note: '' });
     expect(personnesListees(nomme)).toHaveLength(3);

@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { disposerArbre } from './arbreGlobal';
 import { chemin, familleElargie, fratrie, liensParents, parentsCommuns, relation } from './deductions';
 import { familleProche } from './familleProche';
-import { aDesLiens, ajouterFiliation, ajouterFiliations, ajouterFrereSansParent, creerPersonne, donneesVides, personnesVisibles, supprimerFiliation, supprimerPersonne } from './modele';
+import {
+  aDesLiens,
+  ajouterFiliation,
+  ajouterFiliations,
+  ajouterFrereSansParent,
+  creerPersonne,
+  donneesVides,
+  personnesVisibles,
+  supprimerFiliation,
+  supprimerPersonne,
+} from './modele';
 import { lienAvecMoi, motsChemin } from './parente';
 import { estDonneesValides } from './stockage';
 import type { Donnees } from './types';

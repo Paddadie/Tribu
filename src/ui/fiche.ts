@@ -176,7 +176,11 @@ function ligneElargie({ personne, relation }: Parent, belleFamille: boolean): HT
     const libelle = libelleRelation(relation, personne.sexe, optionsLien(lireDonnees(), relation, personne));
     etiquette = !!libelle && h('span', { class: 'etiquette' }, majuscule(libelle));
   } else if (relation.type === 'alliance') etiquette = h('span', { class: 'etiquette etiquette-adoptif' }, 'Par alliance');
-  return h('div', { class: 'ligne' }, h('a', { class: 'ligne-lien', href: `#/personne/${personne.id}` }, ...contenuLigne(personne, undefined, detailProche(personne, new Date())), etiquette));
+  return h(
+    'div',
+    { class: 'ligne' },
+    h('a', { class: 'ligne-lien', href: `#/personne/${personne.id}` }, ...contenuLigne(personne, undefined, detailProche(personne, new Date())), etiquette),
+  );
 }
 
 /** Grands-parents, petits-enfants, oncles et tantes, neveux et nièces, cousins, belle-famille ; une section vide est masquée. */
@@ -214,7 +218,11 @@ function sectionEnfants(liens: Lien[], p: Personne): HTMLElement | null {
 /** Ligne d'un conjoint ou d'un ex : naissance, âge, enfants du couple, étiquette « Marié(e) » ; le crayon ouvre l'union. */
 function ligneUnion(p: Personne, { union, personne: c }: { union: Union; personne: Personne }): HTMLElement {
   const n = enfantsDuCouple(lireDonnees(), p.id, c.id).length;
-  const detail = [detailProche(c, new Date()), (union.date || union.lieu) && `Union ${libelleUnion(union.date, union.lieu)}`, n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`]
+  const detail = [
+    detailProche(c, new Date()),
+    (union.date || union.lieu) && `Union ${libelleUnion(union.date, union.lieu)}`,
+    n > 0 && `${n} enfant${n > 1 ? 's' : ''} ensemble`,
+  ]
     .filter(Boolean)
     .join(' · ');
   const statut = sontFiances(union) ? libelleFiance(c.sexe) : union.marie && libelleMarie(c.sexe);
@@ -279,7 +287,9 @@ function ouvrirChoixProche(p: Personne): void {
 export function fiche(p: Personne): HTMLElement {
   const maintenant = new Date();
   // Naissance, décès, puis âge (« 34 ans » ou « Morte à 82 ans ») sur sa propre ligne, plus appuyée.
-  const dates = [libelleNaissance(p.naissance, p.sexe, p.lieuNaissance), libelleDeces(p.deces, p.sexe, estDecede(p), p.lieuDeces)].filter(Boolean).map((t) => h('span', {}, majuscule(t)));
+  const dates = [libelleNaissance(p.naissance, p.sexe, p.lieuNaissance), libelleDeces(p.deces, p.sexe, estDecede(p), p.lieuDeces)]
+    .filter(Boolean)
+    .map((t) => h('span', {}, majuscule(t)));
   const age = estDecede(p) ? libelleAgeDeces(p, maintenant) : libelleAge(p, maintenant);
   if (age) dates.push(h('span', { class: 'age' }, majuscule(age)));
   const lien = lienMoi(p);

@@ -23,7 +23,6 @@ interface Trait {
   halo?: boolean;
 }
 
-
 interface OptionsNoeud {
   /** Personne de la fiche : pas de lien, nœud plus grand. */
   ici?: boolean;

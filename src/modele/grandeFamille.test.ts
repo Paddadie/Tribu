@@ -5,7 +5,7 @@ import type { Donnees } from './types';
 
 function alea(graine: number) {
   let s = graine;
-  return () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  return () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
 }
 
 /** Grande famille aléatoire (graine fixe) : couples, beaux-parents, enfants, quatre groupes d'amis avec famille. */
@@ -63,7 +63,13 @@ function genere(graine: number, taille: number) {
 }
 
 it('ne superpose jamais deux traits communs de la même ligne, même dans une grande famille', () => {
-  for (const [graine, taille] of [[1, 40], [2, 80], [3, 120], [4, 200], [5, 200]]) {
+  for (const [graine, taille] of [
+    [1, 40],
+    [2, 80],
+    [3, 120],
+    [4, 200],
+    [5, 200],
+  ]) {
     const { d, moi } = genere(graine, taille);
     const brs = disposerArbre(d, moi).branches;
     const portee = (b: (typeof brs)[number]) => {

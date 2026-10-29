@@ -89,7 +89,8 @@ describe('couleurFamille', () => {
   it('répartit des noms variés sur plusieurs couleurs', () => {
     const noms = ['Martin', 'Roux', 'Benali', 'Lefèvre', 'Moreau', 'Dubois', 'Girard', 'Bernard', 'Petit', 'Durand'];
     expect(new Set(noms.map((n) => c(n))).size).toBeGreaterThanOrEqual(5);
-  });});
+  });
+});
 
 describe('mentionNaissance', () => {
   it('accorde selon le sexe', () => {
@@ -104,7 +105,11 @@ describe('mentionNaissance', () => {
 });
 
 describe('couleursDesFamilles', () => {
-  const personne = (id: string, nom: string, nomNaissance?: string): Personne => ({ ...creerPersonne(donneesVides(), { prenom: id, nom }).personne, id, ...(nomNaissance ? { nomNaissance } : {}) });
+  const personne = (id: string, nom: string, nomNaissance?: string): Personne => ({
+    ...creerPersonne(donneesVides(), { prenom: id, nom }).personne,
+    id,
+    ...(nomNaissance ? { nomNaissance } : {}),
+  });
   const donnees = (personnes: Personne[], unions: [string, string][] = []): Donnees => ({
     ...donneesVides(),
     personnes,
@@ -140,13 +145,24 @@ describe('couleursDesFamilles', () => {
     const ps = noms.flatMap((n, i) => Array.from({ length: 30 - i }, (_, j) => personne(`${n}-${j}`, n)));
     const unions: [string, string][] = noms.slice(1).map((n, i) => [`${noms[i]}-0`, `${n}-0`]);
     const d = donnees(ps, unions);
-    for (const [a, b] of unions) expect(couleursProches(couleurFamille(d.personnes.find((p) => p.id === a)!, d)!, couleurFamille(d.personnes.find((p) => p.id === b)!, d)!)).toBe(false);
+    for (const [a, b] of unions)
+      expect(
+        couleursProches(
+          couleurFamille(
+            d.personnes.find((p) => p.id === a)!,
+            d,
+          )!,
+          couleurFamille(
+            d.personnes.find((p) => p.id === b)!,
+            d,
+          )!,
+        ),
+      ).toBe(false);
   });
   it('est mémorisée par objet de données', () => {
     const d = donnees([personne('a', 'Martin')]);
     expect(couleursDesFamilles(d)).toBe(couleursDesFamilles(d));
   });
-
 });
 
 describe('tri par nom', () => {

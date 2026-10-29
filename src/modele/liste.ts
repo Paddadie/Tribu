@@ -67,7 +67,11 @@ export function couleursDesFamilles(d: Donnees): Map<string, number> {
   const liees = new Map<string, Set<string>>();
   const lier = (a?: string, b?: string) => {
     if (!a || !b || a === b || !taille.has(a) || !taille.has(b)) return;
-    for (const [x, y] of [[a, b], [b, a]]) liees.set(x, (liees.get(x) ?? new Set()).add(y));
+    for (const [x, y] of [
+      [a, b],
+      [b, a],
+    ])
+      liees.set(x, (liees.get(x) ?? new Set()).add(y));
   };
   for (const u of d.unions) lier(cleDe.get(u.personneA), cleDe.get(u.personneB));
   for (const f of d.filiations) lier(cleDe.get(f.parent), cleDe.get(f.enfant));

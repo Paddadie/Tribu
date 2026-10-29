@@ -1,7 +1,7 @@
 /* Feuille de style découpée dans src/styles/ ; l'ordre des imports est celui de la cascade. */
-@import "./styles/base.css";
-@import "./styles/accueil.css";
-@import "./styles/fiche.css";
-@import "./styles/arbre.css";
-@import "./styles/etats.css";
-@import "./styles/animations.css";
+@import './styles/base.css';
+@import './styles/accueil.css';
+@import './styles/fiche.css';
+@import './styles/arbre.css';
+@import './styles/etats.css';
+@import './styles/animations.css';

@@ -74,7 +74,12 @@ describe('localStorage', () => {
   it('signale le contenu illisible même si la copie de secours échoue', () => {
     const magasin = faux();
     magasin.setItem(CLE_STOCKAGE, '{pas du json');
-    const plein = { ...magasin, setItem: () => { throw new Error('quota'); } };
+    const plein = {
+      ...magasin,
+      setItem: () => {
+        throw new Error('quota');
+      },
+    };
     expect(charger(plein)).toEqual({ lisible: false, brut: '{pas du json' });
     expect(magasin.getItem(CLE_STOCKAGE)).toBe('{pas du json');
   });
@@ -142,9 +147,7 @@ describe('validation des données', () => {
     const trois = [fil(1, d.personnes[0].id), fil(2, d.personnes[1].id)];
     expect(estDonneesValides({ ...d, filiations: trois })).toBe(true);
     const extra = creerPersonne(d, { prenom: 'Dan', nom: 'Z' });
-    expect(
-      estDonneesValides({ ...extra.donnees, filiations: [...trois, fil(3, extra.personne.id)] }),
-    ).toBe(false);
+    expect(estDonneesValides({ ...extra.donnees, filiations: [...trois, fil(3, extra.personne.id)] })).toBe(false);
   });
 
   it('refuse un groupe d’amis invalide : membre inconnu, doublon, moins de deux membres, id déjà pris, nom mal typé', () => {

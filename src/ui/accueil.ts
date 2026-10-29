@@ -228,13 +228,7 @@ function blocBientot(d: Donnees, evs: Evenement[], aujourdhui: Date): HTMLElemen
     'section',
     { class: 'bientot' },
     h('h2', { class: 'titre-section titre-lien' }, 'Bientôt', h('a', { href: '#/agenda?sans-fetes' }, 'Tout voir')),
-    montrees.length === 0
-      ? calme(d, aujourdhui)
-      : h(
-          'div',
-          { class: 'defile-bientot' },
-          ...montrees.map((e) => vignette(e, aujourdhui)),
-        ),
+    montrees.length === 0 ? calme(d, aujourdhui) : h('div', { class: 'defile-bientot' }, ...montrees.map((e) => vignette(e, aujourdhui))),
   );
 }
 

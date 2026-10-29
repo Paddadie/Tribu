@@ -15,7 +15,16 @@ const cas = [...famillesDeReference().map((f) => ({ nom: f.fichier, d: f.donnees
 /** Seuils : nombre de fautes de chaque sorte et métriques d'aujourd'hui (arrondies vers le haut au centième). */
 const SEUILS: Record<
   string,
-  { entrelacements: number; busCollés: number; fratriesCollees: number; largeur: number; ecartMoyen: number; coudes: number; petitsCoudes: number; croisements: number }
+  {
+    entrelacements: number;
+    busCollés: number;
+    fratriesCollees: number;
+    largeur: number;
+    ecartMoyen: number;
+    coudes: number;
+    petitsCoudes: number;
+    croisements: number;
+  }
 > = {
   dupontel: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 14.5, ecartMoyen: 0.01, coudes: 11, petitsCoudes: 0, croisements: 0 },
   'martinez-vasseur': { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 14.57, ecartMoyen: 0.08, coudes: 18, petitsCoudes: 4, croisements: 0 },

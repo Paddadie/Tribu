@@ -2,3 +2,5 @@ dist/
 dev-dist/
 docs/
 package-lock.json
+src/modele/fixtures/
+README.md

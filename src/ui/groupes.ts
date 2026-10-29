@@ -17,11 +17,15 @@ import { selecteurPersonne } from './selecteurPersonne';
 const appel = (p: Personne) => p.prenom || p.nom;
 const pluriel = (n: number) => `${n} personne${n > 1 ? 's' : ''}`;
 
-const membresDe = (d: Donnees, g: GroupeAmis): Personne[] =>
-  d.personnes.filter((p) => g.membres.includes(p.id)).sort(comparateur(lireReglages().tri));
+const membresDe = (d: Donnees, g: GroupeAmis): Personne[] => d.personnes.filter((p) => g.membres.includes(p.id)).sort(comparateur(lireReglages().tri));
 
 function barre(retour: string, titre: string): HTMLElement {
-  return h('div', { class: 'barre' }, lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)), h('h1', { class: 'titre-formulaire' }, titre));
+  return h(
+    'div',
+    { class: 'barre' },
+    lienRetour(retour, { class: 'bouton-icone', 'aria-label': 'Retour' }, icone('retour', 26)),
+    h('h1', { class: 'titre-formulaire' }, titre),
+  );
 }
 
 /** Liste des groupes, avec « Nouveau groupe ». */
@@ -66,7 +70,9 @@ export function ecranNouveauGroupe(): HTMLElement {
   };
   const dessiner = () => {
     const d = lireDonnees();
-    const libres = personnesListees(d).filter((p) => groupesDe(d, p.id).length === 0).sort(comparateur(lireReglages().tri));
+    const libres = personnesListees(d)
+      .filter((p) => groupesDe(d, p.id).length === 0)
+      .sort(comparateur(lireReglages().tri));
     const trouvees = filtrerParNom(libres, filtre);
     liste.replaceChildren(
       libres.length === 0
@@ -221,7 +227,11 @@ export function ecranGroupe(g: GroupeAmis): HTMLElement {
             'div',
             { class: 'ligne ligne-union' },
             h('a', { class: 'ligne-lien', href: `#/personne/${p.id}` }, ...contenuLigne(p)),
-            h('button', { type: 'button', class: 'bouton-icone', 'aria-label': `Retirer ${appel(p)} du groupe`, onclick: () => retirer(p) }, icone('croix', 20)),
+            h(
+              'button',
+              { type: 'button', class: 'bouton-icone', 'aria-label': `Retirer ${appel(p)} du groupe`, onclick: () => retirer(p) },
+              icone('croix', 20),
+            ),
           ),
         ),
       ),

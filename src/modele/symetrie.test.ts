@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { amis, conjoint, exConjoints, fratrie, liensEnfants, liensParents, relation } from './deductions';
 import { etiquette } from './parente';
-import { ajouterAuGroupe, ajouterFiliation, ajouterFiliations, ajouterFrereSansParent, ajouterUnion, creerGroupe, creerPersonne, donneesVides, separerUnion, supprimerFiliation, supprimerUnion } from './modele';
+import {
+  ajouterAuGroupe,
+  ajouterFiliation,
+  ajouterFiliations,
+  ajouterFrereSansParent,
+  ajouterUnion,
+  creerGroupe,
+  creerPersonne,
+  donneesVides,
+  separerUnion,
+  supprimerFiliation,
+  supprimerUnion,
+} from './modele';
 import type { Donnees } from './types';
 
 // Un lien noté depuis une fiche doit se lire sur l'autre fiche, sans seconde saisie.
@@ -17,7 +29,11 @@ function trois() {
 
 describe('liens à deux personnes : un seul enregistrement, lisible des deux côtés', () => {
   it('union actuelle : noté depuis A, B a le conjoint A ; pas de doublon dans le sens inverse', () => {
-    const { ids: [a, b], lire, ecrire } = trois();
+    const {
+      ids: [a, b],
+      lire,
+      ecrire,
+    } = trois();
     ecrire(ajouterUnion(lire(), a, b, true).donnees);
     expect(conjoint(lire(), b)?.personne.id).toBe(a);
     expect(conjoint(lire(), a)?.personne.id).toBe(b);
@@ -26,7 +42,11 @@ describe('liens à deux personnes : un seul enregistrement, lisible des deux cô
   });
 
   it('ex : séparer ou supprimer depuis un côté se voit de l’autre', () => {
-    const { ids: [a, b], lire, ecrire } = trois();
+    const {
+      ids: [a, b],
+      lire,
+      ecrire,
+    } = trois();
     const { donnees, union } = ajouterUnion(lire(), a, b);
     ecrire(separerUnion(donnees, union.id));
     expect(conjoint(lire(), b)).toBeUndefined();
@@ -38,7 +58,11 @@ describe('liens à deux personnes : un seul enregistrement, lisible des deux cô
   });
 
   it('parent ↔ enfant : étiquettes adaptées à chaque point de vue, suppression des deux côtés', () => {
-    const { ids: [parent, enfant], lire, ecrire } = trois();
+    const {
+      ids: [parent, enfant],
+      lire,
+      ecrire,
+    } = trois();
     const { donnees, filiation } = ajouterFiliation(lire(), parent, enfant, 'biologique');
     ecrire(donnees);
     expect(liensEnfants(lire(), parent).map((l) => l.personne.id)).toEqual([enfant]);
@@ -52,7 +76,11 @@ describe('liens à deux personnes : un seul enregistrement, lisible des deux cô
   });
 
   it('frère ou sœur : déduit des parents, visible des deux côtés', () => {
-    const { ids: [p, a, b], lire, ecrire } = trois();
+    const {
+      ids: [p, a, b],
+      lire,
+      ecrire,
+    } = trois();
     ecrire(ajouterFiliations(lire(), [p], a, 'biologique'));
     ecrire(ajouterFiliations(lire(), [p], b, 'biologique'));
     expect(fratrie(lire(), a).freresSoeurs.map((x) => x.id)).toEqual([b]);
@@ -60,14 +88,22 @@ describe('liens à deux personnes : un seul enregistrement, lisible des deux cô
   });
 
   it('frère ou sœur sans parent connu : lien visible des deux fiches', () => {
-    const { ids: [a, b], lire, ecrire } = trois();
+    const {
+      ids: [a, b],
+      lire,
+      ecrire,
+    } = trois();
     ecrire(ajouterFrereSansParent(lire(), a, b));
     expect(fratrie(lire(), a).freresSoeurs.map((x) => x.id)).toEqual([b]);
     expect(fratrie(lire(), b).freresSoeurs.map((x) => x.id)).toEqual([a]);
   });
 
   it('amitié : un groupe, donc réciproque', () => {
-    const { ids: [a, b], lire, ecrire } = trois();
+    const {
+      ids: [a, b],
+      lire,
+      ecrire,
+    } = trois();
     ecrire(creerGroupe(lire(), [a, b]).donnees);
     expect(amis(lire(), a).map((x) => x.id)).toEqual([b]);
     expect(amis(lire(), b).map((x) => x.id)).toEqual([a]);
