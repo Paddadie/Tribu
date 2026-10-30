@@ -34,6 +34,8 @@ export function formulaire(existante: Personne | undefined, saisie = ''): HTMLEl
         h('label', { class: 'ligne-deces', for: 'marie-parents' }, h('span', {}, `Marié${existante!.sexe === 'F' ? 'e' : ''} avec ${autre.prenom}`), marie),
       )
     : null;
+  identite.montrerMarie(marie.checked);
+  marie.addEventListener('change', () => identite.montrerMarie(marie.checked));
   const retour = existante ? `#/personne/${existante.id}` : '#/';
   garderSaisie(identite.modifie);
 

@@ -1552,6 +1552,42 @@ describe('V4 lot 2 : saisie', () => {
     expect(enregistrees().personnes.find((p) => p.id === celeste)).toEqual(expect.objectContaining({ sansRappel: true, ignorerIncomplet: true }));
   });
 
+  it('le nom de jeune fille n’apparaît que pour une personne mariée, ou qui en a déjà un', async () => {
+    const champNaissance = () => ecran().querySelector<HTMLElement>('#nom-naissance')!.closest<HTMLElement>('.champ')!;
+    const { donnees, celeste, achille } = couple();
+    await demarrer(donnees, `#/modifier/${celeste}`);
+    expect(champNaissance().hidden).toBe(true);
+
+    const maries = { ...donnees, unions: donnees.unions.map((u) => ({ ...u, marie: true })) };
+    await demarrer(maries, `#/modifier/${celeste}`);
+    expect(champNaissance().hidden).toBe(false);
+    expect(champNaissance().textContent).toBe('Nom de jeune fille');
+    await demarrer(maries, `#/modifier/${achille}`);
+    expect(champNaissance().textContent).toBe('Nom de naissance');
+    // Séparés après un mariage : le champ reste.
+    await demarrer({ ...maries, unions: maries.unions.map((u) => ({ ...u, statut: 'separee' as const })) }, `#/modifier/${celeste}`);
+    expect(champNaissance().hidden).toBe(false);
+
+    const dejaSaisi = { ...donnees, personnes: donnees.personnes.map((p) => (p.id === celeste ? { ...p, nomNaissance: 'Ferrand' } : p)) };
+    await demarrer(dejaSaisi, `#/modifier/${celeste}`);
+    expect(champNaissance().hidden).toBe(false);
+
+    // Création, même pour une femme : le choix du nom après le mariage s'en charge.
+    await demarrer(donnees, '#/nouveau');
+    await toucher(trouver('label.choix', 'Femme').querySelector('input')!);
+    expect(champNaissance().hidden).toBe(true);
+  });
+
+  it('le nom de jeune fille apparaît avec la case « Mariée avec … » d’un autre parent sans nom', async () => {
+    const champNaissance = () => ecran().querySelector<HTMLElement>('#nom-naissance')!.closest<HTMLElement>('.champ')!;
+    const f = famille();
+    const sansNom = { ...f.donnees, personnes: f.donnees.personnes.map((p) => (p.id === f.ids.Bruno ? { ...p, sansNom: true as const } : p)) };
+    await demarrer(sansNom, `#/modifier/${f.ids.Anne}`);
+    expect(champNaissance().hidden).toBe(true);
+    await toucher(ecran().querySelector<HTMLInputElement>('#marie-parents')!);
+    expect(champNaissance().hidden).toBe(false);
+  });
+
   it('enfant : l’ex est proposé comme autre parent, « Autre parent ou inconnu » n’en ajoute aucun', async () => {
     const { donnees: d, celeste } = couple();
     const separes = { ...d, unions: d.unions.map((u) => ({ ...u, statut: 'separee' as const })) };

@@ -17,6 +17,8 @@ export interface ChampsIdentite {
   /** Nom de jeune fille saisi, et remplacement (sans compter comme une saisie). */
   lireNomNaissance: () => string;
   definirNomNaissance: (nom: string) => void;
+  /** Case « Marié avec … » de la fiche : allumée, elle fait apparaître le nom de naissance. */
+  montrerMarie: (marie: boolean) => void;
   /** Sexe coché. */
   sexe: () => Sexe | undefined;
   /** Appelle `rappel` quand le sexe change. */
@@ -132,7 +134,11 @@ export function champsIdentite(
   const choixSexe = radios.map(({ radio, libelle }) => h('label', { class: 'choix' }, radio, h('span', {}, libelle)));
   const sexeCoche = () => radios.find((r) => r.radio.checked)?.valeur;
 
-  // Nom de naissance : « de jeune fille » pour une femme ; à la création, proposé pour une femme seulement.
+  // Nom de naissance : « de jeune fille » pour une femme. Seulement pour une personne mariée (ou l'ayant été),
+  // ou qui en a déjà un ; à la création, le choix du nom après le mariage s'en charge.
+  const mariee = (marie: boolean) =>
+    marie || !!existante?.nomNaissance || donnees.unions.some((u) => u.marie && (u.personneA === existante?.id || u.personneB === existante?.id));
+  let marieCoche = false;
   const nomNaissance = h('input', {
     id: 'nom-naissance',
     type: 'text',
@@ -145,7 +151,7 @@ export function champsIdentite(
   const champNomNaissance = h('div', { class: 'champ' }, libelleNomNaissance, nomNaissance);
   const accorderNomNaissance = () => {
     libelleNomNaissance.textContent = sexeCoche() === 'F' ? 'Nom de jeune fille' : 'Nom de naissance';
-    champNomNaissance.hidden = !existante && sexeCoche() !== 'F';
+    champNomNaissance.hidden = !existante || !mariee(marieCoche);
   };
   accorderNomNaissance();
   for (const { radio } of radios) radio.addEventListener('change', accorderNomNaissance);
@@ -227,6 +233,10 @@ export function champsIdentite(
     definirNomNaissance: (valeur) => {
       nomNaissance.value = valeur;
       depart[2] = valeur;
+    },
+    montrerMarie: (marie) => {
+      marieCoche = marie;
+      accorderNomNaissance();
     },
     sexe: sexeCoche,
     surSexe: (rappel) => {
