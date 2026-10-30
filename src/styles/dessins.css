@@ -36,6 +36,18 @@
   stroke-dasharray: 0.1 5;
 }
 
+/* Année (ou date et lieu, dans l'arbre de près) d'une union, au-dessus du trait du couple ; grise pour des ex. */
+.mention-union {
+  fill: var(--secondaire);
+  font-style: italic;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.mention-union.ex {
+  fill: var(--trait-ex);
+}
+
 .trait.adoption {
   stroke-dasharray: 9 5;
   /* Le motif part d'un blanc : la courte branche d'un adopté (10 px) se détache de la barre au lieu de paraître pleine. */
@@ -342,9 +354,23 @@ a.noeud:active .avatar {
   background: linear-gradient(90deg, var(--trait) 9px, transparent 9px) 0 0 / 14px 1.5px repeat-x;
 }
 
+/* Repère « décédé(e) » : l'avatar décédé du dessin en petit (teinte atténuée sans famille, même croix). */
 .cle-decede {
-  width: 12px;
-  height: 12px;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
   border-radius: 50%;
-  background: var(--trait);
+  background: color-mix(in srgb, var(--secondaire) 40%, var(--carte));
+}
+
+.cle-decede::after {
+  content: '†';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1;
+  color: var(--encre);
 }

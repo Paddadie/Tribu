@@ -2,6 +2,8 @@
 // (arbreImage.ts) : positions, cadres des groupes, zone de la bulle, passage vers la bulle et tracés des traits.
 
 import type { Disposition, GroupeDessine, Point } from '../modele/arbreGlobal';
+import { placerMentions, sansVoisinEntre, segmentsDe, unionEntre, type Boite, type MentionUnion, type Obstacles, type Palier } from '../modele/mentionsUnion';
+import type { Union } from '../modele/types';
 
 /** Pixels entre deux places voisines, et entre deux générations (à l'échelle 1). */
 export const PAS_X = 80;
@@ -192,4 +194,53 @@ export function hautEtiquette(disp: Disposition, px: (p: Point) => Point, e: Dis
     if (!recouvre || traverse) return bus - 24;
   }
   return dessous;
+}
+
+/** Anneau de Moi et des membres d'un groupe autour de l'avatar (arbre.css, `box-shadow`). */
+const ANNEAU = 5;
+/** Hauteur d'un nom de famille posé sur l'arbre, et d'un titre de groupe. */
+export const HAUT_ETIQUETTE = 16;
+
+/** Boîte d'un nom de famille : centré sur sa lignée, ou finissant (`fin`) ou commençant (`debut`) au milieu d'un couple. */
+export function boiteEtiquette(disp: Disposition, px: (p: Point) => Point, e: Disposition['etiquettes'][number]): Boite {
+  const { x } = px(e);
+  const l = largeurEtiquette(e.texte);
+  const g = e.ancre === 'fin' ? x - l : e.ancre === 'debut' ? x : x - l / 2;
+  const h = hautEtiquette(disp, px, e);
+  return { g, h, d: g + l, b: h + HAUT_ETIQUETTE };
+}
+
+/**
+ * Dates d'union de l'arbre global, au palier voulu : seulement entre deux partenaires côte à côte sur la même
+ * ligne, sans personne entre eux. Rien ne recouvre un trait (lignes, amitiés, bords des cadres), un avatar, un nom
+ * de personne, un nom de famille ni un titre de groupe.
+ */
+export function mentionsArbre(
+  disp: Disposition,
+  p: Positions,
+  traits: Trait[],
+  cadres: Cadre[],
+  unions: Union[],
+  palier: Palier,
+  moi: string,
+  aujourdhui = new Date(),
+): MentionUnion[] {
+  // Moi et les membres d'un groupe ont un anneau autour de l'avatar (arbre.css) : 5 px de plus.
+  const anneau = new Set([moi, ...disp.groupes.flatMap((g) => g.membres)]);
+  const cercles = new Map([...p.centres].map(([id, c]) => [id, { x: c.x, y: c.y, r: anneau.has(id) ? R + ANNEAU : R }]));
+  const obstacles: Obstacles = {
+    cercles: [...cercles.values()],
+    segments: [...traits.flatMap((t) => segmentsDe(t.d)), ...cadres.flatMap((c) => segmentsDe(`M ${c.x} ${c.y} H ${c.x + c.l} V ${c.y + c.ha} H ${c.x} Z`))],
+    boites: [
+      ...[...p.centres.values()].map((c) => ({ g: c.x - LARG / 2, h: c.y + R, d: c.x + LARG / 2, b: c.y + SOUS_NOM })),
+      ...disp.etiquettes.map((e) => boiteEtiquette(disp, p.px, e)),
+      ...cadres.map((c) => ({ g: c.x + 12, h: c.y + 8, d: c.x + c.l - 12, b: c.y + 8 + HAUT_ETIQUETTE })),
+    ],
+  };
+  const couples = disp.couples.flatMap((c) => {
+    const u = unionEntre(unions, c.a, c.b);
+    const [g, d] = [cercles.get(c.a)!, cercles.get(c.b)!].sort((a, b) => a.x - b.x);
+    return u && g.y === d.y && sansVoisinEntre(g, d, obstacles.cercles) ? [{ g, d, y: g.y, union: u, ex: c.separe }] : [];
+  });
+  return placerMentions(couples, palier, obstacles, aujourdhui);
 }

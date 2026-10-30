@@ -72,6 +72,17 @@ button.bouton-icone {
   stroke-dasharray: calc(0.1px / var(--s)) calc(5px / var(--s));
 }
 
+/* Dates d'union (modele/mentionsUnion.ts) : l'année de près, la date et le lieu tout près, rien de loin. */
+.traits-arbre .mention-union.detail,
+.vue-arbre.proche .traits-arbre .mention-union.annee,
+.vue-arbre.loin .traits-arbre .mention-union {
+  display: none;
+}
+
+.vue-arbre.proche:not(.loin) .traits-arbre .mention-union.detail {
+  display: inline;
+}
+
 .traits-arbre .ami {
   stroke: var(--accent);
   stroke-width: calc(2px / var(--s));

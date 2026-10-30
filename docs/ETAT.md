@@ -1,6 +1,7 @@
 # État en cours
 
-Dernier commit : b607650 (passe qualité, étape 6). Étape 7 (découpe de modele.ts + docs) faite, à commiter : 1023 tests, `tsc`, build et `prettier --check` verts au 29/10.
+Dernier commit : 73061ae (nom de naissance pour les mariés). À commiter : date d'union sur le trait du couple (variante C) : 1065 tests, `tsc`, build et `prettier --check` verts au 30/10 ; 71 captures sur 192 changent (fiche, arbre, lien), capture 11-arbre-pres ajoutée (téléphone, ×2,2).
+- À regarder par Paul : arbre de près sur des fiches réelles ; une date qui ne trouve pas sa place disparaît (estimation de largeur prudente).
 
 ## Passe qualité technique (refactor pur, sans changement visible) — 7 étapes faites
 - Règles : aucun changement fonctionnel, visuel, de route, de stockage ni de dépendance ; un bug repéré est noté, pas corrigé.

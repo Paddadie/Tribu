@@ -9,7 +9,7 @@ import { conjoint, fratrie, liensEnfants, liensParents, relation } from './deduc
 import { prenomOuNom } from './liste';
 import { anneeDe, estDecede, estInconnu } from './modele';
 import { estParentSansNom } from './parentSansNom';
-import type { Donnees, Personne, StatutUnion } from './types';
+import type { Donnees, Personne, StatutUnion, Union } from './types';
 
 /** Statut de l'union entre deux personnes ; `null` : aucune union enregistrée. */
 type Statut = StatutUnion | null;
@@ -57,6 +57,8 @@ export interface FamilleProche {
   partenaires: Partenaire[];
   /** Du plus âgé au plus jeune ; `autre` : leur autre parent dessinable. */
   enfants: (Rattache & { autre: string | null })[];
+  /** Unions enregistrées, pour la date écrite sur le trait d'un couple. */
+  unions: Union[];
 }
 
 /**
@@ -131,7 +133,18 @@ export function familleProche(d: Donnees, id: string, moi?: string): FamilleProc
     if (e.autre && e.autre !== cj && !partenaires.some((x) => x.id === e.autre)) partenaires.push({ id: e.autre, statut: statut(id, e.autre) });
   partenaires.reverse();
 
-  return { personnes, centre: id, moi, couples, freres, autresCouples, conjoint: cj ? { id: cj, statut: 'actuelle' } : null, partenaires, enfants };
+  return {
+    personnes,
+    centre: id,
+    moi,
+    couples,
+    freres,
+    autresCouples,
+    conjoint: cj ? { id: cj, statut: 'actuelle' } : null,
+    partenaires,
+    enfants,
+    unions: d.unions,
+  };
 }
 
 /** Le dessin a quelqu'un d'autre que la personne (la case « + Parent » seule ne compte pas). */
@@ -201,6 +214,8 @@ export interface DispositionFoyer {
   hauteur: number;
   /** Plus large que la place donnée : le cadre défile de côté. */
   defile: boolean;
+  /** Couples reliés par un trait droit entre leurs avatars (pas par une voie sous les noms), gauche puis droite. */
+  unions: { g: string; d: string }[];
 }
 
 function creerNoeud(f: FamilleProche, id: string): NoeudFoyer {
@@ -218,7 +233,7 @@ function creerNoeud(f: FamilleProche, id: string): NoeudFoyer {
 }
 
 /** Bas du nœud (sous les années), depuis le centre de l'avatar. */
-const bas = (n: NoeudFoyer) => n.rayon + 4 + n.lignes * (n.ici ? 18 : 16) + (n.annees ? 14 : 0);
+export const bas = (n: NoeudFoyer) => n.rayon + 4 + n.lignes * (n.ici ? 18 : 16) + (n.annees ? 14 : 0);
 const dist = (a: NoeudFoyer, b: NoeudFoyer, couple?: boolean) => (a.largeur + b.largeur) / 2 + (couple ? ECART_COUPLE : ECART);
 
 // --- Placement d'une ligne : blocs contigus attirés vers leur ancre (moindres carrés, sans chevauchement) ---
@@ -409,6 +424,7 @@ export function disposerFoyer(f: FamilleProche, budget: number): DispositionFoye
     return N.get(id)!;
   };
   const traits: TraitFoyer[] = [];
+  const unions: DispositionFoyer['unions'] = [];
   const trait = (d: string, style: StyleTrait = 'plein', halo = false) => traits.push({ d, style, halo });
   const rayon = (x: NoeudFoyer) => x.rayon;
 
@@ -644,6 +660,7 @@ export function disposerFoyer(f: FamilleProche, budget: number): DispositionFoye
   const union = (A: NoeudFoyer, B: NoeudFoyer, statut: Statut) => {
     const [g, d] = A.x < B.x ? [A, B] : [B, A];
     trait(`M${g.x + g.rayon + 4} ${g.y}H${d.x - d.rayon - 4}`, styleUnion(statut));
+    if (g.personne && d.personne && g.y === d.y) unions.push({ g: g.id, d: d.id });
   };
   const voie = (A: NoeudFoyer, B: NoeudFoyer, yv: number, statut: Statut) => {
     trait(`M${A.x} ${A.y + bas(A) + 2}V${yv}`);
@@ -715,5 +732,5 @@ export function disposerFoyer(f: FamilleProche, budget: number): DispositionFoye
 
   // Les traits à halo passent par-dessus les autres.
   traits.sort((a, b) => Number(a.halo) - Number(b.halo));
-  return { noeuds: tous, traits, largeur: Math.ceil(largeur), hauteur: Math.ceil(yCourant + 12), defile: largeur > budget + 1 };
+  return { noeuds: tous, traits, largeur: Math.ceil(largeur), hauteur: Math.ceil(yCourant + 12), defile: largeur > budget + 1, unions };
 }

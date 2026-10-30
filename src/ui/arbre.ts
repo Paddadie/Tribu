@@ -6,6 +6,7 @@ import type { Etape } from '../modele/deductions';
 import { annees, disposerFoyer, type FamilleProche, type StyleTrait } from '../modele/familleProche';
 import { estDecede } from '../modele/modele';
 import { mentionNaissance, prenomOuNom } from '../modele/liste';
+import { mentionsFoyer, type MentionUnion } from '../modele/mentionsUnion';
 import { motsChemin } from '../modele/parente';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
@@ -64,7 +65,7 @@ export function noeud(p: Personne | undefined, moi: string | undefined, x: numbe
       );
 }
 
-function svg(l: number, haut: number, traits: Trait[]): SVGSVGElement {
+function svg(l: number, haut: number, traits: Trait[], mentions: MentionUnion[] = []): SVGSVGElement {
   const s = document.createElementNS(SVG, 'svg');
   s.setAttribute('width', String(l));
   s.setAttribute('height', String(haut));
@@ -82,7 +83,23 @@ function svg(l: number, haut: number, traits: Trait[]): SVGSVGElement {
     chemin.setAttribute('d', t.d);
     s.append(chemin);
   }
+  s.append(...textesMentions(mentions));
   return s;
+}
+
+/** Date d'union au-dessus du trait d'un couple (modele/mentionsUnion.ts), en `<text>` SVG ; `classe` : palier de l'arbre. */
+export function textesMentions(mentions: MentionUnion[], classe = ''): SVGTextElement[] {
+  return mentions.flatMap((m) =>
+    m.lignes.map((l) => {
+      const t = document.createElementNS(SVG, 'text');
+      t.setAttribute('class', `mention-union${classe && ` ${classe}`}${m.ex ? ' ex' : ''}`);
+      t.setAttribute('x', String(l.x));
+      t.setAttribute('y', String(l.y));
+      t.setAttribute('font-size', String(l.taille));
+      t.textContent = l.texte;
+      return t;
+    }),
+  );
 }
 
 /**
@@ -173,7 +190,7 @@ export function dessinFoyer(f: FamilleProche): HTMLElement {
       const dis = disposerFoyer(f, largeur);
       arbre.style.height = `${dis.hauteur}px`;
       const noeuds = dis.noeuds.map((n) => noeud(n.personne, f.moi, n.x, n.y, n.rayon, { ici: n.ici, larg: n.largeur, annee: true, manque: f.centre }));
-      const dessin = [svg(dis.largeur, dis.hauteur, dis.traits), ...noeuds];
+      const dessin = [svg(dis.largeur, dis.hauteur, dis.traits, mentionsFoyer(dis, f.unions)), ...noeuds];
       if (dis.defile) {
         const defile = h(
           'div',

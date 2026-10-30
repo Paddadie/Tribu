@@ -177,6 +177,8 @@ export interface OptionsPersonne {
 export interface OptionsUnion {
   marie?: boolean;
   date?: string;
+  /** Lieu du mariage (seulement pour une union mariée). */
+  lieu?: string;
   /** Au mariage, l'épouse prend le nom de son mari (défaut), comme la case « Prend le nom ». */
   prendLeNom?: boolean;
   nomA?: string;
@@ -309,7 +311,15 @@ export class Famille {
     const ia = this.assurer(a, { generation, nom: o.nomA ?? (deuxNouveaux ? this.nom : this.autreNom()) });
     const ib = this.assurer(b, { generation, nom: o.nomB ?? this.autreNom() });
     const marie = o.marie ?? false;
-    this.unions.push({ id: `${this.prefixe}-u${this.unions.length + 1}`, personneA: ia, personneB: ib, marie, statut, ...(o.date ? { date: o.date } : {}) });
+    this.unions.push({
+      id: `${this.prefixe}-u${this.unions.length + 1}`,
+      personneA: ia,
+      personneB: ib,
+      marie,
+      statut,
+      ...(o.date ? { date: o.date } : {}),
+      ...(o.lieu ? { lieu: o.lieu } : {}),
+    });
     if (marie && statut === 'actuelle' && o.prendLeNom !== false) this.prendreNom(a, b);
     this.courant = [a, b];
     return this;
@@ -416,23 +426,23 @@ export function famille(nom: string, o: OptionsFamille): Famille {
 /** Point 13 : un cousin (Bastien) avec une ex et une compagne ; six générations ; demi-frère de Moi (Léon). */
 export function dupontel(): FamilleFictive {
   return famille('Dupontel', { graine: 7, debut: 1868 })
-    .couple('Anselme', 'Berthe', { marie: true })
+    .couple('Anselme', 'Berthe', { marie: true, date: '1890-04-22', lieu: 'Quimperlé' })
     .enfants(['Honoré'])
-    .couple('Honoré', 'Léontine', { marie: true })
+    .couple('Honoré', 'Léontine', { marie: true, date: '1921' })
     .enfants(['Auguste'])
-    .couple('Auguste', 'Germaine', { marie: true })
+    .couple('Auguste', 'Germaine', { marie: true, date: '1944-09-30', lieu: 'Saint-Valery-en-Caux' })
     .enfants(['Firmin', 'Marcel'])
-    .couple('Firmin', 'Odile', { marie: true })
+    .couple('Firmin', 'Odile', { marie: true, date: '1972-07-08', lieu: 'Vannes' })
     .enfants(['Apolline', 'Gaspard', 'Clara'])
-    .couple('Marcel', 'Yvonne', { marie: true })
+    .couple('Marcel', 'Yvonne', { marie: true, date: '--05-20' })
     .enfants(['Bastien'])
-    .ex('Bastien', 'Coralie')
+    .ex('Bastien', 'Coralie', { date: '1998' })
     .enfants(['Gaël', 'Lison', 'Timothée'])
-    .couple('Bastien', 'Romane')
+    .couple('Bastien', 'Romane', { date: '2000-09' })
     .enfants(['Jules', 'Anaïs'])
     .ex('Gaspard', 'Solène')
     .enfants(['Noah'])
-    .couple('Gaspard', 'Margaux', { marie: true, date: '2001-06-16' })
+    .couple('Gaspard', 'Margaux', { marie: true, date: '2001-06-16', lieu: 'Dinard' })
     .enfants(['Léon', 'Mathilde'])
     .moi('Léon')
     .construire();
@@ -443,7 +453,7 @@ export function martinezVasseur(): FamilleFictive {
   return famille('Martinez', { graine: 11, debut: 1880, fichier: 'martinez-vasseur' })
     .ex('Ramón', 'Pilar', { marie: true })
     .enfants(['Tomás', 'Lucia'])
-    .couple('Tomás', 'Elena', { marie: true })
+    .couple('Tomás', 'Elena', { marie: true, date: '1934-05-12', lieu: 'Séville' })
     .enfants(['Andrés', 'Rosa', 'Mateo'])
     .couple('Andrés', 'Nuria')
     .enfants(['Iker', 'Alba'])
@@ -457,9 +467,9 @@ export function martinezVasseur(): FamilleFictive {
     .enfants(['Hubert', 'Armand', 'Colette', 'Fernand', 'Huguette', 'Raymond'])
     .couple('Armand', 'Blanche', { marie: true })
     .enfants(['Désiré', 'Agathe'])
-    .couple('Hubert', 'Lucia', { marie: true })
+    .couple('Hubert', 'Lucia', { marie: true, lieu: 'Tarbes' })
     .enfants(['Diego'])
-    .couple('Diego', 'Hélène', { marie: true })
+    .couple('Diego', 'Hélène', { marie: true, date: '1960-10-01', lieu: 'Biarritz' })
     .enfants(['Inès', 'Hugo'])
     .moi('Inès')
     .construire();
@@ -468,15 +478,15 @@ export function martinezVasseur(): FamilleFictive {
 /** Point 5 : enfants d'un ex non uni, enfant ajouté après coup avec un « ? » ; conjoint avec 2 adoptés et 1 biologique. */
 export function lambert(): FamilleFictive {
   return famille('Lambert', { graine: 23, debut: 1930 })
-    .couple('Gérard', 'Monique', { marie: true })
+    .couple('Gérard', 'Monique', { marie: true, date: '1957-06-29' })
     .enfants(['Marc'])
     .personne('Aurélie', { generation: 1, nom: 'Kervadec' })
     .enfants(['Théo', 'Zoé'], { de: ['Marc', 'Aurélie'] })
-    .couple('Marc', 'Nathalie', { marie: true })
+    .couple('Marc', 'Nathalie', { marie: true, date: '1985-09-14', lieu: 'Dinan' })
     .enfants(['Sophie'])
     .enfants(['Tristan'], { de: ['Marc'] })
     .sansNom(['Tristan'])
-    .couple('Romain', 'Sophie', { marie: true })
+    .couple('Romain', 'Sophie', { marie: true, date: '2008-06-21', lieu: 'Saumur' })
     .adopte('Nina', { par: ['Romain', 'Sophie'] })
     .adopte('Malo', { par: ['Romain', 'Sophie'] })
     .enfants(['Jade'])
@@ -488,10 +498,10 @@ export function lambert(): FamilleFictive {
 export function rochefort(): FamilleFictive {
   return famille('Rochefort', { graine: 31, debut: 1935, partielles: true })
     .fratrieSansParents(['Henri', 'Louis', 'Germaine'])
-    .couple('Henri', 'Jeanne', { marie: true })
+    .couple('Henri', 'Jeanne', { marie: true, date: '1963' })
     .enfants(['Anatole', 'Margot'])
     .decede('Jeanne')
-    .couple('Henri', 'Odette', { marie: true })
+    .couple('Henri', 'Odette', { marie: true, date: '1990-05-05', lieu: 'Angers' })
     .couple('Anatole', 'Claire', { marie: true })
     .enfants(['Arthur', 'Lison'])
     .decede('Anatole', 'sans date')
@@ -505,16 +515,16 @@ export function rochefort(): FamilleFictive {
 export function extremes(): FamilleFictive {
   const douze = ['Albane', 'Baptiste', 'Clément', 'Delphine', 'Eudes', 'Flavie', 'Grégoire', 'Hortense', 'Ignace', 'Joséphine', 'Ophélie', 'Lazare'];
   return famille('Ferrandi', { graine: 47, debut: 1950, fichier: 'extremes' })
-    .couple('Gustave', 'Adèle', { marie: true })
+    .couple('Gustave', 'Adèle', { marie: true, date: '1972-08-26', lieu: 'Ajaccio' })
     .enfants(douze)
-    .couple('Clément', 'Victor', { marie: true })
+    .couple('Clément', 'Victor', { marie: true, date: '2015-07-11', lieu: 'Annecy' })
     .ex('Ophélie', 'Bruno')
     .enfants(['Yanis'])
-    .ex('Ophélie', 'Cyril')
+    .ex('Ophélie', 'Cyril', { date: '1999' })
     .enfants(['Maëlle'])
     .ex('Ophélie', 'Damien')
     .enfants(['Sacha'])
-    .couple('Ophélie', 'Jérôme')
+    .couple('Ophélie', 'Jérôme', { date: '2010' })
     .moi('Baptiste')
     .construire();
 }

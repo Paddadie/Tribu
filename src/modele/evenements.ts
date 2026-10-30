@@ -2,7 +2,7 @@
 // Fonctions pures : la date du jour est passée en paramètre.
 
 import { feteDuPrenom, joursNommes, saintsDuCalendrier } from './fetes';
-import { majuscule, MOIS, nomComplet } from './liste';
+import { majuscule, MOIS, MOIS_COURTS, nomComplet } from './liste';
 import { enCouple, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE, personnesListees } from './modele';
 import { libelleAnniversaireUnion } from './noces';
 import type { Donnees, Personne } from './types';
@@ -186,7 +186,6 @@ export function depuisUnion(e: Evenement): string {
 }
 
 const JOURS_COURTS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
-const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
 /** « ven. » : jour de la semaine de l'événement. */
 export function jourCourt(e: Pick<Evenement, 'annee' | 'mois' | 'jour'>): string {

@@ -9,20 +9,31 @@ import { couleurFamille, filtrerParNom, nomComplet, simplifier } from '../modele
 import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
 import type { Donnees, Personne } from '../modele/types';
-import { noeud } from './arbre';
+import { noeud, textesMentions } from './arbre';
 import { h, icone, SVG } from './dom';
 import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
-import { calculerCadres, hautEtiquette, LARG, positions, R, SOUS_NOM, traitsArbre, zoneBulle, type Cadre } from './geometrieArbre';
+import {
+  calculerCadres,
+  HAUT_ETIQUETTE,
+  hautEtiquette,
+  LARG,
+  mentionsArbre,
+  positions,
+  R,
+  SOUS_NOM,
+  traitsArbre,
+  zoneBulle,
+  type Cadre,
+} from './geometrieArbre';
 
 const ECHELLE_MIN = 0.2;
 const ECHELLE_MAX = 3;
 /** En dessous de cette échelle, les noms s'effacent : il ne reste que les pastilles. */
 const ECHELLE_LOIN = 0.6;
-
-/** Hauteur d'une étiquette de famille (sa ligne de texte). */
-const HAUT_ETIQUETTE = 16;
+/** À partir de cette échelle, la date d'une union se lit en entier, avec son lieu (sinon l'année seule). */
+const ECHELLE_PROCHE = 1.6;
 
 /** Une famille de la liste « Familles » : nom, couleur de lignée, effectif, zone occupée (pixels) et personne la plus haute, qui pulse à l'arrivée. */
 interface FamilleListee extends ResumeFamille {
@@ -287,8 +298,13 @@ class Carte {
       }
     }
 
-    for (const t of traitsArbre(this.disp, { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres }, bulle, this.moi.id))
-      trait(t.d, t.classe, t.lignee);
+    const pos = { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres };
+    const traits = traitsArbre(this.disp, pos, bulle, this.moi.id);
+    for (const t of traits) trait(t.d, t.classe, t.lignee);
+    // Dates d'union : l'année de près, la date et le lieu tout près (classe `proche` de la vue), rien de loin.
+    const unions = lireDonnees().unions;
+    for (const palier of ['annee', 'detail'] as const)
+      s.append(...textesMentions(mentionsArbre(this.disp, pos, traits, this.cadres, unions, palier, this.moi.id), palier));
     return s;
   }
 
@@ -474,6 +490,7 @@ class Carte {
     this.calque.style.transform = `translate(${this.v.tx}px, ${this.v.ty}px) scale(${this.v.s})`;
     this.calque.style.setProperty('--s', String(this.v.s));
     this.vue.classList.toggle('loin', this.v.s < ECHELLE_LOIN);
+    this.vue.classList.toggle('proche', this.v.s >= ECHELLE_PROCHE);
     this.eviterChevauchements();
     vueGardee = { ...this.v };
   }

@@ -182,14 +182,22 @@ export function nomListe(p: Pick<Personne, 'prenom' | 'nom'>, tri: Tri): string 
   return tri === 'nom' ? [p.nom, p.prenom].filter(Boolean).join(' ') : nomComplet(p);
 }
 
-/** Personnes dont le prénom ou le nom (ou « prénom nom ») contient la saisie, sans tenir compte de la casse ni des accents. */
+/**
+ * Personnes dont « prénom nom » ou « prénom nom de naissance » contient chaque mot de la saisie, sans tenir compte
+ * de la casse ni des accents. Les deux noms sont des cibles séparées : chacune est un nom que la personne a porté,
+ * alors qu'une saisie mêlant nom actuel et nom de naissance ne désigne personne.
+ */
 export function filtrerParNom(personnes: Personne[], saisie: string): Personne[] {
   const mots = simplifier(saisie).split(/\s+/).filter(Boolean);
   if (mots.length === 0) return personnes;
-  return personnes.filter((p) => {
-    const cible = simplifier(`${p.prenom} ${p.nom}`);
-    return mots.every((m) => cible.includes(m));
-  });
+  return personnes.filter((p) =>
+    [p.nom, p.nomNaissance]
+      .filter((nom) => nom !== undefined)
+      .some((nom) => {
+        const cible = simplifier(`${p.prenom} ${nom}`);
+        return mots.every((m) => cible.includes(m));
+      }),
+  );
 }
 
 /** Texte comparable pour les homonymes : simplifié, espaces superflus retirés. */
@@ -237,6 +245,7 @@ export function grouperParLettre(personnes: Personne[], tri: Tri = 'nom'): Group
 }
 
 export const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+export const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
 /**
  * « 1961-05-14 » → « née le 14 mai 1961 », « 1961-05 » → « née en mai 1961 »,

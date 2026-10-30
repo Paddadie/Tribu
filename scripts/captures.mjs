@@ -255,6 +255,13 @@ try {
           // Nommage (V4, lot 3) : « Lien avec toi » du proche le plus éloigné, détail ouvert.
           const loin = plusEloigne(JSON.parse(json), f.moi);
           if (loin) await capture(`${fam}-${nom}-10-lien`, `#/personne/${loin}`, theme, `document.querySelector('.bouton-detail')?.click()`, 1400, o);
+          // Arbre de près (× 2,2, molette sur l'année d'union la plus proche du centre) : dates d'union en entier, avec leur lieu.
+          const pres = `(() => {
+            const loin = (r) => Math.hypot(r.x - innerWidth / 2, r.y - innerHeight / 2);
+            const r = [...document.querySelectorAll('.mention-union.annee')].map((t) => t.getBoundingClientRect()).sort((a, b) => loin(a) - loin(b))[0];
+            if (r) document.querySelector('.vue-arbre').dispatchEvent(new WheelEvent('wheel', { deltaY: -400, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, bubbles: true, cancelable: true }));
+          })()`;
+          await capture(`${fam}-${nom}-11-arbre-pres`, '#/arbre', theme, pres, hauteur, o);
         }
     }
   } else if (mode === 'maquettes') {

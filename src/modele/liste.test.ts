@@ -216,6 +216,36 @@ describe('filtrerParNom', () => {
   it('ne renvoie rien si personne ne correspond', () => {
     expect(filtrerParNom(gens, 'xyz')).toEqual([]);
   });
+
+  describe('nom de naissance', () => {
+    const mariee = { ...p('Claire', 'Girard'), nomNaissance: 'Bérenger' };
+    const tous = [...gens, mariee];
+    const prenoms = (saisie: string) => filtrerParNom(tous, saisie).map((x) => x.prenom);
+    it('trouve par le nom de naissance seul', () => {
+      expect(prenoms('bérenger')).toEqual(['Claire']);
+      expect(prenoms('beren')).toEqual(['Claire']);
+    });
+    it('trouve par « prénom nom de naissance », dans les deux ordres', () => {
+      expect(prenoms('claire berenger')).toEqual(['Claire']);
+      expect(prenoms('berenger claire')).toEqual(['Claire']);
+    });
+    it('ignore casse et accents', () => {
+      expect(prenoms('BERENGER')).toEqual(['Claire']);
+      expect(prenoms('Clàire BÉRENGER')).toEqual(['Claire']);
+    });
+    it('ne mêle pas nom actuel et nom de naissance', () => {
+      expect(prenoms('girard berenger')).toEqual([]);
+    });
+    it('garde les résultats sur prénom et nom actuel', () => {
+      expect(prenoms('girard')).toEqual(['Marie', 'Claire']);
+      expect(prenoms('claire girard')).toEqual(['Claire']);
+      expect(prenoms('marie berenger')).toEqual([]);
+    });
+    it('ne change rien pour une personne sans nom de naissance', () => {
+      expect(filtrerParNom(tous, 'lamb').map((x) => x.prenom)).toEqual(['Éloïse', 'Jean']);
+      expect(filtrerParNom(tous, 'jean lambert')).toHaveLength(1);
+    });
+  });
 });
 
 describe('grouperParLettre', () => {

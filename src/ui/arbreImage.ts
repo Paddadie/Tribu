@@ -9,7 +9,7 @@ import { couleurFamille, initiales, mentionNaissance, prenomOuNom } from '../mod
 import { estDecede } from '../modele/modele';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
-import { calculerCadres, hautEtiquette, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
+import { calculerCadres, hautEtiquette, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
 
 /** Plus grand côté de l'image : au-delà, les navigateurs mobiles refusent ou déforment le canvas. */
 export const COTE_MAX = 4096;
@@ -256,8 +256,17 @@ export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition,
     }
   });
 
-  // Traits, puis noms de famille, puis personnes.
-  for (const t of traitsArbre(disp, pos, bulle, moi.id)) dessinerTrait(ctx, t.d, t.classe, t.lignee);
+  // Traits et années des unions, puis noms de famille, puis personnes.
+  const traits = traitsArbre(disp, pos, bulle, moi.id);
+  for (const t of traits) dessinerTrait(ctx, t.d, t.classe, t.lignee);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  for (const m of mentionsArbre(disp, pos, traits, cadres, d.unions, 'annee', moi.id, aujourdhui))
+    for (const l of m.lignes) {
+      ctx.fillStyle = m.ex ? COULEURS.traitEx : COULEURS.secondaire;
+      ctx.font = `italic 600 ${l.taille}px ${POLICE}`;
+      ctx.fillText(l.texte, l.x, l.y);
+    }
   for (const e of disp.etiquettes) {
     const c = pos.px(e);
     ctx.fillStyle = e.lignee !== undefined ? teinte(e.lignee) : COULEURS.secondaire;
