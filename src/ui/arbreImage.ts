@@ -10,11 +10,23 @@ import { estDecede } from '../modele/modele';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
 import { calculerCadres, hautEtiquette, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
+import { encoderPng } from './png';
 
-/** Plus grand côté de l'image : au-delà, les navigateurs mobiles refusent ou déforment le canvas. */
-export const COTE_MAX = 4096;
-/** Netteté visée (pixels de l'image par pixel du dessin). */
-const ECHELLE_VISEE = 2;
+// Limites des canvas relevées par la bibliothèque canvas-size (jhildenbiddle.github.io/canvas-size, « Test Results ») :
+// Safari iOS 9+ accepte 4 194 303 px de large mais 4096 × 4096 = 16 777 216 px de surface au plus ; Chrome Android,
+// 32 767 ou 65 535 px de côté et 117 à 268 Mpx de surface. Au-delà, le canvas reste vide sans erreur. L'image est donc
+// dessinée par bandes de PIXELS_BANDE puis assemblée par png.ts : seule la surface d'une bande compte pour le canvas.
+
+/** Netteté visée (pixels de l'image par pixel du dessin) : les noms restent nets quand on zoome. */
+export const ECHELLE_VISEE = 3;
+/** Plus grand côté de l'image : moins que le côté maximal du canvas de Chrome, et lisible par les visionneuses. */
+export const COTE_MAX = 16384;
+/** Pixels de l'image au plus : 48 Mpx, la taille des photos des téléphones récents, que leur galerie sait ouvrir. */
+export const PIXELS_MAX = 48_000_000;
+/** Surface d'une bande : bien sous la limite de Safari iOS, pour ménager la mémoire. */
+export const PIXELS_BANDE = 4_000_000;
+/** Secours sans bandes (CompressionStream absent ou en échec) : un seul canvas, dans la limite de Safari iOS. */
+export const PIXELS_CANVAS = 4096 * 4096;
 /** Bande du titre, au-dessus de l'arbre. */
 const ENTETE = 56;
 const POLICE = 'system-ui, -apple-system, "Segoe UI", sans-serif';
@@ -70,11 +82,19 @@ export interface DimensionsImage {
   pixelsH: number;
 }
 
-/** Taille de l'image : ×2 si possible, réduite pour que le plus grand côté ne dépasse pas COTE_MAX. */
-export function dimensionsImage(largeur: number, hauteurArbre: number): DimensionsImage {
+/** Taille de l'image : ×3 si possible, réduite pour tenir dans COTE_MAX de côté et `pixelsMax` de surface. */
+export function dimensionsImage(largeur: number, hauteurArbre: number, pixelsMax = PIXELS_MAX): DimensionsImage {
   const hauteur = hauteurArbre + ENTETE;
-  const echelle = Math.min(ECHELLE_VISEE, COTE_MAX / Math.max(largeur, hauteur));
-  return { largeur, hauteur, echelle, pixelsL: Math.round(largeur * echelle), pixelsH: Math.round(hauteur * echelle) };
+  const echelle = Math.min(ECHELLE_VISEE, COTE_MAX / Math.max(largeur, hauteur), Math.sqrt(pixelsMax / (largeur * hauteur)));
+  return { largeur, hauteur, echelle, pixelsL: Math.floor(largeur * echelle), pixelsH: Math.floor(hauteur * echelle) };
+}
+
+/** Bandes horizontales (en pixels de l'image) de `pixelsBande` au plus, qui couvrent toute la hauteur sans se chevaucher. */
+export function bandes(pixelsL: number, pixelsH: number, pixelsBande = PIXELS_BANDE): { y: number; h: number }[] {
+  const pas = Math.max(1, Math.floor(pixelsBande / pixelsL));
+  const liste: { y: number; h: number }[] = [];
+  for (let y = 0; y < pixelsH; y += pas) liste.push({ y, h: Math.min(pas, pixelsH - y) });
+  return liste;
 }
 
 /** Taille annoncée avant l'export, sans rien dessiner. */
@@ -193,17 +213,13 @@ function dessinerNoeud(
   }
 }
 
-/** Dessine tout l'arbre sur le canvas (déjà à la taille de `dimensionsArbre`). */
-export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date): void {
-  const pos = positions(disp);
-  const dim = dimensionsImage(pos.largeur, pos.hauteur);
-  canvas.width = dim.pixelsL;
-  canvas.height = dim.pixelsH;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas indisponible');
-  ctx.scale(dim.echelle, dim.echelle);
+type Positions = ReturnType<typeof positions>;
+
+/** Peint tout l'arbre, en unités du dessin, sur un contexte déjà mis à l'échelle (et décalé quand on peint une bande). */
+function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, pos: Positions): void {
+  const largeur = pos.largeur;
   ctx.fillStyle = COULEURS.fond;
-  ctx.fillRect(0, 0, dim.largeur, dim.hauteur);
+  ctx.fillRect(0, 0, largeur, pos.hauteur + ENTETE);
 
   // Titre et date.
   const titre = [moi.prenom, moi.nom].filter(Boolean).join(' ');
@@ -215,7 +231,7 @@ export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition,
   ctx.textAlign = 'right';
   ctx.fillStyle = COULEURS.secondaire;
   ctx.font = `14px ${POLICE}`;
-  ctx.fillText(aujourdhui.toLocaleDateString('fr-FR'), dim.largeur - 24, ENTETE / 2 + 4);
+  ctx.fillText(aujourdhui.toLocaleDateString('fr-FR'), largeur - 24, ENTETE / 2 + 4);
   ctx.translate(0, ENTETE);
 
   const cadres = calculerCadres(disp, pos.centres);
@@ -291,13 +307,67 @@ export function dessinerArbreImage(canvas: HTMLCanvasElement, disp: Disposition,
   }
 }
 
-/** PNG de l'arbre autour de `moi`. */
-export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date): Promise<Blob> {
+type Peindre = (ctx: CanvasRenderingContext2D) => void;
+
+/** Un canvas qui dépasse les limites du navigateur reste vide (transparent) sans erreur : le fond blanc doit s'y lire. */
+function estPeint(px: Uint8ClampedArray): boolean {
+  return px[3] === 255 && px[px.length - 1] === 255;
+}
+
+/** Chemin principal : l'image entière, peinte bande par bande sur un seul petit canvas, et assemblée par encoderPng. */
+async function pngParBandes(dim: DimensionsImage, peindre: Peindre): Promise<Blob> {
   const canvas = document.createElement('canvas');
-  dessinerArbreImage(canvas, disp, d, moi, aujourdhui);
+  canvas.width = dim.pixelsL;
+  try {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) throw new Error('Canvas indisponible');
+    function* peintes(ctx: CanvasRenderingContext2D) {
+      for (const b of bandes(dim.pixelsL, dim.pixelsH)) {
+        if (canvas.height !== b.h) canvas.height = b.h;
+        // Décalage en pixels entiers : chaque bande retombe sur la même grille, sans couture visible.
+        ctx.setTransform(dim.echelle, 0, 0, dim.echelle, 0, -b.y);
+        peindre(ctx);
+        const px = ctx.getImageData(0, 0, dim.pixelsL, b.h).data;
+        if (!estPeint(px)) throw new Error('Bande vide');
+        yield px;
+      }
+    }
+    return await encoderPng(dim.pixelsL, dim.pixelsH, peintes(ctx));
+  } finally {
+    // Libère tout de suite la mémoire du canvas (Safari iOS plafonne la mémoire de tous les canvas de la page).
+    canvas.width = canvas.height = 0;
+  }
+}
+
+/** Secours : un seul canvas dans la limite de Safari iOS, encodé par le navigateur. */
+async function pngUnCanvas(dim: DimensionsImage, peindre: Peindre): Promise<Blob> {
+  const canvas = document.createElement('canvas');
+  canvas.width = dim.pixelsL;
+  canvas.height = dim.pixelsH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas indisponible');
+  ctx.scale(dim.echelle, dim.echelle);
+  peindre(ctx);
+  const coins = [ctx.getImageData(0, 0, 1, 1).data, ctx.getImageData(dim.pixelsL - 1, dim.pixelsH - 1, 1, 1).data];
+  if (!coins.every(estPeint)) throw new Error('Canvas vide');
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  canvas.width = canvas.height = 0;
   if (!blob) throw new Error('Image impossible à créer');
   return blob;
+}
+
+/** PNG de l'arbre autour de `moi`, à la taille de `dimensionsArbre` ; plus petit (PIXELS_CANVAS) si le navigateur ne sait pas l'assembler par bandes. */
+export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date): Promise<Blob> {
+  const pos = positions(disp);
+  const peindre: Peindre = (ctx) => peindreArbre(ctx, disp, d, moi, aujourdhui, pos);
+  if (typeof CompressionStream === 'function') {
+    try {
+      return await pngParBandes(dimensionsImage(pos.largeur, pos.hauteur), peindre);
+    } catch {
+      // On retombe sur le canvas unique, plus petit mais accepté partout.
+    }
+  }
+  return pngUnCanvas(dimensionsImage(pos.largeur, pos.hauteur, PIXELS_CANVAS), peindre);
 }
 
 export const NOM_FICHIER_ARBRE = (jour: Date) => `tribu-arbre-${jour.toISOString().slice(0, 10)}.png`;
