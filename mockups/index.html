@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tribu · maquettes de l'arbre</title>
+    <style>
+      :root {
+        --vert: #2e7262;
+        --fond: #f6f4ee;
+        --texte: #1f2925;
+        --doux: #77847e;
+        --bord: #d6dcd8;
+        font: 14px system-ui, sans-serif;
+        color: var(--texte);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--fond);
+        overflow: hidden;
+      }
+      header {
+        position: fixed;
+        inset: 0 0 auto 0;
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        align-items: center;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--bord);
+      }
+      header h1 {
+        font-size: 15px;
+        margin: 0 6px 0 0;
+      }
+      .onglets {
+        display: flex;
+        border: 1px solid var(--bord);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .onglets button {
+        border: 0;
+        background: none;
+        padding: 6px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .onglets button[aria-pressed='true'] {
+        background: var(--vert);
+        color: #fff;
+      }
+      header select,
+      header > button,
+      header label.fichier {
+        font: inherit;
+        padding: 5px 10px;
+        border: 1px solid var(--bord);
+        border-radius: 999px;
+        background: #fff;
+        cursor: pointer;
+      }
+      label.fichier input {
+        display: none;
+      }
+      .moi-choix {
+        position: relative;
+      }
+      .moi-choix input {
+        font: inherit;
+        padding: 5px 10px;
+        border: 1px solid var(--bord);
+        border-radius: 999px;
+        width: 13em;
+      }
+      .moi-choix ul {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin: 4px 0 0;
+        padding: 4px;
+        list-style: none;
+        background: #fff;
+        border: 1px solid var(--bord);
+        border-radius: 10px;
+        max-height: 50vh;
+        overflow: auto;
+        min-width: 16em;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      }
+      .moi-choix li {
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .moi-choix li:hover {
+        background: var(--fond);
+      }
+      .moi-choix ul:empty {
+        display: none;
+      }
+      #carte {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        cursor: grab;
+      }
+      #accueil {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        text-align: center;
+        color: var(--doux);
+      }
+      #accueil.cache {
+        display: none;
+      }
+      body.depot #accueil {
+        display: grid;
+        background: rgba(46, 114, 98, 0.08);
+        outline: 3px dashed var(--vert);
+        outline-offset: -12px;
+      }
+      #panneau {
+        position: fixed;
+        z-index: 3;
+        right: 10px;
+        top: 64px;
+        width: min(380px, calc(100% - 20px));
+        max-height: calc(100% - 80px);
+        overflow: auto;
+        background: #fff;
+        border: 1px solid var(--bord);
+        border-radius: 14px;
+        padding: 12px 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        display: none;
+      }
+      #panneau.ouvert {
+        display: block;
+      }
+      #panneau h2 {
+        font-size: 15px;
+        margin: 0 0 6px;
+      }
+      #panneau p {
+        color: var(--doux);
+        margin: 4px 0 8px;
+      }
+      #panneau table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      #panneau td {
+        padding: 3px 4px;
+        border-top: 1px solid #eef0ee;
+      }
+      #panneau td:last-child {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      #panneau tr.alerte td:last-child {
+        color: #b5603f;
+        font-weight: 600;
+      }
+      #feuille {
+        position: fixed;
+        z-index: 4;
+        inset: auto 0 0 0;
+        max-height: 70%;
+        background: #fff;
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
+        transform: translateY(105%);
+        transition: transform 0.25s;
+        display: flex;
+        flex-direction: column;
+      }
+      #feuille.ouvert {
+        transform: none;
+      }
+      #feuille .tete {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+      }
+      #feuille h2 {
+        font-size: 15px;
+        margin: 0;
+      }
+      #feuille .defile {
+        overflow: auto;
+        padding: 0 10px 14px;
+      }
+      #feuille svg {
+        display: block;
+        height: auto;
+      }
+      @media (max-width: 640px) {
+        header h1 {
+          display: none;
+        }
+        #panneau {
+          top: auto;
+          bottom: 10px;
+          max-height: 60%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Maquettes de l'arbre</h1>
+      <div class="onglets" role="group" aria-label="Maquette">
+        <button data-v="A">A</button><button data-v="A proches">A proches</button><button data-v="B1">B1</button><button data-v="B2">B2</button>
+      </div>
+      <select id="source" aria-label="Données"></select>
+      <label class="fichier">Ouvrir un export…<input id="fichier" type="file" accept=".json,application/json" /></label>
+      <div class="moi-choix"><input id="moi" placeholder="Qui est Moi ?" autocomplete="off" /><ul id="moi-liste"></ul></div>
+      <button id="toi">Toi</button><button id="tout">Tout</button><button id="mesures">Mesures</button>
+    </header>
+    <svg id="carte" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="accueil" class="cache">
+      <p>Choisis une famille fictive, ou ouvre ton export Tribu (bouton « Ouvrir un export… » ou glisser-déposer).<br />Le fichier reste sur ton appareil : rien n'est envoyé.</p>
+    </div>
+    <aside id="panneau"></aside>
+    <section id="feuille">
+      <div class="tete"><h2></h2><button id="fermer">Fermer</button></div>
+      <div class="defile"><svg xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </section>
+    <!-- Tes données, facultatives : local/donnees.js est créé par preparer.mjs et ignoré par Git. -->
+    <script src="local/donnees.js" onerror="void 0"></script>
+    <script src="js/familles-reference.js"></script>
+    <script src="js/familles.js"></script>
+    <script src="js/disposition.js"></script>
+    <script src="js/rendu.js"></script>
+    <script src="js/foyers.js"></script>
+    <script src="js/mesures.js"></script>
+    <script src="js/appli.js"></script>
+  </body>
+</html>

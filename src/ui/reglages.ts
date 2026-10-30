@@ -7,7 +7,9 @@ import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from
 import { disposerArbre } from '../modele/arbreGlobal';
 import type { Tri } from '../modele/liste';
 import { filtrerListe } from '../modele/filtres';
+import { AFFICHAGES, garderPour, type Affichage } from '../modele/ligneDirecte';
 import { donneesVides, personnesListees, personnesVisibles } from '../modele/modele';
+import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { FusionAnnulee, fusionner } from '../modele/fusion';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
@@ -22,11 +24,12 @@ import { lireDonnees, lireReglages, modifierReglages, suiviCourant } from './eta
 import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { remplacer } from './navigation';
+import { affichageArbre } from './arbreGlobal';
 import { arbrePng, dimensionsArbre, NOM_FICHIER_ARBRE } from './arbreImage';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
-function choix<T extends string>(nom: string, legende: string, options: [T, string][], actuel: T, choisir: (v: T) => void): HTMLElement {
+function choix<T extends string>(nom: string, legende: string, options: [T, string][], actuel: T, choisir: (v: T) => void, grille = false): HTMLElement {
   const boutons = options.map(([valeur, libelle]) =>
     h(
       'label',
@@ -35,7 +38,7 @@ function choix<T extends string>(nom: string, legende: string, options: [T, stri
       h('span', {}, libelle),
     ),
   );
-  return h('fieldset', { class: 'champ' }, h('legend', {}, legende), h('div', { class: 'choix-groupe' }, ...boutons));
+  return h('fieldset', { class: 'champ' }, h('legend', {}, legende), h('div', { class: grille ? 'choix-groupe grille' : 'choix-groupe' }, ...boutons));
 }
 
 /** Interrupteur : titre et aide à gauche, case à cocher à droite. */
@@ -151,6 +154,9 @@ function ongletExports(majTout: () => void): Onglet {
   const resumeImage = h('p', { class: 'secondaire' });
   const messageImage = h('p', { class: 'secondaire', role: 'status' });
   const boutonImage = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterImage() }, 'Exporter l’arbre en PNG');
+  // Personnes à dessiner : le filtre de l'arbre en cours, changeable ici sans toucher à l'écran Arbre.
+  let affichage: Affichage = affichageArbre();
+  const dessin = (moi: string) => disposerArbre(lireDonnees(), moi, garderPour(lireDonnees(), moi, affichage));
 
   const maj = () => {
     const n = personnesVisibles(lireDonnees()).length;
@@ -163,8 +169,10 @@ function ongletExports(majTout: () => void): Onglet {
     boutonAgenda.disabled = total === 0;
     const moi = ficheMoi(lireReglages(), lireDonnees());
     if (moi) {
-      const dim = dimensionsArbre(disposerArbre(lireDonnees(), moi.id));
-      resumeImage.textContent = `${pluriel(n)} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
+      const disp = dessin(moi.id);
+      const dim = dimensionsArbre(disp);
+      const dessinees = affichage === 'tout' ? n : disp.places.filter((p) => !estVirtuel(p.personne.id) && !p.personne.inconnu).length;
+      resumeImage.textContent = `${pluriel(dessinees)} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
     } else resumeImage.textContent = 'Choisis ta fiche dans Réglages → Moi.';
     boutonImage.disabled = !moi;
   };
@@ -187,7 +195,7 @@ function ongletExports(majTout: () => void): Onglet {
     if (!moi) return;
     try {
       const maintenant = new Date();
-      const png = await arbrePng(disposerArbre(lireDonnees(), moi.id), lireDonnees(), moi, maintenant);
+      const png = await arbrePng(dessin(moi.id), lireDonnees(), moi, maintenant);
       const issue = await exporterFichier(NOM_FICHIER_ARBRE(maintenant), png, 'image/png');
       messageImage.textContent = MESSAGES_EXPORT[issue];
       messageImage.className = issue === 'annule' ? 'secondaire' : 'succes';
@@ -246,7 +254,18 @@ function ongletExports(majTout: () => void): Onglet {
           h(
             'p',
             { class: 'secondaire' },
-            'Dessine tout l’arbre global (famille et amis) dans une image PNG, avec les noms. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+            'Dessine l’arbre global dans une image PNG, avec les noms : tout l’arbre (famille et amis) ou seulement ta ligne directe. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+          ),
+          choix(
+            'affichage-png',
+            'Personnes à dessiner',
+            AFFICHAGES.map((a): [Affichage, string] => [a.valeur, a.libelle]),
+            affichage,
+            (v) => {
+              affichage = v;
+              maj();
+            },
+            true,
           ),
           resumeImage,
           boutonImage,

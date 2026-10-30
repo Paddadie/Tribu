@@ -616,6 +616,7 @@ Aucune question ouverte.
 - [x] Groupes d'amis (après l'arbre global) : nom de famille au-dessus des lignées, cadres de groupes dans « Tes amis », saisie par groupe, Réglages → Groupes d'amis ; maquette validée le 19/10 (claude.ai/artifact/C5fAaf2hkT89PDdtXV6E4T), codé le 19/10
 - [x] « Famille proche » fiabilisé (21/10) : 22 cas fictifs (tests/fixtures/famille-proche), test de référence, rapport et 3 maquettes (claude.ai/artifact/2JMCd1nRBCtLXRPY8jBt6U), stratégie S2 « rangées repliées » choisie par Paul ; correction de `fratrie()` (`freresComplets`) ; placement pur `modele/familleProche.ts`
 - [x] Veuvage (21/10) : nouvelle union possible après le décès du conjoint ; règle « une union actuelle avec un vivant » à la création, à l'import et à la fusion ; section « Conjoint décédé » sur la fiche.
+- [x] Filtre « Ligne directe » de l'arbre global (30/10) : trois niveaux + Tout l'arbre, pastille, loupe sur les cachés, même choix dans l'export PNG ; maquette validée le 30/10 (claude.ai/artifact/3sFMJK2gbDhR1cjd1zVR73)
 - Plusieurs groupes par personne (règle « un seul » levée dans les écrans)
 - Photos (IndexedDB nécessaire)
 - Import et export GEDCOM

@@ -5,6 +5,7 @@
 import { disposerArbre, type Disposition, type Point } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { prochesDeFamille } from '../modele/filtres';
+import { AFFICHAGES, garderPour, type Affichage } from '../modele/ligneDirecte';
 import { couleurFamille, filtrerParNom, nomComplet, simplifier } from '../modele/liste';
 import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi } from '../modele/reglages';
@@ -53,6 +54,9 @@ interface Vue {
   s: number;
 }
 
+/** Liste ouverte au-dessus des puces : Familles, Amis, ou le choix du filtre (bouton « Afficher » du haut). */
+type Feuille = 'familles' | 'amis' | 'afficher';
+
 /** Vue choisie par sa puce (pleine tant qu'on ne s'en écarte pas) ; aucune après un déplacement ou un autre saut. */
 type VueActive = 'toi' | 'tout' | undefined;
 
@@ -97,6 +101,31 @@ let activeGardee: VueActive;
 const pile: { v: Vue; active: VueActive }[] = [];
 const PILE_MAX = 30;
 let astuceMontree = false;
+/** Filtre « Ligne directe » gardé pendant la session ; l'export PNG le reprend par défaut. */
+let affichageGarde: Affichage = 'tout';
+export const affichageArbre = (): Affichage => affichageGarde;
+
+/** Ce que l'écran donne à la carte, en plus du dessin : filtre en cours et moyens d'en changer. */
+interface OptionsCarte {
+  focus?: FocusArbre;
+  /** Personne à montrer dès l'arrivée (recherche d'une personne hors du filtre). */
+  cible?: string;
+  affichage: Affichage;
+  /** Moi sans parent : la feuille « Afficher » invite à en ajouter. */
+  sansParents: boolean;
+  /** Bouton « Afficher » de la barre du haut : il ouvre la feuille du filtre. */
+  bouton: HTMLElement;
+  /** Tout l'arbre, calculé au premier besoin : la recherche y trouve les personnes cachées par le filtre. */
+  toutLArbre: () => Disposition;
+  /** Change de filtre et redessine ; `cible` : personne à montrer ensuite. */
+  choisir: (a: Affichage, cible?: string) => void;
+}
+
+/** La famille ou le groupe visé par une pop-up de l'accueil est-il sur ce dessin ? */
+function montre(disp: Disposition, focus: FocusArbre): boolean {
+  if (focus.quoi === 'groupe') return disp.groupes.some((g) => g.id === focus.cle);
+  return disp.places.some((p) => !estVirtuel(p.personne.id) && simplifier(p.personne.nom.trim()) === focus.cle);
+}
 
 /** Douze couleurs pastel de CSS (--c0 à --c11) : une par nom de famille ; les groupes d'amis reprennent la série en décalé. */
 export const couleur = (k: number) => `var(--c${k % 12})`;
@@ -111,8 +140,9 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d);
   const loupe = h('button', { type: 'button', class: 'bouton-icone', 'aria-label': 'Chercher une personne' }, icone('recherche', 24));
+  const filtre = h('button', { type: 'button', class: 'bouton-icone filtre-arbre', 'aria-expanded': 'false' }, icone('lignee', 24));
   const barre = barreEcran('#/', 'Arbre');
-  if (moi) barre.append(loupe);
+  if (moi) barre.append(filtre, loupe);
   if (!moi) {
     return h(
       'div',
@@ -126,9 +156,43 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
       ),
     );
   }
-  const disp = disposerArbre(d, moi.id);
-  const carte = new Carte(disp, moi, focus);
+  const dessiner = () => disposerArbre(d, moi.id, garderPour(d, moi.id, affichageGarde));
+  let disp = dessiner();
+  // Famille ou groupe hors du filtre : on revient à tout l'arbre plutôt que de ne rien montrer.
+  if (focus && affichageGarde !== 'tout' && !montre(disp, focus)) {
+    affichageGarde = 'tout';
+    disp = dessiner();
+  }
+  let toute = affichageGarde === 'tout' ? disp : undefined;
+  const sansParents = !d.filiations.some((f) => f.enfant === moi.id);
+  const creer = (o: Pick<OptionsCarte, 'focus' | 'cible'>) => {
+    const choix = AFFICHAGES.find((a) => a.valeur === affichageGarde)!;
+    filtre.classList.toggle('actif', affichageGarde !== 'tout');
+    filtre.setAttribute('aria-label', `Afficher : ${(choix.pastille ?? choix.libelle).toLowerCase()}`);
+    return new Carte(disp, moi, {
+      ...o,
+      affichage: affichageGarde,
+      sansParents,
+      bouton: filtre,
+      toutLArbre: () => (toute ??= disposerArbre(d, moi.id)),
+      choisir,
+    });
+  };
+  // Nouveau filtre : nouveau dessin, recentré sur Moi (ou sur la personne cherchée) ; l'ancienne vue n'a plus de sens.
+  const choisir = (a: Affichage, cible?: string) => {
+    affichageGarde = a;
+    vueGardee = undefined;
+    activeGardee = undefined;
+    pile.length = 0;
+    disp = dessiner();
+    if (a === 'tout') toute = disp;
+    const nouvelle = creer({ cible });
+    carte.vue.replaceWith(nouvelle.vue);
+    carte = nouvelle;
+  };
+  let carte = creer({ focus });
   loupe.addEventListener('click', () => carte.basculerRecherche());
+  filtre.addEventListener('click', () => carte.basculerAffichage());
   if (feuille) carte.ouvrirFeuille(feuille);
   return h('div', { class: 'ecran ecran-arbre' }, barre, carte.vue);
 }
@@ -155,7 +219,7 @@ class Carte {
   private echelleEtiquettes = 0;
   /** Liste ouverte par « Familles » ou « Amis », posée au-dessus des commandes : elle en glisse et s'y replie (CSS). */
   private readonly feuille = h('div', { class: 'feuille-arbre' });
-  private feuilleOuverte: 'familles' | 'amis' | undefined;
+  private feuilleOuverte: Feuille | undefined;
   private readonly puces = new Map<string, HTMLElement>();
   private readonly puceToi: HTMLElement;
   private readonly puceTout: HTMLElement;
@@ -163,10 +227,13 @@ class Carte {
   private active: VueActive;
   /** Barre des puces, en bas : le dessin passe dessous, « Tout » cadre l'arbre au-dessus. */
   private readonly barreBas: HTMLElement;
+  private readonly o: OptionsCarte;
 
-  constructor(disp: Disposition, moi: Personne, focus?: FocusArbre) {
+  constructor(disp: Disposition, moi: Personne, o: OptionsCarte) {
     this.disp = disp;
     this.moi = moi;
+    this.o = o;
+    this.puces.set('afficher', o.bouton);
     const pos = positions(disp);
     this.largeur = pos.largeur;
     this.hauteur = pos.hauteur;
@@ -225,11 +292,22 @@ class Carte {
       this.familles.some((f) => !f.amis) && this.puceListe('familles', 'Familles', 'famille'),
       this.cadres.length > 0 && this.puceListe('amis', 'Amis', 'ami'),
     );
+    const libelle = AFFICHAGES.find((a) => a.valeur === o.affichage)?.pastille;
+    // Filtre actif : rappelé en haut de la carte ; un toucher revient à tout l'arbre.
+    const pastille =
+      libelle &&
+      h(
+        'button',
+        { type: 'button', class: 'pastille-filtre', 'aria-label': `${libelle} : revenir à tout l’arbre`, onclick: () => o.choisir('tout') },
+        h('span', {}, libelle),
+        icone('croix', 18),
+      );
     this.vue = h(
       'div',
       { class: 'vue-arbre' },
       this.calque,
       astuce,
+      pastille,
       this.feuille,
       this.barreBas,
       h(
@@ -257,8 +335,9 @@ class Carte {
         this.v = vueGardee ? { ...vueGardee } : this.surPersonne(moi.id, 1);
         this.appliquer();
         // Arrivée depuis une pop-up de l'accueil : saut sur la zone (la vue de départ va sur la pile de « Revenir »).
-        const cap = this.zoneDe(focus);
+        const cap = this.zoneDe(o.focus);
         if (cap) this.sauter(this.surZone(cap.zone), undefined, cap.cibles);
+        if (o.cible && this.noeuds.has(o.cible)) this.montrer(o.cible);
       }
       this.appliquer();
     });
@@ -361,12 +440,39 @@ class Carte {
     if (this.puces.has(quoi) && this.feuilleOuverte !== quoi) this.basculerFeuille(quoi);
   }
 
-  private basculerFeuille(quoi: 'familles' | 'amis'): void {
+  basculerAffichage(): void {
+    this.basculerFeuille('afficher');
+  }
+
+  /** Feuille « Afficher » : tout l'arbre, ou la ligne directe de Moi à trois niveaux (ligneDirecte.ts). */
+  private choixAffichage(): HTMLElement[] {
+    const lignes = AFFICHAGES.map((a) =>
+      h(
+        'label',
+        { class: 'ligne-choix' },
+        h('input', { type: 'radio', name: 'affichage', value: a.valeur, checked: a.valeur === this.o.affichage, onchange: () => this.o.choisir(a.valeur) }),
+        h('span', {}, h('strong', {}, a.libelle), h('small', {}, a.detail)),
+      ),
+    );
+    const note = this.o.sansParents ? 'Ajoute tes parents pour voir ta lignée.' : 'Les personnes cachées restent trouvables avec la loupe.';
+    return [
+      h('h2', {}, 'Afficher'),
+      h('fieldset', { class: 'choix-affichage' }, h('legend', { class: 'sr-only' }, 'Qui montrer dans l’arbre'), ...lignes),
+      h('p', { class: 'note-feuille' }, note),
+    ];
+  }
+
+  private basculerFeuille(quoi: Feuille): void {
     const etait = this.feuilleOuverte;
     this.fermerFeuille();
     if (etait === quoi) return;
     this.feuilleOuverte = quoi;
     this.puces.get(quoi)?.setAttribute('aria-expanded', 'true');
+    if (quoi === 'afficher') {
+      this.feuille.replaceChildren(...this.choixAffichage());
+      this.feuille.classList.add('ouverte');
+      return;
+    }
     const ligne = (pastille: HTMLElement, nom: string, detail: string, zone: Zone, cibles: string[]) =>
       h(
         'button',
@@ -731,14 +837,39 @@ class Carte {
       return;
     }
     const personnes = this.disp.places.map((p) => p.personne).filter((p) => !estVirtuel(p.id));
+    // Filtre actif : les personnes cachées viennent après, marquées ; les toucher revient à tout l'arbre.
+    const ici = new Set(personnes);
+    let cachees: Personne[] | undefined;
+    const horsFiltre = () => {
+      if (this.o.affichage === 'tout') return [];
+      const ids = new Set(personnes.map((p) => p.id));
+      return (cachees ??= this.o
+        .toutLArbre()
+        .places.map((p) => p.personne)
+        .filter((p) => !estVirtuel(p.id) && !ids.has(p.id)));
+    };
     const liste = h('ul', {});
     const champ = h('input', { type: 'search', placeholder: 'Prénom ou nom', 'aria-label': 'Chercher une personne', enterkeyhint: 'search' });
     const remplir = () => {
-      const trouves = champ.value.trim() ? filtrerParNom(personnes, champ.value) : [];
+      const trouves = champ.value.trim() ? [...filtrerParNom(personnes, champ.value), ...filtrerParNom(horsFiltre(), champ.value)] : [];
       liste.replaceChildren(
         ...trouves
           .slice(0, 8)
-          .map((p) => h('li', {}, h('button', { type: 'button', onclick: () => this.montrer(p.id) }, avatarPersonne(p), nomComplet(p) || 'Sans nom'))),
+          .map((p) =>
+            h(
+              'li',
+              {},
+              ici.has(p)
+                ? h('button', { type: 'button', onclick: () => this.montrer(p.id) }, avatarPersonne(p), nomComplet(p) || 'Sans nom')
+                : h(
+                    'button',
+                    { type: 'button', class: 'hors-filtre', onclick: () => this.o.choisir('tout', p.id) },
+                    avatarPersonne(p),
+                    h('span', {}, nomComplet(p) || 'Sans nom'),
+                    h('small', {}, 'hors ligne directe'),
+                  ),
+            ),
+          ),
       );
     };
     champ.addEventListener('input', remplir);

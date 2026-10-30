@@ -4,6 +4,7 @@
 // Les personnes sans lien avec Moi ne sont pas placées. Le placement d'une partie est dans partie.ts.
 
 import { nomGroupe } from './deductions';
+import { restreindre } from './ligneDirecte';
 import { couleurFamille } from './liste';
 import { avecParentsSansNom, estParentSansNom } from './parentSansNom';
 import { disposerPartie, ECART_FAMILLES, lier, type Bloc, type Voisins } from './partie';
@@ -342,9 +343,13 @@ function anneauxDeGroupe(gr: Graphe, places: PlaceArbre[]): Disposition['anneaux
   });
 }
 
-export function disposerArbre(donnees: Donnees, moi: string): Disposition {
+/**
+ * `garder` (filtre « Ligne directe », ligneDirecte.ts) réduit l'arbre à ces personnes, sans amis ; les couleurs et les
+ * étiquettes de familles restent calculées sur toutes les données, pour ne pas changer d'un affichage à l'autre.
+ */
+export function disposerArbre(donnees: Donnees, moi: string, garder?: Set<string>): Disposition {
   // Un enfant qui n'a qu'un parent reçoit un autre parent « ? », dessiné à côté (voir parentSansNom.ts).
-  const d = avecParentsSansNom(donnees);
+  const d = avecParentsSansNom(garder ? restreindre(donnees, garder) : donnees);
   const gr = graphe(d, moi);
   const { personnes } = gr;
   if (!personnes.has(moi)) return { places: [], couples: [], branches: [], amities: [], groupes: [], etiquettes: [], anneaux: [] };

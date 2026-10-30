@@ -490,6 +490,99 @@ button.bouton-icone {
   border: 3px solid;
 }
 
+/* Feuille « Afficher » (filtre « Ligne directe ») : un choix par ligne, le libellé au-dessus de son aide. */
+.choix-affichage {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ligne-choix {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--rayon-s);
+  cursor: pointer;
+}
+
+.ligne-choix:has(input:checked) {
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+.ligne-choix input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+.ligne-choix span {
+  display: grid;
+  gap: 2px;
+}
+
+.ligne-choix strong {
+  font-weight: var(--gras);
+}
+
+.ligne-choix small {
+  color: var(--secondaire);
+  font-size: var(--t2);
+}
+
+.ligne-choix:has(input:checked) small {
+  color: inherit;
+}
+
+.note-feuille {
+  margin: 8px 12px 4px;
+  color: var(--secondaire);
+  font-size: var(--t1);
+}
+
+/* Filtre actif : le bouton du haut sur fond clair, et un rappel en haut de la carte dont le ✕ revient à tout l'arbre. */
+.ecran-arbre button.bouton-icone.actif {
+  border-radius: 50%;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+}
+
+.pastille-filtre {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  min-height: 36px;
+  padding: 0 8px 0 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--accent-clair);
+  color: var(--accent-texte);
+  font: inherit;
+  font-size: var(--t2);
+  font-weight: var(--gras);
+  box-shadow: var(--ombre-basse);
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+
+.pastille-filtre span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pastille-filtre svg {
+  flex: none;
+}
+
 .rond-arbre {
   width: 44px;
   height: 44px;
@@ -587,6 +680,14 @@ button.bouton-icone {
 
 .recherche-arbre li button:active {
   background: var(--accent-clair);
+}
+
+/* Personne cachée par le filtre « Ligne directe » : la toucher revient à tout l'arbre. */
+.recherche-arbre li button.hors-filtre small {
+  margin-left: auto;
+  color: var(--secondaire);
+  font-size: var(--t1);
+  white-space: nowrap;
 }
 
 .recherche-arbre .avatar {

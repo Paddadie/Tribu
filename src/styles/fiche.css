@@ -316,6 +316,12 @@ fieldset.champ legend {
   gap: 8px;
 }
 
+/* Quatre options ou plus : deux colonnes, pour que les libellés longs restent lisibles sur téléphone. */
+.choix-groupe.grille {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 .choix-groupe .choix {
   flex: 1;
   position: relative;

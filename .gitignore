@@ -12,3 +12,6 @@ exports/
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+
+# Maquettes : tes données et les captures qui en sont faites restent locales
+mockups/local/

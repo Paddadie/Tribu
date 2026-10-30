@@ -1,8 +1,8 @@
 # État en cours
 
-Dernier commit : 7a518ec (export PNG plus net). À commiter : « Qui suivre » (Réglages › Données, variante A) : 1086 tests, `tsc`, build et `prettier --check` verts au 30/10 ; 0 capture changée sur 202, captures 12-qui-suivre et 13-modifier-loin ajoutées (téléphone).
-- Cercles depuis Moi (`modele/suivi.ts`), cases Rappels / À compléter, préréglages Tout le monde (défaut) / Famille proche ; exceptions par fiche (`avecRappel`, `signalerIncomplet`) ; l'export .ics suit les rappels.
-- À regarder par Paul : la grille sur ses données réelles ; les trois puces passent sur deux lignes sur téléphone (« Sur mesure » seule dessous).
+Dernier commit : ee348a3 (Qui suivre). À commiter : filtre « Ligne directe » de l'arbre global (maquette 3sFMJK2gbDhR1cjd1zVR73) : 1118 tests, `tsc` et build verts au 30/10 ; captures : arbres changés par la nouvelle icône de la barre, 14-ligne-directe (3 appareils), 15-afficher et 16-export-png (téléphone) ajoutées.
+- `modele/ligneDirecte.ts` (niveaux, `restreindre`), `disposerArbre(d, moi, garder?)` ; feuille « Afficher », pastille, loupe sur les cachés ; export PNG « Personnes à dessiner » (2 × 2).
+- À regarder par Paul : le filtre sur ses données réelles ; le dossier `mockups/` non suivi fait échouer `format:check`.
 
 ## Passe qualité technique (refactor pur, sans changement visible) — 7 étapes faites
 - Étapes : 1 Prettier · 2 utilitaires uniques · 3 code mort · 4 découpe de fiche.css · 5 `barreEcran` / `boutonRetour` · 6 Réglages par onglet · 7 modele.ts par sujet. Décisions : DECISIONS.md.

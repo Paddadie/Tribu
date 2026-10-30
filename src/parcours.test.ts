@@ -1330,6 +1330,116 @@ describe('arbre global', () => {
   });
 });
 
+describe('arbre : filtre « Ligne directe »', () => {
+  /** Chloé (Moi), fille d'Anne et Bruno, sœur d'Emma ; Gilles, père de Bruno et de Lancelot ; Iris, fille de Lancelot ; Karim, ami. */
+  function lignee() {
+    let { donnees: d, ids } = famille();
+    for (const prenom of ['Emma', 'Gilles', 'Lancelot', 'Iris', 'Karim']) {
+      const r = creerPersonne(d, { prenom, nom: prenom === 'Karim' ? 'Amrani' : 'Martin' });
+      [d, ids[prenom]] = [r.donnees, r.personne.id];
+    }
+    for (const [parent, enfant] of [
+      ['Anne', 'Emma'],
+      ['Bruno', 'Emma'],
+      ['Gilles', 'Bruno'],
+      ['Gilles', 'Lancelot'],
+      ['Lancelot', 'Iris'],
+    ])
+      d = ajouterFiliation(d, ids[parent], ids[enfant], 'biologique').donnees;
+    d = creerGroupe(d, [ids.Karim], '', ids.Chloé).donnees;
+    return { donnees: d, ids };
+  }
+  const places = () =>
+    [...ecran().querySelectorAll<HTMLAnchorElement>('.calque a.noeud')].map((a) => a.getAttribute('href')!).filter((h) => h.startsWith('#/personne/'));
+  const afficher = () => ecran().querySelector<HTMLElement>('.barre button.filtre-arbre')!;
+  const choisirAffichage = async (libelle: string) => {
+    await toucher(afficher());
+    const radio = trouver('.feuille-arbre label.ligne-choix', libelle, ecran()).querySelector<HTMLInputElement>('input')!;
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+    await pause();
+  };
+  const pastille = () => ecran().querySelector<HTMLElement>('.pastille-filtre');
+
+  it('la feuille « Afficher » propose quatre choix ; « + leurs frères et sœurs » garde oncles et sœur, sans cousins ni amis', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    expect(afficher().classList.contains('actif')).toBe(false);
+    expect(pastille()).toBeNull();
+    await toucher(afficher());
+    expect(afficher().getAttribute('aria-expanded')).toBe('true');
+    expect([...ecran().querySelectorAll('.feuille-arbre label.ligne-choix strong')].map((e) => e.textContent)).toEqual([
+      'Tout l’arbre',
+      'Ligne directe',
+      '+ leurs frères et sœurs',
+      '+ leurs conjoints',
+    ]);
+    expect(ecran().querySelector('.feuille-arbre .note-feuille')?.textContent).toBe('Les personnes cachées restent trouvables avec la loupe.');
+    await toucher(afficher());
+    await choisirAffichage('+ leurs frères et sœurs');
+    expect(places().sort()).toEqual(['Anne', 'Bruno', 'Chloé', 'Emma', 'Gilles', 'Lancelot'].map((n) => `#/personne/${ids[n]}`).sort());
+    expect(pastille()?.textContent).toBe('Ligne directe + frères et sœurs');
+    expect(afficher().classList.contains('actif')).toBe(true);
+    expect(ecran().querySelector('.zone-amis')).toBeNull();
+    expect(() => trouver('.commandes-arbre button', 'Amis', ecran())).toThrow();
+  });
+
+  it('le filtre tient au retour d’une fiche ; la pastille revient à tout l’arbre', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    await choisirAffichage('Ligne directe');
+    expect(places()).not.toContain(`#/personne/${ids.Emma}`);
+    await toucher(ecran().querySelector<HTMLElement>(`.calque a[href="#/personne/${ids.Anne}"]`)!);
+    await retour();
+    await pause();
+    expect(titre()).toBe('Arbre');
+    expect(pastille()?.textContent).toBe('Ligne directe');
+    expect(places()).not.toContain(`#/personne/${ids.Emma}`);
+    await toucher(pastille()!);
+    expect(pastille()).toBeNull();
+    expect(places()).toContain(`#/personne/${ids.Iris}`);
+    expect(afficher().classList.contains('actif')).toBe(false);
+  });
+
+  it('la loupe trouve aussi les personnes cachées ; en toucher une revient à tout l’arbre', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    await choisirAffichage('Ligne directe');
+    await toucher(ecran().querySelector<HTMLElement>('.barre button[aria-label="Chercher une personne"]')!);
+    const champ = ecran().querySelector<HTMLInputElement>('.recherche-arbre input')!;
+    champ.value = 'iris';
+    champ.dispatchEvent(new Event('input'));
+    const trouve = ecran().querySelector<HTMLElement>('.recherche-arbre li button')!;
+    expect(trouve.textContent).toBe('IMIris Martinhors ligne directe');
+    await toucher(trouve);
+    expect(pastille()).toBeNull();
+    expect(places()).toContain(`#/personne/${ids.Iris}`);
+  });
+
+  it('sans parents, la feuille invite à en ajouter', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer(donnees, '#/arbre', { moi: ids.Gilles });
+    await toucher(afficher());
+    expect(ecran().querySelector('.feuille-arbre .note-feuille')?.textContent).toBe('Ajoute tes parents pour voir ta lignée.');
+  });
+
+  it('l’export PNG reprend le filtre de l’arbre et peut en changer', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
+    await choisirAffichage('+ leurs frères et sœurs');
+    location.hash = '#/reglages/exports';
+    await pause();
+    const coche = () => ecran().querySelector<HTMLInputElement>('input[name="affichage-png"]:checked')?.value;
+    const resume = () => trouver('p.secondaire', 'image d’environ', ecran()).textContent;
+    expect(coche()).toBe('fratries');
+    expect(resume()).toMatch(/^6 personnes · /);
+    const tout = trouver('label.choix', 'Tout l’arbre', ecran()).querySelector<HTMLInputElement>('input')!;
+    tout.checked = true;
+    tout.dispatchEvent(new Event('change'));
+    expect(resume()).toMatch(/^9 personnes · /);
+  });
+});
+
 describe('accueil, agenda et dates', () => {
   const deux = (n: number) => String(n).padStart(2, '0');
   /** Date dans `jours` jours, `ans` ans plus tôt, au format « AAAA-MM-JJ ». */
