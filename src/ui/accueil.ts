@@ -23,7 +23,7 @@ import { importerJson } from '../modele/stockage';
 import type { Donnees, Personne } from '../modele/types';
 import { changerAvecAnnulation, rafraichirEcran } from './annulation';
 import { h, icone } from './dom';
-import { lireDonnees, lireReglages } from './etat';
+import { lireDonnees, lireReglages, suiviCourant } from './etat';
 import { messageImport } from './import';
 import { disposerArbre } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
@@ -202,7 +202,7 @@ function vignette(e: Evenement, aujourdhui: Date): HTMLElement {
 
 /** Rien dans les 30 jours : la prochaine date de l'année, s'il y en a une. */
 function calme(d: Donnees, aujourdhui: Date): HTMLElement {
-  const prochaine = evenementsAVenir(d, aujourdhui, 365, { fetes: false }).find((e) => e.dans > HORIZON && e.genre !== 'deces');
+  const prochaine = evenementsAVenir(d, aujourdhui, 365, { fetes: false, ...suiviCourant(d) }).find((e) => e.dans > HORIZON && e.genre !== 'deces');
   const quoi = prochaine && (prochaine.genre === 'anniversaire' ? libelleAnnees(prochaine.annees) || 'anniversaire' : detailEvenement(prochaine));
   return h(
     'div',
@@ -351,7 +351,7 @@ function raccourcis(d: Donnees, listees: Personne[], moi: Personne | undefined):
 
 function sommaire(d: Donnees, moi: Personne | undefined, listees: Personne[]): HTMLElement[] {
   const aujourdhui = new Date();
-  const evs = evenementsAVenir(d, aujourdhui, HORIZON, { fetes: lireReglages().fetes });
+  const evs = evenementsAVenir(d, aujourdhui, HORIZON, { fetes: lireReglages().fetes, ...suiviCourant(d) });
   const duJour = evs.filter((e) => e.dans === 0);
   const deces = evs.filter((e) => e.genre === 'deces' && e.dans <= 1);
   return [

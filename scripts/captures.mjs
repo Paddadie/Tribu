@@ -262,6 +262,9 @@ try {
             if (r) document.querySelector('.vue-arbre').dispatchEvent(new WheelEvent('wheel', { deltaY: -400, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, bubbles: true, cancelable: true }));
           })()`;
           await capture(`${fam}-${nom}-11-arbre-pres`, '#/arbre', theme, pres, hauteur, o);
+          // « Qui suivre » : la grille des cercles, et les interrupteurs d'une fiche qui suit son cercle.
+          await capture(`${fam}-${nom}-12-qui-suivre`, '#/reglages/donnees', theme, '', 1700, o);
+          if (loin) await capture(`${fam}-${nom}-13-modifier-loin`, `#/modifier/${loin}`, theme, '', 1700, o);
         }
     }
   } else if (mode === 'maquettes') {

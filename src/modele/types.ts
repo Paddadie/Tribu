@@ -30,6 +30,9 @@ export interface Personne {
   ignorerIncomplet?: true;
   /** Aucun rappel (anniversaire, fête, décès, unions où elle figure). */
   sansRappel?: true;
+  /** Exceptions à « Qui suivre » (suivi.ts) : signalée ou rappelée même hors des cercles suivis ; jamais avec leur contraire. */
+  signalerIncomplet?: true;
+  avecRappel?: true;
   /**
    * Parent inconnu : personne sans nom créée en coulisse pour relier des frères et sœurs dont on ignore les parents.
    * Elle compte dans les déductions mais n'apparaît jamais (listes, fiches, arbres) ; voir `estInconnu`.

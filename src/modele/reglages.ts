@@ -1,7 +1,8 @@
-// Réglages de l'appli (tri de la liste, thème, date du dernier export, fiche « Moi »), mémorisés dans localStorage sous
+// Réglages de l'appli (tri de la liste, thème, date du dernier export, fiche « Moi », « Qui suivre »), mémorisés dans localStorage sous
 // leur propre clé : un import ou un effacement des données ne les touche pas.
 
 import type { Tri } from './liste';
+import { lireCercles, SUIVI_TOUT, type Suivi } from './suivi';
 import type { Donnees, Personne } from './types';
 
 export type Theme = 'auto' | 'clair' | 'sombre';
@@ -17,13 +18,23 @@ export interface Reglages {
   fetes: boolean;
   /** Fêtes du prénom dans l'export .ics (non par défaut : une par personne, ça fait beaucoup). */
   fetesDansIcs: boolean;
+  /** Cercles suivis pour les rappels et « À compléter » (suivi.ts) ; tous par défaut. */
+  suivi: Suivi;
 }
 
 export const CLE_REGLAGES = 'tribu:reglages';
 
 type Magasin = Pick<Storage, 'getItem' | 'setItem'>;
 
-export const REGLAGES_PAR_DEFAUT: Reglages = { tri: 'prenom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false };
+export const REGLAGES_PAR_DEFAUT: Reglages = {
+  tri: 'prenom',
+  theme: 'auto',
+  dernierExport: null,
+  moi: null,
+  fetes: true,
+  fetesDansIcs: false,
+  suivi: SUIVI_TOUT,
+};
 
 /** Charge les réglages ; chaque valeur absente ou inconnue retombe sur sa valeur par défaut. */
 export function chargerReglages(magasin: Magasin): Reglages {
@@ -38,10 +49,16 @@ export function chargerReglages(magasin: Magasin): Reglages {
       moi: typeof o.moi === 'string' && o.moi !== '' ? o.moi : null,
       fetes: typeof o.fetes === 'boolean' ? o.fetes : REGLAGES_PAR_DEFAUT.fetes,
       fetesDansIcs: typeof o.fetesDansIcs === 'boolean' ? o.fetesDansIcs : REGLAGES_PAR_DEFAUT.fetesDansIcs,
+      suivi: lireSuivi(o.suivi),
     };
   } catch {
     return { ...REGLAGES_PAR_DEFAUT };
   }
+}
+
+function lireSuivi(v: unknown): Suivi {
+  const o = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {};
+  return { rappels: lireCercles(o.rappels, SUIVI_TOUT.rappels), completer: lireCercles(o.completer, SUIVI_TOUT.completer) };
 }
 
 export function sauvegarderReglages(magasin: Magasin, reglages: Reglages): void {

@@ -2,6 +2,7 @@
 // Fonctions pures, testables sans navigateur.
 
 import { MOTIF_SANS_ANNEE } from './modele';
+import { SUIVI_TOUT, suivis, type Suivi } from './suivi';
 import type { Donnees, Personne } from './types';
 
 export type Filtre = 'tous' | 'famille' | 'amis' | 'groupe' | 'acompleter';
@@ -76,8 +77,11 @@ export function familleDe(d: Donnees, moi: string): Set<string> {
   return vus;
 }
 
-/** Garde les personnes qui répondent au critère. `moi` : la famille se compte depuis lui, et il n'est pas un « ami proche ». */
-export function filtrerListe(d: Donnees, personnes: Personne[], critere: Critere, moi?: string): Personne[] {
+/**
+ * Garde les personnes qui répondent au critère. `moi` : la famille se compte depuis lui, et il n'est pas un « ami proche ».
+ * `suivi` (« Qui suivre ») : cercles signalés dans « À compléter » ; sans lui, tous.
+ */
+export function filtrerListe(d: Donnees, personnes: Personne[], critere: Critere, moi?: string, suivi?: Suivi): Personne[] {
   switch (critere.filtre) {
     case 'famille': {
       if (!moi) return personnes;
@@ -95,9 +99,10 @@ export function filtrerListe(d: Donnees, personnes: Personne[], critere: Critere
     }
     case 'acompleter': {
       const voulus = critere.manques;
-      // « Ne plus me la signaler » : la fiche garde ses manques, seul ce filtre l'écarte.
+      // Fiche non signalée (cercle non suivi, « Ne plus me la signaler ») : elle garde ses manques, seul ce filtre l'écarte.
+      const s = suivis(d, moi, suivi ?? SUIVI_TOUT);
       return personnes.filter((p) => {
-        if (p.ignorerIncomplet) return false;
+        if (!s.signale(p)) return false;
         const m = manquesDe(p);
         return voulus && voulus.size > 0 ? m.some((x) => voulus.has(x)) : m.length > 0;
       });

@@ -35,10 +35,12 @@ export interface ChampsPersonne {
   lieuDeces?: string;
   ignorerIncomplet?: boolean;
   sansRappel?: boolean;
+  signalerIncomplet?: boolean;
+  avecRappel?: boolean;
 }
 
 /** Champs que tous les écrans n'envoient pas (création rapide, import ancien) : absents de `ChampsPersonne`, `modifierPersonne` les garde. */
-const CHAMPS_GARDES = ['lieuNaissance', 'lieuDeces', 'ignorerIncomplet', 'sansRappel'] as const;
+const CHAMPS_GARDES = ['lieuNaissance', 'lieuDeces', 'ignorerIncomplet', 'sansRappel', 'signalerIncomplet', 'avecRappel'] as const;
 
 /** Décédée : interrupteur allumé, ou date de décès connue (données d'avant l'interrupteur). */
 export function estDecede(p: Pick<Personne, 'deces' | 'decede'>): boolean {
@@ -105,6 +107,9 @@ function normaliser(champs: ChampsPersonne): Omit<Personne, 'id'> {
     note: champs.note ?? '',
     ...(champs.ignorerIncomplet ? { ignorerIncomplet: true as const } : {}),
     ...(champs.sansRappel ? { sansRappel: true as const } : {}),
+    // Une exception et son contraire ne vont pas ensemble : l'éteint l'emporte.
+    ...(champs.signalerIncomplet && !champs.ignorerIncomplet ? { signalerIncomplet: true as const } : {}),
+    ...(champs.avecRappel && !champs.sansRappel ? { avecRappel: true as const } : {}),
   };
 }
 

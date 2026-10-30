@@ -6,11 +6,10 @@ import { MANQUES, filtrerListe, manquesDe, type Filtre, type Manque } from '../m
 import type { Personne } from '../modele/types';
 import { nomGroupe } from '../modele/deductions';
 import { personnesListees } from '../modele/modele';
-import { ficheMoi } from '../modele/reglages';
 import { accueilVide } from './accueil';
 import { h, icone } from './dom';
 import { boutonRetour } from './ecran';
-import { lireDonnees, lireReglages } from './etat';
+import { lireDonnees, lireReglages, suiviCourant } from './etat';
 import { contenuLigne } from './lignePersonne';
 
 // Le filtre survit à l'aller-retour liste → fiche → liste.
@@ -39,9 +38,9 @@ function ligne(p: Personne, tri: Tri): HTMLElement {
 
 function fichesFiltrees(): Personne[] {
   const d = lireDonnees();
-  const moi = ficheMoi(lireReglages(), d)?.id;
+  const { moi, suivi } = suiviCourant(d);
   const criteres = { filtre: puce, groupe: groupeChoisi, manques: manquesChoisis };
-  return filtrerListe(d, filtrerParNom(personnesListees(d), filtre), criteres, moi);
+  return filtrerListe(d, filtrerParNom(personnesListees(d), filtre), criteres, moi, suivi);
 }
 
 function liste(): HTMLElement[] {
@@ -115,9 +114,10 @@ export function ecranPersonnes(): HTMLElement {
   };
 
   const d = lireDonnees();
-  const moi = ficheMoi(lireReglages(), d)?.id;
-  // Manques réellement présents dans la liste : un filtre sans personne n'est pas proposé.
-  const manquesPresents = new Set(personnesListees(d).flatMap(manquesDe));
+  const { moi, suivi } = suiviCourant(d);
+  // Manques réellement présents parmi les fiches signalées : un filtre sans personne n'est pas proposé.
+  const signalees = filtrerListe(d, personnesListees(d), { filtre: 'acompleter' }, moi, suivi);
+  const manquesPresents = new Set(signalees.flatMap(manquesDe));
   const manquesDispo = MANQUES.filter((m) => manquesPresents.has(m.manque));
   for (const m of [...manquesChoisis]) if (!manquesPresents.has(m)) manquesChoisis.delete(m);
   if (puce === 'acompleter' && manquesDispo.length === 0) puce = 'tous';

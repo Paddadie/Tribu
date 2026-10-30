@@ -1,21 +1,24 @@
 // Écran Réglages : affichage (tri de la liste, thème), exports (agenda .ics, arbre en PNG), sauvegarde (export par
 // partage ou téléchargement, import JSON fusionné avec les données, questions en cas de conflit),
-// effacement des données, version. Import et effacement sont annulables.
+// « Qui suivre » (cercles des rappels et de « À compléter »), effacement des données, version. Import et effacement
+// sont annulables.
 
 import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from '../modele/agenda';
 import { disposerArbre } from '../modele/arbreGlobal';
 import type { Tri } from '../modele/liste';
-import { donneesVides, personnesVisibles } from '../modele/modele';
+import { filtrerListe } from '../modele/filtres';
+import { donneesVides, personnesListees, personnesVisibles } from '../modele/modele';
 import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { FusionAnnulee, fusionner } from '../modele/fusion';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
+import { CERCLES, cercleDe, memeSuivi, SUIVI_FAMILLE_PROCHE, SUIVI_TOUT, suivis, type Cercle, type Suivi } from '../modele/suivi';
 import { changerAvecAnnulation } from './annulation';
 import { choisir } from './choisir';
 import { ouvrirChoixMoi } from './choixMoi';
 import { confirmer } from './confirmer';
 import { h, icone, type Enfant } from './dom';
 import { barreEcran } from './ecran';
-import { lireDonnees, lireReglages, modifierReglages } from './etat';
+import { lireDonnees, lireReglages, modifierReglages, suiviCourant } from './etat';
 import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { remplacer } from './navigation';
@@ -151,7 +154,7 @@ function ongletExports(majTout: () => void): Onglet {
 
   const maj = () => {
     const n = personnesVisibles(lireDonnees()).length;
-    const bilan = bilanAgenda(evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs }));
+    const bilan = bilanAgenda(evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs, ...suiviCourant() }));
     const total = bilan.naissances + bilan.deces + bilan.unions + bilan.fetes;
     resumeAgenda.textContent =
       total === 0
@@ -167,7 +170,7 @@ function ongletExports(majTout: () => void): Onglet {
   };
 
   const exporterAgenda = async () => {
-    const evenements = evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs });
+    const evenements = evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs, ...suiviCourant() });
     if (evenements.length === 0) return;
     try {
       const issue = await exporterFichier(NOM_FICHIER_AGENDA, construireIcs(evenements, new Date()), 'text/calendar');
@@ -342,7 +345,123 @@ function ongletSauvegarde(majTout: () => void): Onglet {
 }
 
 /** Données : vérification, effacement (annulable), version. `majTout` : après un effacement. */
+/**
+ * « Qui suivre » : une ligne par cercle (lien avec « Moi »), une case pour les rappels et une pour « À compléter » ;
+ * préréglages au-dessus, bilan dessous. Sans « Moi », pas de cercle : tout le monde est suivi.
+ */
+function quiSuivre(majTout: () => void): Onglet {
+  const prereglages: [string, Suivi | undefined][] = [
+    ['Tout le monde', SUIVI_TOUT],
+    ['Famille proche', SUIVI_FAMILLE_PROCHE],
+    ['Sur mesure', undefined],
+  ];
+  const cases: { quoi: keyof Suivi; cercle: Cercle; boite: HTMLInputElement }[] = [];
+  const nombres = new Map<Cercle, HTMLElement>();
+  const changer = (suivi: Suivi) => {
+    modifierReglages({ suivi });
+    etat();
+  };
+  const caseSuivi = (quoi: keyof Suivi, cercle: Cercle, libelle: string) => {
+    const boite = h('input', {
+      type: 'checkbox',
+      class: 'case-suivi',
+      'aria-label': `${quoi === 'rappels' ? 'Rappels' : 'À compléter'} : ${libelle}`,
+      onchange: () => {
+        const suivi = lireReglages().suivi;
+        changer({ ...suivi, [quoi]: { ...suivi[quoi], [cercle]: boite.checked } });
+      },
+    });
+    cases.push({ quoi, cercle, boite });
+    return boite;
+  };
+  // « Sur mesure » n'est qu'un état (aucun préréglage ne correspond) : le toucher mène aux cases.
+  const puces = prereglages.map(([libelle, suivi]) =>
+    h('button', { type: 'button', class: 'puce', onclick: () => (suivi ? changer(suivi) : cases[0]?.boite.focus()) }, libelle),
+  );
+  const colonne = (nom: 'cloche' | 'crayon', libelle: string) => h('span', { class: 'colonne-suivi' }, icone(nom, 18), libelle);
+  const grille = h(
+    'div',
+    { class: 'carte grille-suivi' },
+    h(
+      'div',
+      { class: 'ligne-suivi entete-suivi' },
+      h('span', { class: 'secondaire' }, 'Lien avec toi'),
+      colonne('cloche', 'Rappels'),
+      colonne('crayon', 'À compléter'),
+    ),
+    ...CERCLES.map(({ cercle, libelle, detail }) => {
+      const nombre = h('span', { class: 'secondaire' });
+      nombres.set(cercle, nombre);
+      return h(
+        'div',
+        { class: 'ligne-suivi' },
+        h(
+          'span',
+          { class: 'ligne-texte' },
+          h('span', {}, h('span', { class: 'ligne-nom' }, libelle), ' ', nombre),
+          detail && h('span', { class: 'secondaire' }, detail),
+        ),
+        caseSuivi('rappels', cercle, libelle),
+        caseSuivi('completer', cercle, libelle),
+      );
+    }),
+  );
+  const bilan = h('p', { class: 'bilan-suivi', 'aria-live': 'polite' });
+  const avecMoi = h(
+    'div',
+    { class: 'qui-suivre' },
+    h('div', { class: 'puces-suivi', role: 'group', 'aria-label': 'Préréglages' }, ...puces),
+    grille,
+    h(
+      'p',
+      { class: 'secondaire aide-section' },
+      'Toi et ton conjoint : toujours suivis. ',
+      h('b', {}, 'Rappels'),
+      ' : anniversaires, fêtes et unions sur l’accueil, l’agenda et l’export .ics. ',
+      h('b', {}, 'À compléter'),
+      ' : fiche signalée s’il manque un nom ou une date ; décochée, elle compte comme complète. Chaque fiche peut faire exception (Modifier).',
+    ),
+    bilan,
+  );
+  const sansMoi = h(
+    'div',
+    { class: 'qui-suivre' },
+    h('p', { class: 'secondaire aide-section' }, 'Les cercles se comptent depuis ta fiche. En attendant, tout le monde est suivi.'),
+    h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixMoi(majTout) }, 'Choisir ma fiche'),
+  );
+
+  /** Cases, préréglage actif et bilan, d'après les réglages et les données du moment. */
+  const etat = () => {
+    const d = lireDonnees();
+    const { moi, suivi } = suiviCourant(d);
+    for (const c of cases) c.boite.checked = suivi[c.quoi][c.cercle];
+    const actif = prereglages.findIndex(([, s]) => !s || memeSuivi(s, suivi));
+    puces.forEach((p, i) => p.setAttribute('aria-pressed', String(i === actif)));
+    const autres = personnesListees(d).filter((p) => p.id !== moi);
+    const s = suivis(d, moi, suivi);
+    const signalees = filtrerListe(d, autres, { filtre: 'acompleter' }, moi, suivi).length;
+    bilan.textContent = `Suivis : ${autres.filter(s.rappel).length} sur ${autres.length} · à compléter : ${signalees} fiche${signalees > 1 ? 's' : ''}`;
+  };
+  const maj = () => {
+    const d = lireDonnees();
+    const moi = suiviCourant(d).moi;
+    avecMoi.hidden = !moi;
+    sansMoi.hidden = !!moi;
+    if (!moi) return;
+    const parCercle = new Map<Cercle, number>();
+    for (const p of personnesListees(d)) {
+      const c = cercleDe(d, moi, p.id);
+      if (c) parCercle.set(c, (parCercle.get(c) ?? 0) + 1);
+    }
+    for (const [cercle, el] of nombres) el.textContent = `· ${parCercle.get(cercle) ?? 0}`;
+    etat();
+  };
+  const contenu = [h('section', { class: 'groupe-reglages' }, h('h2', { class: 'titre-section' }, 'Qui suivre'), avecMoi, sansMoi)];
+  return { contenu, maj };
+}
+
 function ongletDonnees(majTout: () => void): Onglet {
+  const suivi = quiSuivre(majTout);
   const erreurEffacement = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
   const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
@@ -351,6 +470,7 @@ function ongletDonnees(majTout: () => void): Onglet {
     const n = personnesVisibles(lireDonnees()).length;
     boutonEffacer.disabled = n === 0;
     aideEffacer.hidden = n > 0;
+    suivi.maj();
   };
 
   const effacer = async () => {
@@ -371,6 +491,7 @@ function ongletDonnees(majTout: () => void): Onglet {
   const date = new Date(__BUILD_DATE__).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
   const contenu = [
+    ...suivi.contenu,
     h(
       'section',
       { class: 'groupe-reglages' },
@@ -437,6 +558,8 @@ export function ecranReglages(onglet?: string): HTMLElement {
   );
   const onglets = h('div', { class: 'onglets', role: 'tablist' }, ...boutons);
   const ouvrirOnglet = (id: OngletReglages) => {
+    // « Moi » a pu changer dans Général : « Qui suivre » en dépend.
+    contenus[id].maj();
     for (const o of ONGLETS_REGLAGES) {
       document.getElementById(`panneau-${o.id}`)!.hidden = o.id !== id;
       document.getElementById(`onglet-${o.id}`)!.setAttribute('aria-selected', String(o.id === id));

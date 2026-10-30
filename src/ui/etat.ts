@@ -5,7 +5,8 @@
 // l'utilisateur n'a pas choisi de repartir à vide.
 
 import { donneesVides } from '../modele/modele';
-import { chargerReglages, sauvegarderReglages, type Reglages } from '../modele/reglages';
+import { chargerReglages, ficheMoi, sauvegarderReglages, type Reglages } from '../modele/reglages';
+import type { Suivi } from '../modele/suivi';
 import { charger, sauvegarder } from '../modele/stockage';
 import type { Donnees } from '../modele/types';
 
@@ -65,6 +66,11 @@ export function repartirAVide(): void {
 
 export function lireReglages(): Reglages {
   return reglages;
+}
+
+/** « Moi » (s'il existe dans les données) et « Qui suivre », pour les rappels et « À compléter ». */
+export function suiviCourant(d: Donnees = donnees): { moi: string | undefined; suivi: Suivi } {
+  return { moi: ficheMoi(reglages, d)?.id, suivi: reglages.suivi };
 }
 
 // Thème du téléphone, suivi en direct pour le réglage « auto » (absent hors navigateur).

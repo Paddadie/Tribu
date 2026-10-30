@@ -365,3 +365,33 @@ fieldset.champ legend {
 .champ select {
   appearance: auto;
 }
+
+/* Réglage d'une fiche (rappels, « À compléter ») : suit son cercle (« Qui suivre ») ou fait exception. */
+.reglage-fiche .interrupteur {
+  display: flex;
+  /* 64 px avec la bordure de la carte, comme un interrupteur seul. */
+  min-height: 62px;
+}
+
+.pastille-exception {
+  margin-right: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--avert-fond);
+  color: var(--avert-texte);
+  font-size: var(--t1);
+  font-weight: var(--gras);
+}
+
+.revenir-cercle {
+  align-self: flex-start;
+  margin: -6px 16px 12px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--accent-texte);
+  font: inherit;
+  font-size: var(--t2);
+  text-decoration: underline;
+  cursor: pointer;
+}

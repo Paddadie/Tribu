@@ -8,6 +8,7 @@ import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVide
 import { charger, exporterJson, sauvegarder } from './modele/stockage';
 import { entreesCalendrier } from './modele/fetes';
 import type { Donnees, Sexe } from './modele/types';
+import { SUIVI_FAMILLE_PROCHE, type Suivi } from './modele/suivi';
 import { dupontel, extremes } from './modele/test/familles';
 import { couleurFamille } from './modele/liste';
 import { chemin } from './modele/deductions';
@@ -53,7 +54,7 @@ afterEach(() => {
 const pause = () => new Promise((r) => setTimeout(r, 5));
 
 /** Lance l'appli sur `route` avec `donnees` déjà enregistrées. */
-async function demarrer(donnees: Donnees = donneesVides(), route = '#/', reglages?: { moi?: string; fetes?: boolean }) {
+async function demarrer(donnees: Donnees = donneesVides(), route = '#/', reglages?: { moi?: string; fetes?: boolean; suivi?: Suivi }) {
   localStorage.clear();
   sauvegarder(localStorage, donnees);
   if (reglages) localStorage.setItem('tribu:reglages', JSON.stringify(reglages));
@@ -964,8 +965,9 @@ describe('« Moi » et parenté', () => {
     await demarrer(donnees, '#/reglages', { moi: ids.Chloé });
     const autre = creerPersonne(donneesVides(), { prenom: 'Zoé', nom: 'Autre' }).donnees;
     await choisirFichier('autre.json', exporterJson(autre));
-    expect(ecran().textContent).toContain('Chloé Martin');
-    expect(ecran().textContent).not.toContain('Choisir ma fiche');
+    const general = ecran().querySelector('#panneau-general')!;
+    expect(general.textContent).toContain('Chloé Martin');
+    expect(general.textContent).not.toContain('Choisir ma fiche');
   });
 });
 
@@ -1674,5 +1676,77 @@ describe('couleurs des familles (V4, point 16)', () => {
     expect(ligne.querySelector('.avatar')!.getAttribute('style')).toContain(`var(--c${k})`);
     await demarrer(f.donnees, '#/arbre', { moi: f.moi });
     expect(ecran().querySelector(`.calque a[href="#/personne/${p.id}"]`)!.outerHTML).toContain(`var(--c${k})`);
+  });
+});
+
+describe('« Qui suivre » (Réglages › Données)', () => {
+  const caseSuivi = (libelle: string) => ecran().querySelector<HTMLInputElement>(`input[aria-label="${libelle}"]`)!;
+  const presse = () => [...ecran().querySelectorAll('.puces-suivi .puce[aria-pressed="true"]')].map((b) => b.textContent);
+  const suiviEnregistre = () => (JSON.parse(localStorage.getItem('tribu:reglages')!) as { suivi: Suivi }).suivi;
+
+  it('préréglage, case par cercle et bilan ; « Sur mesure » dès qu’on s’écarte', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/reglages/donnees', { moi: ids.Chloé });
+    expect(presse()).toEqual(['Tout le monde']);
+    expect(ecran().querySelector('.grille-suivi')!.textContent).toContain('Parents et enfants · 2');
+    expect(ecran().querySelector('.bilan-suivi')!.textContent).toBe('Suivis : 3 sur 3 · à compléter : 3 fiches');
+
+    await toucher(trouver('.puces-suivi button', 'Famille proche'));
+    expect(presse()).toEqual(['Famille proche']);
+    expect(caseSuivi('Rappels : Sans lien connu').checked).toBe(false);
+    expect(suiviEnregistre()).toEqual(SUIVI_FAMILLE_PROCHE);
+    expect(ecran().querySelector('.bilan-suivi')!.textContent).toBe('Suivis : 2 sur 3 · à compléter : 2 fiches');
+
+    const parents = caseSuivi('Rappels : Parents et enfants');
+    parents.checked = false;
+    parents.dispatchEvent(new Event('change'));
+    expect(presse()).toEqual(['Sur mesure']);
+    expect(suiviEnregistre().rappels.parents).toBe(false);
+  });
+
+  it('sans « Moi » : pas de cercles, tout le monde est suivi', async () => {
+    await demarrer(famille().donnees, '#/reglages/donnees');
+    expect(ecran().querySelector<HTMLElement>('.grille-suivi')!.closest<HTMLElement>('.qui-suivre')!.hidden).toBe(true);
+    expect(ecran().querySelector('#panneau-donnees')!.textContent).toContain('tout le monde est suivi');
+  });
+
+  it('fiche : suit son cercle, fait exception une fois changée, revient au réglage du cercle', async () => {
+    const { donnees, ids } = famille();
+    const reglages = { moi: ids.Chloé, suivi: SUIVI_FAMILLE_PROCHE };
+    await demarrer(donnees, `#/modifier/${ids.Denis}`, reglages);
+    const rappels = () => ecran().querySelector<HTMLInputElement>('#rappels')!;
+    const carte = () => rappels().closest<HTMLElement>('.reglage-fiche')!;
+    expect(rappels().checked).toBe(false);
+    expect(carte().textContent).toContain('Comme son cercle : Sans lien connu');
+    await toucher(rappels());
+    expect(carte().textContent).toContain('Exception');
+    await toucher(trouver('button', 'Enregistrer'));
+    const denis = () => enregistrees().personnes.find((p) => p.id === ids.Denis)!;
+    expect(denis().avecRappel).toBe(true);
+    expect(denis().sansRappel).toBeUndefined();
+
+    await demarrer(enregistrees(), `#/modifier/${ids.Denis}`, reglages);
+    expect(rappels().checked).toBe(true);
+    await toucher(trouver('button', 'Revenir au réglage du cercle'));
+    expect(rappels().checked).toBe(false);
+    expect(carte().textContent).toContain('Comme son cercle');
+    await toucher(trouver('button', 'Enregistrer'));
+    expect(denis().avecRappel).toBeUndefined();
+    expect(denis().sansRappel).toBeUndefined();
+  });
+
+  it('fiche : une modification sans toucher aux interrupteurs ne fige rien', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, `#/modifier/${ids.Denis}`, { moi: ids.Chloé, suivi: SUIVI_FAMILLE_PROCHE });
+    saisir('nom', 'Martel');
+    await toucher(trouver('button', 'Enregistrer'));
+    const denis = enregistrees().personnes.find((p) => p.id === ids.Denis)!;
+    expect([denis.nom, denis.sansRappel, denis.ignorerIncomplet, denis.avecRappel, denis.signalerIncomplet]).toEqual([
+      'Martel',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
   });
 });

@@ -73,6 +73,8 @@ Export depuis Réglages, dans un fichier `tribu-AAAA-MM-JJ.json` :
 - `lieuNaissance`, `lieuDeces` (facultatifs) : texte libre ; `lieuDeces` seulement pour une personne décédée.
 - `ignorerIncomplet: true` : la personne ne figure plus dans « À compléter ». `sansRappel: true` : aucun rappel de ses dates
   (anniversaire, fête, décès, unions).
+- `signalerIncomplet: true`, `avecRappel: true` : l'inverse, même si son cercle n'est pas suivi (« Qui suivre », réglage de
+  l'appareil, non exporté). Jamais avec leur contraire (`ignorerIncomplet`, `sansRappel`).
 - `sexe` (facultatif) : `F` ou `M`.
 - `inconnu: true` : parent inconnu, créé en coulisse pour relier des frères et sœurs
   dont on ignore les parents ; jamais affiché.

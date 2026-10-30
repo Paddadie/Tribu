@@ -130,6 +130,9 @@ export async function fusionner(actuelles: Donnees, importees: Donnees, demander
     // Ne plus signaler, ne plus rappeler : un choix fait d'un côté vaut pour les deux.
     if (c.ignorerIncomplet || p.ignorerIncomplet) fusion.ignorerIncomplet = true;
     if (c.sansRappel || p.sansRappel) fusion.sansRappel = true;
+    // Exceptions inverses (« Qui suivre ») : seulement si aucun côté n'a éteint.
+    if ((c.signalerIncomplet || p.signalerIncomplet) && !fusion.ignorerIncomplet) fusion.signalerIncomplet = true;
+    if ((c.avecRappel || p.avecRappel) && !fusion.sansRappel) fusion.avecRappel = true;
     // Un « inconnu » ou un « ? » qui reçoit un nom de l'autre côté n'en est plus un.
     if (c.inconnu && p.inconnu) fusion.inconnu = true;
     if (c.sansNom && p.sansNom) fusion.sansNom = true;

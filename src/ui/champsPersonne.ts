@@ -4,10 +4,11 @@
 import { estDansLeFutur } from '../modele/age';
 import { accorder, assemblerDate, decouperDate, homonymes, lieuxConnus, MOIS, nomComplet, nomsConnus } from '../modele/liste';
 import { estDecede, personnesVisibles, type ChampsPersonne } from '../modele/modele';
+import { CERCLES, cercleDe, suivis } from '../modele/suivi';
 import type { Personne, Sexe } from '../modele/types';
 import { confirmer } from './confirmer';
 import { h } from './dom';
-import { lireDonnees } from './etat';
+import { lireDonnees, suiviCourant } from './etat';
 
 export interface ChampsIdentite {
   /** Contrôles à insérer dans un formulaire, dans l'ordre d'affichage. */
@@ -175,14 +176,11 @@ export function champsIdentite(
 
   const note = h('textarea', { id: 'note', rows: 3, value: existante?.note ?? '' });
 
-  // Réglages d'une fiche existante : allumés d'office ; éteints, ils enregistrent `sansRappel` / `ignorerIncomplet`.
-  const rappels = h('input', { id: 'rappels', type: 'checkbox', class: 'bascule', checked: !existante?.sansRappel });
-  const signaler = h('input', { id: 'signaler', type: 'checkbox', class: 'bascule', checked: !existante?.ignorerIncomplet });
-  const interrupteur = (id: string, libelle: string, caseACocher: HTMLElement) =>
-    h('label', { class: 'carte interrupteur', for: id }, h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, libelle)), caseACocher);
-  const reglages = existante
-    ? [interrupteur('rappels', 'Rappels (anniversaire, fête…)', rappels), interrupteur('signaler', 'Signaler dans « À compléter »', signaler)]
-    : [];
+  // Réglages d'une fiche existante : d'office, ceux de son cercle (« Qui suivre ») ; changés, ils font exception.
+  const suivi = existante && reglagesSuivi(existante);
+  const rappels = suivi && interrupteurSuivi('rappels', 'Rappels (anniversaire, fête…)', suivi.cercle, suivi.rappel);
+  const signaler = suivi && interrupteurSuivi('signaler', 'Signaler dans « À compléter »', suivi.cercle, suivi.signale);
+  const reglages = rappels && signaler ? [rappels.carte, signaler.carte] : [];
   const champNom = champ('Nom', 'nom', nom);
   champNom.append(propositions);
 
@@ -196,8 +194,8 @@ export function champsIdentite(
     ...naissance.valeurs(),
     lieuNaissance.value,
     note.value,
-    rappels.checked,
-    signaler.checked,
+    rappels?.boite.checked,
+    signaler?.boite.checked,
     decede.checked,
     ...(decede.checked ? [...deces.valeurs(), lieuDeces.value] : []),
   ];
@@ -254,9 +252,92 @@ export function champsIdentite(
       lieuNaissance: lieuNaissance.value,
       ...(decede.checked ? { lieuDeces: lieuDeces.value } : {}),
       note: avecNote ? note.value : (existante?.note ?? ''),
-      ...(existante ? { sansRappel: !rappels.checked, ignorerIncomplet: !signaler.checked } : {}),
+      ...(rappels ? exception(rappels, 'avecRappel', 'sansRappel') : {}),
+      ...(signaler ? exception(signaler, 'signalerIncomplet', 'ignorerIncomplet') : {}),
     }),
   };
+}
+
+/** Réglage de la fiche pour les rappels ou « À compléter » : valeur actuelle, et celle de son cercle (`duCercle`). */
+interface ValeurSuivi {
+  valeur: boolean;
+  duCercle: boolean;
+}
+
+/** Cercle de la fiche (libellé, s'il y a un « Moi ») et ses deux réglages. */
+function reglagesSuivi(p: Personne): { cercle: string | undefined; rappel: ValeurSuivi; signale: ValeurSuivi } {
+  const d = lireDonnees();
+  const { moi, suivi } = suiviCourant(d);
+  const s = suivis(d, moi, suivi);
+  const cercle = moi === undefined ? undefined : cercleDe(d, moi, p.id);
+  return {
+    cercle: cercle && CERCLES.find((c) => c.cercle === cercle)?.libelle,
+    rappel: { valeur: s.rappel(p), duCercle: s.rappelDuCercle(p) },
+    signale: { valeur: s.signale(p), duCercle: s.signaleDuCercle(p) },
+  };
+}
+
+interface InterrupteurSuivi {
+  carte: HTMLElement;
+  boite: HTMLInputElement;
+  depart: boolean;
+  duCercle: boolean;
+}
+
+/**
+ * Interrupteur d'un réglage de fiche : « Comme son cercle : … » tant qu'il suit son cercle, sinon une pastille
+ * « Exception » et de quoi revenir au réglage du cercle. Sans cercle (pas de « Moi », toi ou ton conjoint) : rien de plus.
+ */
+function interrupteurSuivi(id: string, libelle: string, cercle: string | undefined, { valeur, duCercle }: ValeurSuivi): InterrupteurSuivi {
+  const boite = h('input', { id, type: 'checkbox', class: 'bascule', checked: valeur });
+  const aide = h('span', { class: 'secondaire' });
+  const revenir = h(
+    'button',
+    {
+      type: 'button',
+      class: 'revenir-cercle',
+      onclick: () => {
+        boite.checked = duCercle;
+        dire();
+      },
+    },
+    'Revenir au réglage du cercle',
+  );
+  const dire = () => {
+    const exception = !!cercle && boite.checked !== duCercle;
+    aide.replaceChildren(
+      ...(exception
+        ? [h('span', { class: 'pastille-exception' }, 'Exception'), `son cercle (${cercle}) ${duCercle ? 'est' : 'n’est pas'} suivi`]
+        : cercle
+          ? [`Comme son cercle : ${cercle}`]
+          : []),
+    );
+    aide.hidden = aide.childNodes.length === 0;
+    revenir.hidden = !exception;
+  };
+  boite.addEventListener('change', dire);
+  dire();
+  const carte = h(
+    'div',
+    { class: 'carte reglage-fiche' },
+    h('label', { class: 'interrupteur', for: id }, h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, libelle), aide), boite),
+    revenir,
+  );
+  return { carte, boite, depart: valeur, duCercle };
+}
+
+/**
+ * Champs d'exception à enregistrer : rien si l'interrupteur n'a pas bougé (la fiche suit son cercle même s'il change
+ * ensuite), aucun si on revient au réglage du cercle, sinon celui qui force la valeur choisie.
+ */
+function exception<A extends 'avecRappel' | 'signalerIncomplet', E extends 'sansRappel' | 'ignorerIncomplet'>(
+  i: InterrupteurSuivi,
+  allume: A,
+  eteint: E,
+): Partial<Record<A | E, boolean>> {
+  const valeur = i.boite.checked;
+  if (valeur === i.depart) return {};
+  return { [allume]: valeur && !i.duCercle, [eteint]: !valeur && i.duCercle } as Record<A | E, boolean>;
 }
 
 /**

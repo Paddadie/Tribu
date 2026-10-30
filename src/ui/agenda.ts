@@ -5,7 +5,7 @@ import { detailEvenement, evenementsAVenir, jourCourt, libelleAnnees, nomEveneme
 import { majuscule, MOIS } from '../modele/liste';
 import { h, icone } from './dom';
 import { boutonRetour } from './ecran';
-import { lireDonnees, lireReglages } from './etat';
+import { lireDonnees, lireReglages, suiviCourant } from './etat';
 
 type Filtre = 'tout' | GenreEvenement;
 
@@ -54,7 +54,7 @@ export function ecranAgenda(sansFetes = false): HTMLElement {
   const avecFetes = lireReglages().fetes && !sansFetes;
   if (!avecFetes && filtre === 'fete') filtre = 'tout';
   // 12 mois : jusqu'à la veille du même jour l'an prochain.
-  const tous = evenementsAVenir(lireDonnees(), aujourdhui, 364, { fetes: avecFetes });
+  const tous = evenementsAVenir(lireDonnees(), aujourdhui, 364, { fetes: avecFetes, ...suiviCourant() });
   const zone = h('div', { class: 'agenda' });
   const puces = FILTRES.filter((f) => avecFetes || f.filtre !== 'fete').map((f) =>
     h(

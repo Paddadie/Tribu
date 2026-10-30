@@ -1,14 +1,13 @@
 # État en cours
 
-Dernier commit : 73061ae (nom de naissance pour les mariés). À commiter : date d'union sur le trait du couple (variante C) : 1065 tests, `tsc`, build et `prettier --check` verts au 30/10 ; 71 captures sur 192 changent (fiche, arbre, lien), capture 11-arbre-pres ajoutée (téléphone, ×2,2).
-- À regarder par Paul : arbre de près sur des fiches réelles ; une date qui ne trouve pas sa place disparaît (estimation de largeur prudente).
+Dernier commit : 7a518ec (export PNG plus net). À commiter : « Qui suivre » (Réglages › Données, variante A) : 1086 tests, `tsc`, build et `prettier --check` verts au 30/10 ; 0 capture changée sur 202, captures 12-qui-suivre et 13-modifier-loin ajoutées (téléphone).
+- Cercles depuis Moi (`modele/suivi.ts`), cases Rappels / À compléter, préréglages Tout le monde (défaut) / Famille proche ; exceptions par fiche (`avecRappel`, `signalerIncomplet`) ; l'export .ics suit les rappels.
+- À regarder par Paul : la grille sur ses données réelles ; les trois puces passent sur deux lignes sur téléphone (« Sur mesure » seule dessous).
 
 ## Passe qualité technique (refactor pur, sans changement visible) — 7 étapes faites
-- Règles : aucun changement fonctionnel, visuel, de route, de stockage ni de dépendance ; un bug repéré est noté, pas corrigé.
-- Étapes : 1 Prettier · 2 utilitaires uniques (`prenomOuNom`, `majuscule`) · 3 code mort · 4 découpe de fiche.css · 5 `barreEcran` / `boutonRetour` · 6 Réglages par onglet · 7 modele.ts par sujet. Décisions : DECISIONS.md.
-- Contrôle de chaque étape : 0 capture différente sur 192 (`npm run captures -- --familles`, md5), CSS du build identique ; Réglages comparés par HTML produit (36 cas).
+- Étapes : 1 Prettier · 2 utilitaires uniques · 3 code mort · 4 découpe de fiche.css · 5 `barreEcran` / `boutonRetour` · 6 Réglages par onglet · 7 modele.ts par sujet. Décisions : DECISIONS.md.
 - **Prochaine étape** : rapport final à Paul : résumé, laissés de côté, comportements suspects, checklist de tests manuels, recommandations (ESLint = nouvelle dépendance, à valider ; `format:check` en CI).
-- Notes pour le rapport : route `#/ex/<id>` absente du commentaire des routes de main.ts ; capture `dupontel-ordinateur-04-arbre-toi-clair` non déterministe ; aucun bug certain relevé.
+- Notes pour le rapport : route `#/ex/<id>` absente du commentaire des routes de main.ts ; capture `dupontel-ordinateur-04-arbre-toi-clair` et `extremes-telephone-07-conjoint-sombre` non déterministes ; aucun bug certain relevé.
 
 ## Points laissés par les lots 2 à 5 de V4
 - Séparation automatique par `unirParents` : pas de proposition de reprise du nom ; « Mariés » sur les écrans Parent et Qui applique le nom de l'homme sans aperçu.

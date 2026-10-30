@@ -53,6 +53,8 @@ export function estDonneesValides(v: unknown): v is Donnees {
     if (p.lieuDeces !== undefined && typeof p.lieuDeces !== 'string') return false;
     if (p.ignorerIncomplet !== undefined && p.ignorerIncomplet !== true) return false;
     if (p.sansRappel !== undefined && p.sansRappel !== true) return false;
+    if (p.signalerIncomplet !== undefined && p.signalerIncomplet !== true) return false;
+    if (p.avecRappel !== undefined && p.avecRappel !== true) return false;
     ids.add(p.id);
   }
 

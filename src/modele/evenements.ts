@@ -5,6 +5,7 @@ import { feteDuPrenom, joursNommes, saintsDuCalendrier } from './fetes';
 import { majuscule, MOIS, MOIS_COURTS, nomComplet } from './liste';
 import { enCouple, estDecede, joursDuMois, MOTIF_DATE, MOTIF_SANS_ANNEE, personnesListees } from './modele';
 import { libelleAnniversaireUnion } from './noces';
+import { SUIVI_TOUT, suivis, type Suivi } from './suivi';
 import type { Donnees, Personne } from './types';
 
 export type GenreEvenement = 'anniversaire' | 'union' | 'fete' | 'deces';
@@ -51,6 +52,21 @@ function prochaineFois(mois: number, jour: number, aujourdhui: Date): { dans: nu
 export interface OptionsEvenements {
   /** Fêtes du prénom (réglage) ; vrai par défaut. */
   fetes?: boolean;
+  /** « Moi » et « Qui suivre » : sans eux, tout le monde est suivi (sauf exception de la fiche). */
+  moi?: string;
+  suivi?: Suivi;
+}
+
+/**
+ * Personnes dont on rappelle les dates, et test d'une union : rappelée si l'un des deux au moins est suivi,
+ * jamais si l'un a l'exception « sans rappel ». Partagé avec l'export .ics.
+ */
+export function rappelsSuivis(d: Donnees, personnes: Personne[], options: Pick<OptionsEvenements, 'moi' | 'suivi'>) {
+  const s = suivis(d, options.moi, options.suivi ?? SUIVI_TOUT);
+  return {
+    personnes: personnes.filter(s.rappel),
+    union: (a: Personne, b: Personne) => !a.sansRappel && !b.sansRappel && (s.rappel(a) || s.rappel(b)),
+  };
 }
 
 /**
@@ -62,9 +78,11 @@ export interface OptionsEvenements {
  * - Décès : date de décès complète, au moins 1 an.
  */
 export function evenementsAVenir(d: Donnees, aujourdhui: Date, horizon: number, options: OptionsEvenements = {}): Evenement[] {
-  // Une personne sans rappel n'en donne aucun : ni anniversaire, ni fête, ni décès, ni union où elle figure.
-  const listees = personnesListees(d).filter((p) => !p.sansRappel);
-  const parId = new Map(listees.map((p) => [p.id, p]));
+  // Une personne non suivie ne donne ni anniversaire, ni fête, ni décès ; ses unions, voir `rappelsSuivis`.
+  const toutes = personnesListees(d);
+  const rappels = rappelsSuivis(d, toutes, options);
+  const listees = rappels.personnes;
+  const parId = new Map(toutes.map((p) => [p.id, p]));
   const trouves: Evenement[] = [];
   const ajouter = (genre: GenreEvenement, personnes: Personne[], mois: number, jour: number, depuis?: number, extra: Partial<Evenement> = {}) => {
     const fois = prochaineFois(mois, jour, aujourdhui);
@@ -89,7 +107,7 @@ export function evenementsAVenir(d: Donnees, aujourdhui: Date, horizon: number, 
   for (const u of d.unions) {
     const [a, b] = [parId.get(u.personneA), parId.get(u.personneB)];
     const date = jourMois(u.date);
-    if (u.statut !== 'actuelle' || !a || !b || !date || (estDecede(a) && estDecede(b))) continue;
+    if (u.statut !== 'actuelle' || !a || !b || !date || !rappels.union(a, b) || (estDecede(a) && estDecede(b))) continue;
     // Veuf ou veuve remarié : seule la nouvelle union est fêtée.
     if ((estDecede(a) && enCouple(d, b.id)) || (estDecede(b) && enCouple(d, a.id))) continue;
     ajouter('union', [a, b], date.mois, date.jour, date.annee, { marie: u.marie });

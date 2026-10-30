@@ -14,6 +14,7 @@ Commandes : `npm run dev`, `npm test`, `npm run build` (`tsc` compris), `npm run
 - src/modele/evenements.ts : `evenementsAVenir(d, aujourdhui, jours, {fetes})` (anniversaires, unions, fêtes, décès) ; noces.ts (`dureeUnion`, nom des noces) ; fetes.ts (calendrier des prénoms, `entreesCalendrier`).
 - src/modele/fusion.ts : import par fusion (`fusionner`, questions de conflit) ; src/ui/choisir.ts (question à choix), fenetreListe.ts (fenêtre-liste), import.ts, reglages.ts (4 onglets).
 - src/modele/filtres.ts : filtres de la liste (`filtrerListe`, `manquesDe`, `familleDe`).
+- src/modele/suivi.ts : « Qui suivre » (Réglages › Données) : `cercleDe` (cercle d'une fiche depuis Moi), `suivis` (rappel / signalée, exceptions de la fiche comprises), préréglages `SUIVI_TOUT` / `SUIVI_FAMILLE_PROCHE` ; appliqué par `rappelsSuivis` (evenements.ts, repris par l'.ics) et `filtrerListe` ; côté écrans, `suiviCourant()` (etat.ts).
 - src/ui/accueil.ts (salutation, recherche, Aujourd'hui, Bientôt, souvenir, raccourcis), personnes.ts (`#/personnes`, liste + index), agenda.ts (`#/agenda`).
 - src/ui/ : fiche.ts, arbre.ts (`dessinFoyer` = rendu seul, `dessinChemin`), arbreGlobal.ts (classe `Carte`, gestes, feuilles Familles/Amis), ajoutAmi.ts, groupes.ts, champsPersonne.ts ; ecran.ts (`barreEcran`, `boutonRetour` : en-tête des écrans). src/main.ts : routes et View Transition.
 - src/style.css : n'importe que src/styles/, dans l'ordre de la cascade : base (jetons), accueil, fiche, reglages, messages, composants, ajout, dessins (dessins de la fiche), arbre, etats, animations.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { donneesVides, creerPersonne } from './modele';
+import { SUIVI_FAMILLE_PROCHE, SUIVI_TOUT } from './suivi';
 import { CLE_REGLAGES, REGLAGES_PAR_DEFAUT, chargerReglages, ficheMoi, libelleDernierExport, sauvegarderReglages } from './reglages';
 
 function magasin(contenu?: string) {
@@ -12,11 +13,27 @@ function magasin(contenu?: string) {
 
 describe('réglages', () => {
   it("donne les valeurs par défaut quand rien n'est stocké", () => {
-    expect(chargerReglages(magasin())).toEqual({ tri: 'prenom', theme: 'auto', dernierExport: null, moi: null, fetes: true, fetesDansIcs: false });
+    expect(chargerReglages(magasin())).toEqual({
+      tri: 'prenom',
+      theme: 'auto',
+      dernierExport: null,
+      moi: null,
+      fetes: true,
+      fetesDansIcs: false,
+      suivi: SUIVI_TOUT,
+    });
   });
   it('relit ce qui a été sauvegardé', () => {
     const m = magasin();
-    const r = { tri: 'nom', theme: 'sombre', dernierExport: '2026-10-12T09:30:00.000Z', moi: 'id-moi', fetes: false, fetesDansIcs: true } as const;
+    const r = {
+      tri: 'nom',
+      theme: 'sombre',
+      dernierExport: '2026-10-12T09:30:00.000Z',
+      moi: 'id-moi',
+      fetes: false,
+      fetesDansIcs: true,
+      suivi: SUIVI_FAMILLE_PROCHE,
+    } as const;
     sauvegarderReglages(m, r);
     expect(chargerReglages(m)).toEqual(r);
   });
@@ -28,6 +45,7 @@ describe('réglages', () => {
       moi: null,
       fetes: true,
       fetesDansIcs: false,
+      suivi: SUIVI_TOUT,
     });
     expect(chargerReglages(magasin('{"tri":"nom","theme":42}'))).toEqual({
       tri: 'nom',
@@ -36,6 +54,7 @@ describe('réglages', () => {
       moi: null,
       fetes: true,
       fetesDansIcs: false,
+      suivi: SUIVI_TOUT,
     });
   });
   it('ignore une date de dernier export invalide', () => {
@@ -44,6 +63,12 @@ describe('réglages', () => {
   });
   it('garde les fêtes affichées et hors du .ics si la valeur n’est pas un booléen', () => {
     expect(chargerReglages(magasin('{"fetes":"non","fetesDansIcs":1}'))).toMatchObject({ fetes: true, fetesDansIcs: false });
+  });
+  it('« Qui suivre » : garde chaque case valide, suit le cercle sinon', () => {
+    const lu = chargerReglages(magasin('{"suivi":{"rappels":{"cousins":false,"amis":"non"},"completer":7}}')).suivi;
+    expect(lu.rappels).toEqual({ ...SUIVI_TOUT.rappels, cousins: false });
+    expect(lu.completer).toEqual(SUIVI_TOUT.completer);
+    expect(chargerReglages(magasin('{"suivi":null}')).suivi).toEqual(SUIVI_TOUT);
   });
   it('ignore une fiche « Moi » qui n’est pas un id', () => {
     expect(chargerReglages(magasin('{"moi":42}')).moi).toBeNull();

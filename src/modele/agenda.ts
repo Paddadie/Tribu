@@ -1,6 +1,7 @@
 // Export des dates vers un agenda (.ics, RFC 5545) : naissances, décès et unions datées deviennent des événements
 // annuels sur la journée. Les UID sont stables (id + type), donc réimporter met à jour sans créer de doublon.
 
+import { rappelsSuivis, type OptionsEvenements } from './evenements';
 import { feteDuPrenom } from './fetes';
 import { nomComplet } from './liste';
 import { MOTIF_DATE, MOTIF_SANS_ANNEE, estDateSansAnneeValide, estDateValide, estDecede, personnesVisibles } from './modele';
@@ -47,12 +48,14 @@ function jourDeLAnnee(date: string | undefined): { annee?: number; mois: number;
  * Les événements annuels du carnet, triés par mois puis jour. Les fiches sans jour et mois sont ignorées, comme les ex.
  * Avec `fetes`, la fête du prénom de chaque personne vivante et nommée s'y ajoute.
  */
-export function evenementsAgenda(d: Donnees, options: { fetes?: boolean } = {}): EvenementAgenda[] {
+export function evenementsAgenda(d: Donnees, options: Pick<OptionsEvenements, 'fetes' | 'moi' | 'suivi'> = {}): EvenementAgenda[] {
   const visibles = personnesVisibles(d);
   const parId = new Map(visibles.map((p) => [p.id, p]));
+  // Mêmes personnes et unions que les rappels de l'accueil (« Qui suivre », « sans rappel »).
+  const rappels = rappelsSuivis(d, visibles, options);
   const evenements: EvenementAgenda[] = [];
 
-  for (const p of visibles) {
+  for (const p of rappels.personnes) {
     const nom = nomComplet(p);
     const naissance = jourDeLAnnee(p.naissance);
     if (naissance) {
@@ -92,7 +95,7 @@ export function evenementsAgenda(d: Donnees, options: { fetes?: boolean } = {}):
     const a = parId.get(u.personneA);
     const b = parId.get(u.personneB);
     const date = jourDeLAnnee(u.date);
-    if (!a || !b || !date) continue;
+    if (!a || !b || !date || !rappels.union(a, b)) continue;
     const noms = `${nomComplet(a)} et ${nomComplet(b)}`;
     evenements.push({
       uid: `${u.id}-union@${DOMAINE_UID}`,
