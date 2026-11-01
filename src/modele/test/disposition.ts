@@ -4,6 +4,8 @@
 import type { Branche, Disposition } from '../arbreGlobal';
 import { personnesVisibles } from '../modele';
 import { ECART_FAMILLES } from '../partie';
+import { preparer } from '../souple';
+import { fautesDe } from '../soupleRecherche';
 import type { Donnees } from '../types';
 
 const EPS = 1e-6;
@@ -156,4 +158,99 @@ export function metriques(disp: Disposition): Metriques {
     }
   }
   return { largeur, ecartMoyen, coudes, petitsCoudes, croisements };
+}
+
+// Les quatre critères de la disposition, dans l'ordre de priorité : croisements, proximité de Moi, coudes en trop,
+// enfants uniques décentrés. Toutes en places (1 = PAS_X) sauf les croisements, comptés sur le dessin en pixels.
+
+/**
+ * Critère 1 : croisements du dessin tel qu'il s'affiche (la disposition, générations souples comprises si elles y sont
+ * déjà appliquées). Traits de couple et de filiation de la famille, bulle des amis exclue ; un croisement franc entre
+ * deux traits de groupes différents (groupe = les parents d'une fratrie, ou les deux conjoints d'un couple), sans les
+ * contacts en T ni les traits d'une même fratrie. Définition de `fautesDe` (soupleRecherche.ts).
+ */
+export function croisementsDessin(disp: Disposition, moi: string): number {
+  const S = preparer(disp, moi);
+  if (!S) return 0;
+  const n = S.brs.length;
+  return fautesDe(S, new Array<number>(n).fill(0), new Array<boolean>(n).fill(false)).croisements;
+}
+
+/** Rangs de parenté du critère 2, du plus proche au plus éloigné. */
+export const RANGS = ['parents', 'grandsParents', 'fratrie', 'oncles', 'cousins'] as const;
+export type Rang = (typeof RANGS)[number];
+
+/**
+ * Rang de parenté avec Moi, par les filiations (biologiques et adoptives), parents inconnus exclus : parents,
+ * grands-parents, frères et sœurs (demi compris), oncles et tantes (autres enfants des grands-parents), cousins
+ * (leurs enfants). Une personne a son rang le plus proche ; les autres (conjoints, arrière-grands-parents…) n'en ont pas.
+ */
+export function rangsDeParente(d: Donnees, moi: string): Map<string, Rang> {
+  const inconnu = new Set(d.personnes.filter((p) => p.inconnu).map((p) => p.id));
+  // Parents inconnus compris dans le parcours : ils relient des frères et sœurs, mais n'ont pas de rang.
+  const parentsDe = (ids: string[]) => [...new Set(d.filiations.filter((f) => ids.includes(f.enfant)).map((f) => f.parent))];
+  const enfantsDe = (ids: string[]) => [...new Set(d.filiations.filter((f) => ids.includes(f.parent)).map((f) => f.enfant))];
+  const rangs = new Map<string, Rang>();
+  const mettre = (ids: string[], r: Rang) => ids.forEach((id) => id !== moi && !inconnu.has(id) && !rangs.has(id) && rangs.set(id, r));
+  const parents = parentsDe([moi]);
+  const gp = parentsDe(parents);
+  mettre(parents, 'parents');
+  mettre(gp, 'grandsParents');
+  mettre(enfantsDe(parents), 'fratrie');
+  const oncles = enfantsDe(gp).filter((id) => !parents.includes(id));
+  mettre(oncles, 'oncles');
+  mettre(enfantsDe(oncles), 'cousins');
+  return rangs;
+}
+
+/**
+ * Critère 2 : distance horizontale moyenne à Moi (|x − x de Moi|, en places) de chaque rang de parenté présent dans
+ * l'arbre ; un rang absent vaut 0. Se compare rang par rang, le plus proche d'abord.
+ */
+export function proximiteMoi(d: Donnees, moi: string, disp: Disposition): Record<Rang, number> {
+  const placeDe = new Map(disp.places.map((p) => [p.personne.id, p]));
+  const xMoi = placeDe.get(moi)?.x ?? 0;
+  const sommes = Object.fromEntries(RANGS.map((r) => [r, [0, 0]])) as Record<Rang, [number, number]>;
+  for (const [id, r] of rangsDeParente(d, moi)) {
+    const p = placeDe.get(id);
+    if (!p || p.bulle) continue;
+    sommes[r][0] += Math.abs(p.x - xMoi);
+    sommes[r][1]++;
+  }
+  return Object.fromEntries(RANGS.map((r) => [r, sommes[r][1] ? sommes[r][0] / sommes[r][1] : 0])) as Record<Rang, number>;
+}
+
+/** Départs dessinés d'une branche (un parent inconnu n'a pas de trait), sans doublon d'abscisse. */
+const departsDessines = (b: Branche) => [...new Set(b.origines.filter((o) => !o.inconnu).map((o) => Math.round(o.x / EPS) * EPS))];
+
+/**
+ * Critère 3 : coudes au-delà du minimum. Un enfant fait un coude quand aucun départ dessiné n'est juste au-dessus de lui
+ * (son trait change deux fois de direction). Minimum d'une branche : enfants − départs dessinés (chaque départ ne peut
+ * avoir qu'un enfant à son aplomb). Une fratrie sans départ dessiné (parents inconnus) ne compte pas.
+ */
+export function coudesEnTrop(disp: Disposition): number {
+  let total = 0;
+  for (const b of disp.branches) {
+    const departs = departsDessines(b);
+    if (departs.length === 0) continue;
+    const coudes = b.enfants.filter((e) => !departs.some((x) => Math.abs(x - e.x) < 1e-3)).length;
+    total += coudes - Math.max(0, b.enfants.length - departs.length);
+  }
+  return total;
+}
+
+/**
+ * Critère 4 : enfants uniques décentrés. Pour une branche d'un seul enfant et d'un seul départ dessiné (le milieu d'un
+ * couple voisin, ou un parent seul) : l'écart |x du départ − x de l'enfant|, en places, s'il dépasse 0,01. Une branche
+ * à deux départs séparés (parents éloignés) est à part : centrer l'enfant y ajouterait un coude (critère 3).
+ */
+export function enfantsUniquesDecentres(disp: Disposition): { id: string; ecart: number }[] {
+  const res: { id: string; ecart: number }[] = [];
+  for (const b of disp.branches) {
+    const departs = departsDessines(b);
+    if (b.enfants.length !== 1 || departs.length !== 1) continue;
+    const ecart = Math.abs(departs[0] - b.enfants[0].x);
+    if (ecart > 0.01) res.push({ id: b.enfants[0].id, ecart });
+  }
+  return res;
 }

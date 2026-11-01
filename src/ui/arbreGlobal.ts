@@ -392,7 +392,7 @@ class Carte {
 
     const pos = { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres };
     const traits = traitsArbre(this.disp, pos, bulle, this.moi.id);
-    for (const t of traits) trait(t.d, t.classe, t.lignee);
+    for (const t of traits) trait(t.dessin ?? t.d, t.classe, t.lignee);
     // Dates d'union : l'année de près, la date et le lieu tout près (classe `proche` de la vue), rien de loin.
     const unions = lireDonnees().unions;
     for (const palier of ['annee', 'detail'] as const)

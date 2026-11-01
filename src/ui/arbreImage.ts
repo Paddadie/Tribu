@@ -274,7 +274,7 @@ function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donne
 
   // Traits et années des unions, puis noms de famille, puis personnes.
   const traits = traitsArbre(disp, pos, bulle, moi.id);
-  for (const t of traits) dessinerTrait(ctx, t.d, t.classe, t.lignee);
+  for (const t of traits) dessinerTrait(ctx, t.dessin ?? t.d, t.classe, t.lignee);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   for (const m of mentionsArbre(disp, pos, traits, cadres, d.unions, 'annee', moi.id, aujourdhui))

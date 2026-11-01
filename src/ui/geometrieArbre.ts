@@ -31,9 +31,30 @@ export interface ZoneBulle {
 
 /** Un trait à tracer : chemin SVG, classes de style (celles du CSS de l'écran) et lignée dont il prend la couleur. */
 export interface Trait {
+  /** Tracé géométrique : lu par les calculs (noms, mentions d'union), toujours un segment droit pour un trait commun. */
   d: string;
+  /** Tracé à dessiner s'il diffère de `d` : le même trait, avec ses petits ponts au-dessus des traits qu'il croise. */
+  dessin?: string;
   classe: string;
   lignee?: number;
+}
+
+/** Rayon, en pixels, du petit arc d'un trait qui passe au-dessus d'un autre sans lui être relié. */
+export const RAYON_PONT = 4;
+
+/**
+ * Trait horizontal de `x1` à `x2` à l'ordonnée `y`, avec un petit arc au-dessus de chaque abscisse de `croisements`
+ * (traits verticaux d'autres branches). Pas d'arc trop près d'une extrémité ni d'un autre arc : le trait reste droit.
+ */
+export function trajetAvecPonts(x1: number, x2: number, y: number, croisements: number[]): string {
+  let d = `M ${x1} ${y}`;
+  let fin = x1;
+  for (const x of [...croisements].sort((a, b) => a - b)) {
+    if (x - RAYON_PONT < fin + 1 || x + RAYON_PONT > x2 - 1) continue;
+    d += ` H ${x - RAYON_PONT} a ${RAYON_PONT} ${RAYON_PONT} 0 0 1 ${2 * RAYON_PONT} 0`;
+    fin = x + RAYON_PONT;
+  }
+  return `${d} H ${x2}`;
 }
 
 export interface Positions {
@@ -132,7 +153,16 @@ export function traitsArbre(disp: Disposition, p: Positions, bulle: ZoneBulle | 
     traits.push({ d, classe: `trait couple${c.marie ? '' : ' libre'}${c.separe ? ' ex' : ''}`, lignee: c.separe ? undefined : c.lignee });
   }
 
-  for (const br of disp.branches) {
+  // Traits verticaux de chaque branche : un trait commun passe par-dessus ceux des autres branches qui le traversent.
+  const verticaux = disp.branches.map((br) => {
+    const bus = px({ x: 0, y: br.bus }).y;
+    return [
+      ...br.origines.filter((o) => !o.inconnu).map((o) => ({ x: px(o).x, haut: o.parent !== undefined ? px(o).y + SOUS_NOM : px(o).y, bas: bus })),
+      ...br.enfants.map((e) => ({ x: px(e).x, haut: bus, bas: px(e).y - R - 3 })),
+    ];
+  });
+
+  for (const [i, br] of disp.branches.entries()) {
     const bus = px({ x: 0, y: br.bus }).y;
     // Un parent inconnu n'a ni nom ni trait : seul le trait commun relie les frères et sœurs.
     const origines = br.origines.filter((o) => !o.inconnu).map((o) => ({ ...px(o), seul: o.parent !== undefined }));
@@ -141,7 +171,15 @@ export function traitsArbre(disp: Disposition, p: Positions, bulle: ZoneBulle | 
     const classe = enfants.every((e) => e.adoptif) ? 'trait adoption' : 'trait';
     for (const o of origines) traits.push({ d: `M ${o.x} ${o.seul ? o.y + SOUS_NOM : o.y} V ${bus}`, classe, lignee: br.lignee });
     const xs = [...origines, ...enfants].map((q) => q.x);
-    if (Math.max(...xs) - Math.min(...xs) > 0.5) traits.push({ d: `M ${Math.min(...xs)} ${bus} H ${Math.max(...xs)}`, classe, lignee: br.lignee });
+    if (Math.max(...xs) - Math.min(...xs) > 0.5) {
+      const [g, dr] = [Math.min(...xs), Math.max(...xs)];
+      const croisements = verticaux.flatMap((vs, j) =>
+        j === i ? [] : vs.filter((v) => v.x > g + 0.5 && v.x < dr - 0.5 && v.haut < bus - 0.5 && v.bas > bus + 0.5).map((v) => v.x),
+      );
+      const d = `M ${g} ${bus} H ${dr}`;
+      const dessin = croisements.length > 0 ? trajetAvecPonts(g, dr, bus, croisements) : d;
+      traits.push({ d, ...(dessin !== d ? { dessin } : {}), classe, lignee: br.lignee });
+    }
     for (const e of enfants) traits.push({ d: `M ${e.x} ${bus} V ${e.y - R - 3}`, classe: e.adoptif ? 'trait adoption' : 'trait', lignee: br.lignee });
   }
 

@@ -3,6 +3,9 @@
 // Lance le serveur de dev (port 5199) et Edge headless, remplit le localStorage
 // par CDP, puis capture chaque écran en 390×844, DPR 2, clair et sombre.
 // L'export et le dossier de sortie restent hors du dépôt (données réelles).
+// Options, après l'id de Moi : --entier (arbre « Tout » sur ordinateur, puis tout l'arbre à l'échelle 1 et en tuiles)
+// et --autour <id>[,<id>…] (à l'échelle 1, un cadre de 1600 × 1000 autour de chaque personne) ; --sans-ecrans saute
+// les écrans habituels.
 //
 // npm run captures -- --famille-proche <dossier-sortie> [préfixe-de-cas…]
 // Fixtures fictives de tests/fixtures/famille-proche : la carte « Famille proche » de la personne
@@ -23,10 +26,19 @@ import { pathToFileURL } from 'node:url';
 const args = process.argv.slice(2);
 const MODES = { '--famille-proche': 'famille-proche', '--maquettes': 'maquettes', '--familles': 'familles' };
 const mode = MODES[args[0]] ?? 'ecrans';
-const [exportPath, sortie, moiArg] = mode === 'ecrans' ? args : mode === 'famille-proche' ? [undefined, args[1]] : [args[1], args[2]];
+const positionnels =
+  mode === 'ecrans'
+    ? args.slice(
+        0,
+        [...args, '--'].findIndex((a) => a.startsWith('--')),
+      )
+    : args;
+const [exportPath, sortie, moiArg] = mode === 'ecrans' ? positionnels : mode === 'famille-proche' ? [undefined, args[1]] : [args[1], args[2]];
+const entier = mode === 'ecrans' && args.includes('--entier');
+const autour = mode === 'ecrans' && args.includes('--autour') ? (args[args.indexOf('--autour') + 1] ?? '').split(',').filter(Boolean) : [];
 const prefixes = mode === 'famille-proche' ? args.slice(2) : mode === 'familles' ? args.slice(3) : [];
 if (!sortie || (mode !== 'famille-proche' && !exportPath)) {
-  console.error('Usage : npm run captures -- <export.json> <dossier-sortie> [id-de-Moi]');
+  console.error('Usage : npm run captures -- <export.json> <dossier-sortie> [id-de-Moi] [--entier] [--autour <id>[,<id>…]]');
   console.error('        npm run captures -- --famille-proche <dossier-sortie> [préfixe-de-cas…]');
   console.error('        npm run captures -- --maquettes <dossier-html> <dossier-sortie>');
   console.error('        npm run captures -- --familles <dossier-familles> <dossier-sortie> [préfixe-de-fichier…]');
@@ -211,6 +223,65 @@ try {
     return m;
   }
 
+  /**
+   * L'arbre à l'échelle 1 (sans le zoom de l'écran), une fois les générations souples calculées : en entier et en
+   * tuiles (--entier), et un cadre autour de chaque personne demandée (--autour).
+   */
+  async function echelleUn() {
+    const o = { largeur: 1440, mobile: false };
+    if (entier) await capture('05-arbre-tout-ordinateur', '#/arbre', 'clair', clic('Tout'), 900, o);
+    await capture('08-arbre-charge', '#/arbre', 'clair', '', 900, o);
+    // Recherche des générations souples en Worker (quelques secondes en dev) : on attend le redessin.
+    await pause(6000);
+    const taille = (await evaluer(`(() => { const c = document.querySelector('.calque'); return { w: c.offsetWidth, h: c.offsetHeight }; })()`)).result.result
+      .value;
+    const [l, ha] = [Math.ceil(taille.w) + 40, Math.ceil(taille.h) + 200];
+    await cdp('Emulation.setDeviceMetricsOverride', { width: l, height: ha, deviceScaleFactor: 1, mobile: false });
+    await pause(800);
+    const rect = (
+      await evaluer(`(() => {
+        const c = document.querySelector('.calque');
+        // En règle de style : l'écran réapplique sa vue à chaque redimensionnement.
+        document.head.append(Object.assign(document.createElement('style'), { textContent: '.calque { transform: none !important; }' }));
+        c.style.setProperty('--s', '1');
+        document.querySelector('.vue-arbre').classList.remove('loin', 'proche');
+        document.querySelectorAll('.astuce-arbre').forEach((e) => e.remove());
+        const r = c.getBoundingClientRect();
+        const centres = {};
+        for (const n of c.querySelectorAll('.noeud[data-id]')) { const b = n.getBoundingClientRect(); centres[n.dataset.id] = { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }
+        return { x: r.left, y: r.top, w: r.width, h: r.height, centres };
+      })()`)
+    ).result.result.value;
+    await pause(300);
+    const cliche = async (nom, clip) => {
+      const { result } = await cdp('Page.captureScreenshot', { format: 'png', clip: { ...clip, scale: 1 } });
+      writeFileSync(join(dossier, `${nom}.png`), Buffer.from(result.data, 'base64'));
+      console.log('ok', nom);
+    };
+    if (entier) {
+      await cliche('08-arbre-entier', { x: rect.x, y: rect.y, width: rect.w, height: rect.h });
+      const [tl, th] = [2000, 1300];
+      for (let j = 0; j * th < rect.h; j++)
+        for (let i = 0; i * tl < rect.w; i++)
+          await cliche(`08-tuile-${j}-${i}`, {
+            x: rect.x + i * tl,
+            y: rect.y + j * th,
+            width: Math.min(tl, rect.w - i * tl),
+            height: Math.min(th, rect.h - j * th),
+          });
+    }
+    for (const id of autour) {
+      const c = rect.centres[id];
+      if (!c) {
+        console.warn(`Personne absente de l'arbre : ${id}`);
+        continue;
+      }
+      const x = Math.max(rect.x, Math.min(c.x - 800, rect.x + rect.w - 1600));
+      const y = Math.max(rect.y, Math.min(c.y - 500, rect.y + rect.h - 1000));
+      await cliche(`09-autour-${id}`, { x, y, width: Math.min(1600, rect.w), height: Math.min(1000, rect.h) });
+    }
+  }
+
   if (mode === 'famille-proche') {
     const cas = JSON.parse(readFileSync(join(FIXTURES, 'cas.json'), 'utf-8')).filter(
       (c) => prefixes.length === 0 || prefixes.some((p) => c.fichier.startsWith(p)),
@@ -289,7 +360,7 @@ try {
         console.log('ok', `${fichier}-${theme}`);
       }
     }
-  } else
+  } else if (!args.includes('--sans-ecrans'))
     for (const theme of ['clair', 'sombre']) {
       await capture('01-accueil', '#/', theme);
       await capture('02-fiche', `#/personne/${MOI}`, theme, '', 1600);
@@ -299,6 +370,7 @@ try {
       await capture('06-arbre-familles', '#/arbre', theme, clic('Familles'));
       await capture('07-reglages', '#/reglages', theme, '', 1200);
     }
+  if (entier || autour.length > 0) await echelleUn();
   await evaluer('localStorage.clear()');
   ws.close();
   console.log(`Captures dans ${dossier}`);

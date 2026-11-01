@@ -216,6 +216,18 @@ export class Lignes {
     this.gens = [...this.lignes.keys()].sort((a, b) => a - b);
   }
 
+  /** Blocs des ancêtres directs des racines (la ligne directe de Moi) : ils se rangent côte à côte dans leur ligne. */
+  private ascendance = new Set<Bloc>();
+
+  definirAscendance(racines: string[]): void {
+    const vus = new Set(racines);
+    const file = [...racines];
+    for (let i = 0; i < file.length; i++) {
+      for (const pa of this.liens.parents(file[i])) if (!vus.has(pa) && vus.add(pa)) file.push(pa);
+    }
+    this.ascendance = new Set([...vus].filter((id) => !racines.includes(id)).flatMap((id) => this.blocDe.get(id) ?? []));
+  }
+
   decalages(b: Bloc): number[] {
     const r = [0];
     for (let i = 1; i < b.membres.length; i++) r.push(r[i - 1] + (this.ecartPaire.get(clePaire(b.membres[i - 1], b.membres[i])) ?? 1));
@@ -265,6 +277,27 @@ export class Lignes {
     return moyenne((versHaut ? this.liens.parents(id) : this.liens.enfants(id)).map((m) => this.x(m)));
   }
 
+  /** Étendue d'une ligne : son bord gauche et sa largeur (au moins 1). */
+  private etendue(g: number): { debut: number; largeur: number } {
+    const ligne = this.lignes.get(g)!;
+    const debut = Math.min(...ligne.map((b) => b.gauche));
+    return { debut, largeur: Math.max(1, Math.max(...ligne.map((b) => b.gauche + this.largeur(b))) - debut) };
+  }
+
+  /**
+   * Comme `repere`, mais ramené à l'échelle de la ligne `g` : deux lignes n'ont pas la même largeur, et comparer
+   * telles quelles la position d'un parent (ligne étroite) et celle d'un enfant (ligne large) classerait mal les blocs.
+   */
+  private repereEchelle(id: string, versHaut: boolean, g: number): number | undefined {
+    const cible = this.etendue(g);
+    return moyenne(
+      (versHaut ? this.liens.parents(id) : this.liens.enfants(id)).map((m) => {
+        const source = this.etendue(this.blocDe.get(m)!.g);
+        return cible.debut + ((this.x(m) - source.debut) / source.largeur) * cible.largeur;
+      }),
+    );
+  }
+
   /**
    * Sens d'un bloc : un membre se met du côté de ses parents (ou de ses enfants). Sans indice, un couple
    * met l'homme à gauche (côté paternel à gauche), sinon l'aîné.
@@ -294,17 +327,63 @@ export class Lignes {
     for (const g of this.gens) this.lignes.get(g)!.forEach((b) => this.orienter(b, true));
   }
 
+  /** Deux blocs ont un parent en commun (frères et sœurs, ou beaux-frères et belles-sœurs par un couple). */
+  private apparentes(a: Bloc, b: Bloc): boolean {
+    const mien = this.parentsDuBloc(a);
+    return [...this.parentsDuBloc(b)].some((x) => mien.has(x));
+  }
+
+  /**
+   * Les ancêtres directs d'une même ligne se rangent côte à côte : les autres blocs pris entre eux passent de part et d'autre.
+   * Un bloc apparenté au premier ou au dernier ancêtre reste à son côté ; les autres se partagent, moitié à gauche, moitié à droite.
+   */
+  private rapprocherAscendance(ligne: Bloc[]): void {
+    const idx = ligne.flatMap((b, i) => (this.ascendance.has(b) ? [i] : []));
+    if (idx.length < 2) return;
+    const [f, l] = [idx[0], idx[idx.length - 1]];
+    let [debut, fin] = [f, l];
+    while (debut > 0 && this.apparentes(ligne[debut - 1], ligne[f])) debut--;
+    while (fin < ligne.length - 1 && this.apparentes(ligne[fin + 1], ligne[l])) fin++;
+    const aGauche: Bloc[] = [];
+    const aDroite: Bloc[] = [];
+    const libres: Bloc[] = [];
+    const milieu: Bloc[] = [];
+    for (const b of ligne.slice(f + 1, l)) {
+      if (this.ascendance.has(b)) milieu.push(b);
+      else if (this.apparentes(b, ligne[f])) aGauche.push(b);
+      else if (this.apparentes(b, ligne[l])) aDroite.push(b);
+      else if (idx.slice(1, -1).some((i) => this.apparentes(b, ligne[i]))) milieu.push(b);
+      else libres.push(b);
+    }
+    if (libres.length === 0) return;
+    const moitie = Math.ceil(libres.length / 2);
+    const nouvelle = [
+      ...ligne.slice(0, debut),
+      ...libres.slice(0, moitie),
+      ...ligne.slice(debut, f + 1),
+      ...aGauche,
+      ...ligne.slice(f + 1, l).filter((b) => milieu.includes(b)),
+      ...aDroite,
+      ...ligne.slice(l, fin + 1),
+      ...libres.slice(moitie),
+      ...ligne.slice(fin + 1),
+    ];
+    ligne.splice(0, ligne.length, ...nouvelle);
+  }
+
   /** Ordre d'une ligne : barycentres des parents en descendant, des enfants en remontant. */
   private trier(g: number, versHaut: boolean): void {
     const ligne = this.lignes.get(g)!;
     const cle = new Map<Bloc, number>();
+    const sansParents = new Set<Bloc>();
     for (const b of ligne) {
       // Clé : où les membres reliés veulent être, sans tenir compte de leur rang dans le bloc
       // (sinon un frère suivi de son conjoint passerait après son cadet).
       const reps = b.membres.flatMap((m) => {
-        const r = this.repere(m, versHaut);
+        const r = this.repereEchelle(m, versHaut, g);
         return r === undefined ? [] : [r];
       });
+      if (reps.length === 0) sansParents.add(b);
       cle.set(b, moyenne(reps) ?? b.gauche + this.largeur(b) / 2);
     }
     // À égalité (frères et sœurs sous les mêmes parents), l'ordre de leurs enfants, sans quoi les traits se croisent ;
@@ -315,7 +394,16 @@ export class Lignes {
       const [ea, eb] = [enfants(a), enfants(b)];
       return ea === undefined || eb === undefined ? 0 : ea - eb;
     };
-    ligne.sort((a, b) => cle.get(a)! - cle.get(b)! || (versHaut ? parEnfants(a, b) || comparerParNaissance(this.p(aine(a)), this.p(aine(b))) : 0));
+    // En descendant, un couple sans parents connus n'a de clé que sa propre place : il s'insère plutôt selon ses enfants,
+    // devant le premier bloc dont les enfants sont plus à droite, pour que leurs traits ne se croisent pas.
+    const libres = versHaut ? ligne.filter((b) => sansParents.has(b) && enfants(b) !== undefined).sort(parEnfants) : [];
+    const reste = ligne.filter((b) => !libres.includes(b));
+    reste.sort((a, b) => cle.get(a)! - cle.get(b)! || (versHaut ? parEnfants(a, b) || comparerParNaissance(this.p(aine(a)), this.p(aine(b))) : 0));
+    for (const b of libres) {
+      const i = reste.findIndex((c) => (enfants(c) ?? -Infinity) > enfants(b)!);
+      reste.splice(i < 0 ? reste.length : i, 0, b);
+    }
+    ligne.splice(0, ligne.length, ...reste);
     // Les frères et sœurs (un parent en commun) restent côte à côte : un bloc sans lien ne s'intercale pas entre eux.
     // De proche en proche : une chaîne qui porte deux fratries amène aussi les frères et sœurs de l'autre conjoint.
     const groupes: Bloc[] = [];
@@ -328,6 +416,7 @@ export class Lignes {
       }
     }
     ligne.splice(0, ligne.length, ...groupes);
+    this.rapprocherAscendance(ligne);
     this.tasser(ligne);
     for (const b of ligne) this.orienter(b, versHaut);
   }
@@ -620,6 +709,7 @@ export function disposerPartie(
   const liens = parentesDansPartie(partie.ids, parentsDe, tousParents);
   const { gen, ordre } = generations([...partie.racines, ...partie.ids], chefDe, membresDe, liens);
   const lignes = new Lignes(ordre, gen, membresDe, partie.liensBloc, (id) => personnes.get(id)!, liens);
+  lignes.definirAscendance(partie.racines);
   lignes.ordonner();
   lignes.placerAbscisses();
   lignes.centrerEnfantsUniques();

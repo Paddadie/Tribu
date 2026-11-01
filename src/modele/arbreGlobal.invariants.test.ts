@@ -31,7 +31,7 @@ const SEUILS: Record<
   lambert: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 7.63, ecartMoyen: 0.28, coudes: 5, petitsCoudes: 0, croisements: 1 },
   rochefort: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 10.85, ecartMoyen: 0.53, coudes: 9, petitsCoudes: 1, croisements: 0 },
   extremes: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 19, ecartMoyen: 0.19, coudes: 14, petitsCoudes: 0, croisements: 1 },
-  fixture: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 46.16, ecartMoyen: 0.06, coudes: 46, petitsCoudes: 4, croisements: 0 },
+  fixture: { entrelacements: 0, busCollés: 0, fratriesCollees: 0, largeur: 47.63, ecartMoyen: 0.09, coudes: 46, petitsCoudes: 4, croisements: 0 },
 };
 
 describe.each(cas)('arbre principal : $nom', ({ nom, d, moi }) => {
