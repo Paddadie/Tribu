@@ -8,7 +8,7 @@ import { disposerFoyer, familleProche } from '../modele/familleProche';
 import { boiteLigne, coupe, mentionsFoyer, segmentsDe, type Boite, type Cercle, type MentionUnion } from '../modele/mentionsUnion';
 import { dupontel, famillesDeReference } from '../modele/test/familles';
 import type { Donnees } from '../modele/types';
-import { boiteEtiquette, calculerCadres, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
+import { boiteEtiquette, calculerCadres, lieuxEtiquettes, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
 
 const fixture: Donnees = JSON.parse(readFileSync(new URL('../modele/fixtures/arbre-anonyme.json', import.meta.url), 'utf-8'));
 const cas = [...famillesDeReference().map((f) => ({ nom: f.fichier, d: f.donnees, moi: f.moi })), { nom: 'fixture', d: fixture, moi: ID_MOI }];
@@ -41,7 +41,8 @@ describe('arbre global', () => {
       const traits = traitsArbre(disp, pos, zoneBulle(disp, pos.centres, cadres), moi);
       const anneau = new Set([moi, ...disp.groupes.flatMap((g) => g.membres)]);
       const cercles = [...pos.centres].map(([id, c]) => ({ ...c, r: anneau.has(id) ? R + 5 : R }));
-      const etiquettes = disp.etiquettes.map((e) => boiteEtiquette(disp, pos.px, e));
+      const lieux = lieuxEtiquettes(disp, pos, traits);
+      const etiquettes = disp.etiquettes.map((e) => boiteEtiquette(disp, pos.px, e, lieux.get(e)));
       for (const palier of ['annee', 'detail'] as const) {
         const m = mentionsArbre(disp, pos, traits, cadres, d.unions, palier, moi, auj);
         expect(

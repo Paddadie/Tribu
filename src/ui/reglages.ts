@@ -4,7 +4,6 @@
 // sont annulables.
 
 import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from '../modele/agenda';
-import { disposerArbre } from '../modele/arbreGlobal';
 import type { Tri } from '../modele/liste';
 import { filtrerListe } from '../modele/filtres';
 import { AFFICHAGES, garderPour, type Affichage } from '../modele/ligneDirecte';
@@ -14,6 +13,7 @@ import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { FusionAnnulee, fusionner } from '../modele/fusion';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
 import { CERCLES, cercleDe, memeSuivi, SUIVI_FAMILLE_PROCHE, SUIVI_TOUT, suivis, type Cercle, type Suivi } from '../modele/suivi';
+import { arbreSouple } from './arbreSouple';
 import { changerAvecAnnulation } from './annulation';
 import { choisir } from './choisir';
 import { ouvrirChoixMoi } from './choixMoi';
@@ -156,7 +156,8 @@ function ongletExports(majTout: () => void): Onglet {
   const boutonImage = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterImage() }, 'Exporter l’arbre en PNG');
   // Personnes à dessiner : le filtre de l'arbre en cours, changeable ici sans toucher à l'écran Arbre.
   let affichage: Affichage = affichageArbre();
-  const dessin = (moi: string) => disposerArbre(lireDonnees(), moi, garderPour(lireDonnees(), moi, affichage));
+  // Générations souples : les décalages connus de l'écran Arbre (sinon le dessin d'avant, le temps de les chercher).
+  const dessin = (moi: string) => arbreSouple(lireDonnees(), moi, garderPour(lireDonnees(), moi, affichage));
 
   const maj = () => {
     const n = personnesVisibles(lireDonnees()).length;

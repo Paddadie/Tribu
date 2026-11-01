@@ -1,8 +1,10 @@
 # État en cours
 
-Dernier commit : ee348a3 (Qui suivre). À commiter : filtre « Ligne directe » de l'arbre global (maquette 3sFMJK2gbDhR1cjd1zVR73) : 1118 tests, `tsc` et build verts au 30/10 ; captures : arbres changés par la nouvelle icône de la barre, 14-ligne-directe (3 appareils), 15-afficher et 16-export-png (téléphone) ajoutées.
-- `modele/ligneDirecte.ts` (niveaux, `restreindre`), `disposerArbre(d, moi, garder?)` ; feuille « Afficher », pastille, loupe sur les cachés ; export PNG « Personnes à dessiner » (2 × 2).
-- À regarder par Paul : le filtre sur ses données réelles ; le dossier `mockups/` non suivi fait échouer `format:check`.
+Dernier commit : 81f9353 (Ligne directe). À commiter : générations souples V1b (maquette `mockups/generations-souples`) : 1128 tests, `tsc`, build et `format:check` verts au 01/11 ; captures avant / après : captures/souple-avant et souple-apres (arbres de Lambert, extrêmes, Martinez-Vasseur, Rochefort).
+- Passe après `disposerArbre` (inchangé, fixture intacte) : `modele/souple.ts`, `soupleRecherche.ts` ; recherche en Worker, résultat gardé dans `tribu:souple` ; noms de famille déplacés s'ils touchent un trait (`lieuxEtiquettes`).
+- Incohérences de V1b : Paul les signale après essai ; ni bandes ni repères de génération (non validés). Sur ses données : 59 → 26 croisements.
+- Limites : sans calcul gardé, l'arbre d'avant puis un redessin ; PNG souple seulement si le calcul est gardé ; captures d'arbre dépendantes de la fin du Worker (1,8 s). Incohérence vue : extrêmes, trait d'Ophélie commun à deux fratries de deux couleurs.
+- À regarder par Paul : V1b et le filtre « Ligne directe » sur ses données réelles ; un nom de famille déplacé même sans décalage (Martinez-Vasseur, Rochefort ; aucun sur la fixture).
 
 ## Passe qualité technique (refactor pur, sans changement visible) — 7 étapes faites
 - Étapes : 1 Prettier · 2 utilitaires uniques · 3 code mort · 4 découpe de fiche.css · 5 `barreEcran` / `boutonRetour` · 6 Réglages par onglet · 7 modele.ts par sujet. Décisions : DECISIONS.md.

@@ -2,21 +2,11 @@
 // (arbreImage.ts) : positions, cadres des groupes, zone de la bulle, passage vers la bulle et tracés des traits.
 
 import type { Disposition, GroupeDessine, Point } from '../modele/arbreGlobal';
+import { LARG, PAS_X, PAS_Y, R, SOUS_NOM } from '../modele/geometrie';
 import { placerMentions, sansVoisinEntre, segmentsDe, unionEntre, type Boite, type MentionUnion, type Obstacles, type Palier } from '../modele/mentionsUnion';
 import type { Union } from '../modele/types';
 
-/** Pixels entre deux places voisines, et entre deux générations (à l'échelle 1). */
-export const PAS_X = 80;
-export const PAS_Y = 154;
-/** Hauteur d'une 2e ligne de nom (prénom composé) : réservée sous chaque nom, pour que ni trait ni rang suivant ne la touche. */
-export const LIGNE_EN_PLUS = 16;
-/** Ligne « née X » sous le nom, dans l'arbre principal (V4, point 17) : réservée elle aussi. */
-export const LIGNE_NAISSANCE = 14;
-/** Rayon de l'avatar, largeur d'un nœud. */
-export const R = 19;
-export const LARG = 76;
-/** Sous l'avatar, le nom (sur 2 lignes si besoin), « née X » et l'année : un trait qui part d'un parent seul commence en dessous. */
-export const SOUS_NOM = R + 40 + LIGNE_EN_PLUS + LIGNE_NAISSANCE;
+export { LARG, LIGNE_EN_PLUS, LIGNE_NAISSANCE, PAS_X, PAS_Y, R, SOUS_NOM } from '../modele/geometrie';
 export const MARGE = 70;
 
 /** Cadre d'un groupe d'amis, en pixels : de l'étiquette (haut) au nom de la dernière ligne (bas). */
@@ -201,12 +191,61 @@ const ANNEAU = 5;
 /** Hauteur d'un nom de famille posé sur l'arbre, et d'un titre de groupe. */
 export const HAUT_ETIQUETTE = 16;
 
-/** Boîte d'un nom de famille : centré sur sa lignée, ou finissant (`fin`) ou commençant (`debut`) au milieu d'un couple. */
-export function boiteEtiquette(disp: Disposition, px: (p: Point) => Point, e: Disposition['etiquettes'][number]): Boite {
-  const { x } = px(e);
+type Etiquette = Disposition['etiquettes'][number];
+/** Bord gauche d'un nom de famille de largeur `l` ancré en `x` : centré, ou finissant (`fin`) ou commençant (`debut`) au milieu d'un couple. */
+const gauche = (e: Etiquette, x: number, l: number) => (e.ancre === 'fin' ? x - l : e.ancre === 'debut' ? x : x - l / 2);
+
+/**
+ * Lieu de chaque nom de famille : `x` est son point d'ancrage, `y` son haut. D'abord là où le met `hautEtiquette`.
+ * Si un trait le traverse (le trait commun d'un sous-niveau passe tout près des enfants, sous le nom), il glisse de
+ * côté (au plus 60 % de sa largeur), ou monte juste au-dessus d'un trait commun voisin : à la première place libre.
+ */
+export function lieuxEtiquettes(disp: Disposition, p: Positions, traits: Trait[]): Map<Etiquette, Point> {
+  const segments = traits.flatMap((t) => {
+    const m = /^M (\S+) (\S+) ([VH]) (\S+)$/.exec(t.d);
+    return m ? [{ v: m[3] === 'V', a: +m[1], b: +m[2], c: +m[4] }] : [];
+  });
+  const cartes = [...p.centres.values()];
+  const libre = (g: number, d: number, h: number) =>
+    !segments.some((s) =>
+      s.v
+        ? s.a > g - 2 && s.a < d + 2 && Math.max(s.b, s.c) > h - 2 && Math.min(s.b, s.c) < h + HAUT_ETIQUETTE + 2
+        : s.b > h - 2 && s.b < h + HAUT_ETIQUETTE + 2 && Math.max(s.a, s.c) > g && Math.min(s.a, s.c) < d,
+    ) && !cartes.some((q) => q.x + LARG / 2 > g && q.x - LARG / 2 < d && q.y + SOUS_NOM > h && q.y - R < h + HAUT_ETIQUETTE);
+  const lieux = new Map<Etiquette, Point>();
+  for (const e of disp.etiquettes) {
+    const c = p.px(e);
+    const l = largeurEtiquette(e.texte);
+    const g = gauche(e, c.x, l);
+    const h0 = hautEtiquette(disp, p.px, e);
+    const hauteurs = [
+      h0,
+      ...segments
+        .filter((s) => !s.v && s.b < c.y - R && s.b > c.y - PAS_Y && Math.max(s.a, s.c) > g && Math.min(s.a, s.c) < g + l)
+        .map((s) => s.b - 20)
+        .sort((u, v) => v - u),
+    ];
+    const glissements = [g, ...segments.filter((s) => s.v && Math.abs(s.a - c.x) < l).flatMap((s) => [s.a + 5, s.a - l - 5])]
+      .filter((x) => Math.abs(x - g) <= 0.6 * l)
+      .sort((u, v) => Math.abs(u - g) - Math.abs(v - g));
+    let lieu: Point = { x: c.x, y: h0 };
+    for (const y of hauteurs) {
+      const x = glissements.find((x) => libre(x, x + l, y));
+      if (x !== undefined) {
+        lieu = { x: c.x + x - g, y };
+        break;
+      }
+    }
+    lieux.set(e, lieu);
+  }
+  return lieux;
+}
+
+/** Boîte d'un nom de famille, à son lieu (`lieuxEtiquettes`) ou, sans lui, à la hauteur de `hautEtiquette`. */
+export function boiteEtiquette(disp: Disposition, px: (p: Point) => Point, e: Etiquette, lieu?: Point): Boite {
   const l = largeurEtiquette(e.texte);
-  const g = e.ancre === 'fin' ? x - l : e.ancre === 'debut' ? x : x - l / 2;
-  const h = hautEtiquette(disp, px, e);
+  const g = gauche(e, lieu?.x ?? px(e).x, l);
+  const h = lieu?.y ?? hautEtiquette(disp, px, e);
   return { g, h, d: g + l, b: h + HAUT_ETIQUETTE };
 }
 
@@ -228,12 +267,13 @@ export function mentionsArbre(
   // Moi et les membres d'un groupe ont un anneau autour de l'avatar (arbre.css) : 5 px de plus.
   const anneau = new Set([moi, ...disp.groupes.flatMap((g) => g.membres)]);
   const cercles = new Map([...p.centres].map(([id, c]) => [id, { x: c.x, y: c.y, r: anneau.has(id) ? R + ANNEAU : R }]));
+  const lieux = lieuxEtiquettes(disp, p, traits);
   const obstacles: Obstacles = {
     cercles: [...cercles.values()],
     segments: [...traits.flatMap((t) => segmentsDe(t.d)), ...cadres.flatMap((c) => segmentsDe(`M ${c.x} ${c.y} H ${c.x + c.l} V ${c.y + c.ha} H ${c.x} Z`))],
     boites: [
       ...[...p.centres.values()].map((c) => ({ g: c.x - LARG / 2, h: c.y + R, d: c.x + LARG / 2, b: c.y + SOUS_NOM })),
-      ...disp.etiquettes.map((e) => boiteEtiquette(disp, p.px, e)),
+      ...disp.etiquettes.map((e) => boiteEtiquette(disp, p.px, e, lieux.get(e))),
       ...cadres.map((c) => ({ g: c.x + 12, h: c.y + 8, d: c.x + c.l - 12, b: c.y + 8 + HAUT_ETIQUETTE })),
     ],
   };

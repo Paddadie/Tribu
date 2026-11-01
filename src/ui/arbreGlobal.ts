@@ -2,7 +2,7 @@
 // une bulle sous la famille (maquette A). On s'y déplace au doigt (glisser, pincer, double toucher) ou à la
 // souris (molette) ; toucher une personne ouvre sa fiche. Le placement vient de `disposerArbre` (modèle testé).
 
-import { disposerArbre, type Disposition, type Point } from '../modele/arbreGlobal';
+import type { Disposition, Point } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
 import { prochesDeFamille } from '../modele/filtres';
 import { AFFICHAGES, garderPour, type Affichage } from '../modele/ligneDirecte';
@@ -15,10 +15,11 @@ import { h, icone, SVG } from './dom';
 import { barreEcran } from './ecran';
 import { lireDonnees, lireReglages } from './etat';
 import { avatarPersonne } from './lignePersonne';
+import { arbreSouple } from './arbreSouple';
 import {
   calculerCadres,
   HAUT_ETIQUETTE,
-  hautEtiquette,
+  lieuxEtiquettes,
   LARG,
   mentionsArbre,
   positions,
@@ -156,7 +157,19 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
       ),
     );
   }
-  const dessiner = () => disposerArbre(d, moi.id, garderPour(d, moi.id, affichageGarde));
+  // Générations souples : si les décalages de ce dessin ne sont pas encore connus, l'arbre d'avant s'affiche et
+  // l'arbre souple le remplace dès qu'il est prêt, à la même vue (sauf feuille ou recherche ouverte : la prochaine fois).
+  const dessiner = (): Disposition => {
+    const base = arbreSouple(d, moi.id, garderPour(d, moi.id, affichageGarde), (souple) => {
+      if (disp !== base || !carte.vue.isConnected || carte.occupee()) return;
+      disp = souple;
+      if (affichageGarde === 'tout') toute = disp;
+      const nouvelle = creer({});
+      carte.vue.replaceWith(nouvelle.vue);
+      carte = nouvelle;
+    });
+    return base;
+  };
   let disp = dessiner();
   // Famille ou groupe hors du filtre : on revient à tout l'arbre plutôt que de ne rien montrer.
   if (focus && affichageGarde !== 'tout' && !montre(disp, focus)) {
@@ -174,7 +187,7 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
       affichage: affichageGarde,
       sansParents,
       bouton: filtre,
-      toutLArbre: () => (toute ??= disposerArbre(d, moi.id)),
+      toutLArbre: () => (toute ??= arbreSouple(d, moi.id)),
       choisir,
     });
   };
@@ -552,15 +565,18 @@ class Carte {
       el.style.setProperty('--cc', couleurGroupe(this.cadres.indexOf(c)));
       return placer(el, c.x + 12, c.y + 8);
     });
+    const pos = { largeur: this.largeur, hauteur: this.hauteur, px, centres: this.centres };
+    const lieux = lieuxEtiquettes(this.disp, pos, traitsArbre(this.disp, pos, bulle, this.moi.id));
     const familles = this.disp.etiquettes.map((e) => {
       const c = px(e);
-      const haut = hautEtiquette(this.disp, px, e);
-      const el = placer(h('div', { class: `etiquette-famille${e.ancre ? ` ${e.ancre}` : ''}` }, e.texte), c.x, haut);
+      const lieu = lieux.get(e)!;
+      const haut = lieu.y;
+      const el = placer(h('div', { class: `etiquette-famille${e.ancre ? ` ${e.ancre}` : ''}` }, e.texte), lieu.x, haut);
       if (e.lignee !== undefined) el.style.setProperty('--cc', couleurTrait(e.lignee));
       // Dans la bulle, de loin, les titres des groupes suffisent.
       if (bulle && c.y > bulle.ha) el.classList.add('dans-bulle');
       const poids = this.disp.places.filter((p) => e.lignee !== undefined && p.lignee === e.lignee).length;
-      this.etiquettes.push({ el, x: c.x, bas: haut + HAUT_ETIQUETTE, poids, ancre: e.ancre });
+      this.etiquettes.push({ el, x: lieu.x, bas: haut + HAUT_ETIQUETTE, poids, ancre: e.ancre });
       return el;
     });
     return [...titres, ...familles];
@@ -826,6 +842,11 @@ class Carte {
       { passive: false },
     );
     this.vue.addEventListener('dragstart', (e) => e.preventDefault());
+  }
+
+  /** Une feuille ou la recherche est ouverte : on ne remplace pas le dessin sous les doigts. */
+  occupee(): boolean {
+    return this.feuilleOuverte !== undefined || this.recherche !== undefined;
   }
 
   // ——— Recherche ———

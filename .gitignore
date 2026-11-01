@@ -13,5 +13,5 @@ CLAUDE.md
 CLAUDE.local.md
 .claude/
 
-# Maquettes : tes données et les captures qui en sont faites restent locales
-mockups/local/
+# Maquettes (scripts, images, captures) : outils de travail, gardés en local
+mockups/

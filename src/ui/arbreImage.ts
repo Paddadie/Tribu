@@ -9,7 +9,7 @@ import { couleurFamille, initiales, mentionNaissance, prenomOuNom } from '../mod
 import { estDecede } from '../modele/modele';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
-import { calculerCadres, hautEtiquette, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
+import { calculerCadres, lieuxEtiquettes, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
 import { encoderPng } from './png';
 
 // Limites des canvas relevées par la bibliothèque canvas-size (jhildenbiddle.github.io/canvas-size, « Test Results ») :
@@ -283,13 +283,14 @@ function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donne
       ctx.font = `italic 600 ${l.taille}px ${POLICE}`;
       ctx.fillText(l.texte, l.x, l.y);
     }
+  const lieux = lieuxEtiquettes(disp, pos, traits);
   for (const e of disp.etiquettes) {
-    const c = pos.px(e);
+    const c = lieux.get(e)!;
     ctx.fillStyle = e.lignee !== undefined ? teinte(e.lignee) : COULEURS.secondaire;
     ctx.font = `600 10.5px ${POLICE}`;
     ctx.textAlign = e.ancre === 'fin' ? 'right' : e.ancre === 'debut' ? 'left' : 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(e.texte.toLocaleUpperCase('fr').split('').join(' '), c.x, hautEtiquette(disp, pos.px, e) + 8);
+    ctx.fillText(e.texte.toLocaleUpperCase('fr').split('').join(' '), c.x, c.y + 8);
   }
   const rangs = new Map(disp.groupes.map((g, i) => [g.id, i]));
   const anneaux = new Map<string, string>();
