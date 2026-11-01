@@ -40,8 +40,8 @@ const MAX_AUJOURDHUI = 4;
 const MAX_FETES_AUJOURDHUI = 4;
 const MAX_VIGNETTES = 10;
 const HORIZON = 30;
-/** Fêtes annoncées dans « Bientôt » : la semaine à venir seulement. */
-const HORIZON_FETES = 7;
+/** Fêtes annoncées dans « Bientôt » : celles de demain seulement. */
+const HORIZON_FETES = 1;
 const MAX_RESULTATS = 30;
 
 const minuscule = (t: string) => t.charAt(0).toLocaleLowerCase('fr') + t.slice(1);

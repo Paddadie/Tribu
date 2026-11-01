@@ -1058,6 +1058,27 @@ describe('mémo : décès, âge et anniversaires', () => {
     }
   });
 
+  it('« Bientôt » ne montre que les fêtes de demain, pas celles d’après, et garde les anniversaires', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 21, 12));
+    try {
+      const { donnees } = avec(
+        { prenom: 'Céline' }, // fête aujourd'hui (21/10)
+        { prenom: 'Élodie' }, // demain (22/10)
+        { prenom: 'Florentin' }, // dans 3 jours (24/10)
+        { prenom: 'Fêtard', naissance: dans(5, 30) },
+      );
+      await demarrer(donnees);
+      const bientot = ecran().querySelector('.bientot')!.textContent!;
+      expect(bientot).toContain('Élodie');
+      expect(bientot).not.toContain('Florentin');
+      expect(bientot).toContain('Fêtard');
+      expect(ecran().querySelector('.aujourdhui')!.textContent).toContain('Céline');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('la fiche affiche l’âge d’une personne vivante, et décès puis « Morte à … » pour une décédée', async () => {
     const { donnees, ids } = avec({ prenom: 'Vivante', naissance: dans(-40, 34) }, { prenom: 'Disparue', naissance: '1941-05-03', deces: '2024-01-14' });
     await demarrer(donnees, `#/personne/${ids.Vivante}`);
