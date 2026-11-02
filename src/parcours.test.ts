@@ -690,7 +690,7 @@ describe('import', () => {
     await demarrer(famille().donnees, '#/reglages');
     const titres = (id: string) => [...ecran().querySelectorAll(`#panneau-${id} h2, #panneau-${id} h3`)].map((t) => t.textContent);
     expect(titres('general')).toEqual(['Moi', 'Amis', 'Affichage']);
-    expect(titres('suivi')).toEqual(['Fêtes', 'Qui suivre']);
+    expect(titres('suivi')).toEqual(['Fêtes', 'Fiche par fiche', 'Qui suivre']);
     expect(titres('partager')).toEqual(['Partager', 'Exporter les dates vers un agenda', 'Exporter l’arbre en image']);
     expect(titres('donnees')).toEqual(['Sauvegarde', 'Exporter', 'Importer', 'Vérifier et effacer']);
     expect(ecran().querySelector('#panneau-suivi #fetes')).not.toBeNull();
@@ -1520,8 +1520,8 @@ describe('arbre : filtre « Ligne directe »', () => {
     expect(liste.disabled).toBe(false);
     liste.dispatchEvent(new Event('change'));
     expect(coche()).toBe('groupe');
-    // Karim et Chloé : le groupe sans la famille de Chloé.
-    expect(resume()).toMatch(/^2 personnes · /);
+    // Karim, Chloé et sa famille proche (ses parents et sa sœur), sans grand-père, oncle ni cousine.
+    expect(resume()).toMatch(/^5 personnes · /);
   });
 
   it('sans groupe d’amis, l’export PNG grise le choix du groupe', async () => {
@@ -1989,5 +1989,76 @@ describe('« Qui suivre » (Réglages › Suivi)', () => {
       undefined,
       undefined,
     ]);
+  });
+
+  const avec = (d: Donnees, id: string, champs: Partial<Donnees['personnes'][number]>): Donnees => ({
+    ...d,
+    personnes: d.personnes.map((p) => (p.id === id ? { ...p, ...champs } : p)),
+  });
+
+  it('fiche par fiche : liens dans l’onglet, au-dessus de « Qui suivre »', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(avec(donnees, ids.Denis, { avecRappel: true }), '#/reglages/suivi', { moi: ids.Chloé, suivi: SUIVI_FAMILLE_PROCHE });
+    const titres = [...ecran().querySelectorAll('#panneau-suivi .titre-section')].map((t) => t.textContent);
+    expect(titres.indexOf('Fiche par fiche')).toBe(titres.indexOf('Qui suivre') - 1);
+    expect(trouver('a', 'Rappels').getAttribute('href')).toBe('#/suivi/rappels');
+    expect(trouver('a', 'Rappels').textContent).toContain('4 personnes · 1 exception');
+    expect(trouver('a', 'À compléter').textContent).toContain('4 fiches incomplètes · aucune exception');
+  });
+
+  it('fiche par fiche : rappels par cercle, exception créée puis retirée', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/suivi/rappels', { moi: ids.Chloé, suivi: SUIVI_FAMILLE_PROCHE });
+    expect(titre()).toBe('Rappels');
+    const sections = () => [...ecran().querySelectorAll('.liste-suivi .titre-cercle')].map((t) => t.textContent);
+    expect(sections()).toEqual(['Toi et ton conjointtoujours suivis', 'Parents et enfantscercle suivi', 'Sans lien connucercle non suivi']);
+    expect(ecran().querySelector('.resume-suivi')!.textContent).toBe('3 suivies sur 4 · 0 exception');
+    const denis = () => ecran().querySelector<HTMLInputElement>(`[data-id="${ids.Denis}"] input`)!;
+    expect(denis().checked).toBe(false);
+
+    await toucher(denis());
+    expect(enregistrees().personnes.find((p) => p.id === ids.Denis)!.avecRappel).toBe(true);
+    expect(denis().checked).toBe(true);
+    expect(ecran().querySelector('.resume-suivi')!.textContent).toBe('4 suivies sur 4 · 1 exception');
+    expect(denis().closest('.ligne')!.textContent).toContain('son cercle : non suivi');
+    await toucher(trouver('.puces button', 'Exceptions'));
+    expect(ecran().querySelectorAll('.liste-suivi .ligne')).toHaveLength(1);
+
+    await toucher(trouver('button', 'Revenir au cercle'));
+    const fiche = enregistrees().personnes.find((p) => p.id === ids.Denis)!;
+    expect([fiche.avecRappel, fiche.sansRappel]).toEqual([undefined, undefined]);
+    expect(ecran().querySelector('.liste-suivi')!.textContent).toBe('Aucun résultat.');
+    await toucher(trouver('.puces button', 'Toutes'));
+  });
+
+  it('fiche par fiche : « À compléter » ne liste pas les fiches complètes', async () => {
+    const { donnees, ids } = famille();
+    const complete = avec(donnees, ids.Anne, { naissance: '1960-04-02' });
+    await demarrer(complete, '#/suivi/completer', { moi: ids.Chloé, suivi: SUIVI_FAMILLE_PROCHE });
+    const lignes = () => [...ecran().querySelectorAll<HTMLElement>('.liste-suivi .ligne')];
+    expect(
+      lignes()
+        .map((l) => l.dataset.id)
+        .sort(),
+    ).toEqual([ids.Bruno, ids.Chloé, ids.Denis].sort());
+    expect(lignes()[0]!.textContent).toContain('Naissance inconnue');
+    // Bruno (parent, signalé par son cercle) : l'éteindre crée « Ne plus me la signaler ».
+    await toucher(
+      lignes()
+        .find((l) => l.dataset.id === ids.Bruno)!
+        .querySelector('input')!,
+    );
+    expect(enregistrees().personnes.find((p) => p.id === ids.Bruno)!.ignorerIncomplet).toBe(true);
+  });
+
+  it('fiche par fiche : sans « Moi », liste par lettre où tout le monde est suivi', async () => {
+    const { donnees, ids } = famille();
+    await demarrer(donnees, '#/suivi/rappels');
+    expect(ecran().querySelector('.dit-cercle')).toBeNull();
+    expect(ecran().querySelector('.resume-suivi')!.textContent).toBe('4 suivies sur 4 · 0 exception');
+    const anne = ecran().querySelector<HTMLInputElement>(`[data-id="${ids.Anne}"] input`)!;
+    await toucher(anne);
+    expect(enregistrees().personnes.find((p) => p.id === ids.Anne)!.sansRappel).toBe(true);
+    expect(ecran().textContent).toContain('tout le monde est suivi');
   });
 });

@@ -342,6 +342,9 @@ try {
           await capture(`${fam}-${nom}-11-arbre-pres`, '#/arbre', theme, pres, hauteur, o);
           // « Qui suivre » : la grille des cercles, et les interrupteurs d'une fiche qui suit son cercle.
           await capture(`${fam}-${nom}-12-qui-suivre`, '#/reglages/suivi', theme, '', 1700, o);
+          // Suivi fiche par fiche : rappels, puis « À compléter » (fiches incomplètes seulement).
+          await capture(`${fam}-${nom}-12b-suivi-rappels`, '#/suivi/rappels', theme, '', 1700, o);
+          await capture(`${fam}-${nom}-12c-suivi-completer`, '#/suivi/completer', theme, '', 1700, o);
           if (loin) await capture(`${fam}-${nom}-13-modifier-loin`, `#/modifier/${loin}`, theme, '', 1700, o);
           // Feuille « Afficher » ouverte, et le choix des personnes de l'export PNG.
           await capture(`${fam}-${nom}-15-afficher`, '#/arbre', theme, `document.querySelector('.filtre-arbre').click()`, hauteur, o);

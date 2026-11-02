@@ -77,6 +77,8 @@ export interface Disposition {
   etiquettes: EtiquetteFamille[];
   /** Personnes de l'arbre principal (famille et amis posés à côté d'elle, sans Moi) qui sont dans un groupe d'amis : un petit anneau à la couleur du groupe. */
   anneaux: { id: string; groupe: string }[];
+  /** Rapport largeur / hauteur de l'image exportée, titre compris, atteint par des marges (pageAmis.ts) ; libre sinon. */
+  format?: number;
 }
 
 /** Parcours en largeur depuis `departs`, dans l'ordre de découverte. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { disposerArbre } from './arbreGlobal';
-import { CIBLES, garderCible, nomFichierImage, personnesDessinees, personnesDuGroupe, pourFichier, titreImage } from './cibleImage';
+import { CIBLES, garderCible, nomFichierImage, personnesDessinees, personnesDuGroupe, pourFichier, procheDeMoi, titreImage } from './cibleImage';
 import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele';
 import type { Donnees } from './types';
 
@@ -62,15 +62,55 @@ describe('cibles de l’export PNG', () => {
     expect(personnesDessinees(d, 'famille', disp)).toBe(7);
   });
 
-  it('un groupe garde ses membres, la famille de chacun et Moi, sans la famille de Moi', () => {
+  it('un groupe garde ses membres, la famille de chacun, Moi et sa famille proche, sans son ex', () => {
     const { d, ids, voile } = monde();
     const garder = personnesDuGroupe(d, voile, ids.Léon);
-    // La cousine Inès vient seule : sa famille est celle de Moi.
-    expect([...garder].sort()).toEqual([voile, ids.Léon, ids.Marius, ids.Nora, ids.Pablo, ids.Barnabé, ids.Rosalie, ids.Inès].sort());
+    // La nièce Inès est déjà de la famille proche de Moi : sa propre famille ne s'ajoute pas.
+    const proches = [ids.Léon, ids.Anselme, ids.Berthe, ids.Zélie, ids.Gaspard, ids.Inès];
+    expect([...garder].sort()).toEqual([voile, ...proches, ids.Marius, ids.Nora, ids.Pablo, ids.Barnabé, ids.Rosalie].sort());
     const disp = disposerArbre(d, ids.Léon, garder);
     expect(disp.groupes.map((g) => g.id)).toEqual([voile]);
-    expect(personnesDessinees(d, 'groupe', disp)).toBe(7);
-    expect(disp.places.map((p) => p.personne.id)).not.toContain(ids.Anselme);
+    expect(personnesDessinees(d, 'groupe', disp)).toBe(11);
+    expect(disp.places.map((p) => p.personne.id)).not.toContain(ids.Ottilie);
+  });
+
+  it('la famille proche de Moi : parents et leurs conjoints, fratrie et demi-fratrie avec leurs parents, conjoints et enfants, conjoint et enfants', () => {
+    let d: Donnees = donneesVides();
+    const ids: Record<string, string> = {};
+    for (const prenom of ['Moi', 'Père', 'Mère', 'BellePère', 'Sœur', 'Beauf', 'Neveu', 'DemiFrère', 'DemiSœur', 'BelleMère', 'Conjointe', 'Fils', 'Ex']) {
+      const r = creerPersonne(d, { prenom, nom: 'Fictif' });
+      d = r.donnees;
+      ids[prenom] = r.personne.id;
+    }
+    for (const prenom of ['GrandPère', 'Oncle', 'Cousin', 'BeauPèreDeMoi', 'CompagnonDeBelleMère', 'ExDuPère']) {
+      const r = creerPersonne(d, { prenom, nom: 'Exclu' });
+      d = r.donnees;
+      ids[prenom] = r.personne.id;
+    }
+    const filiation = (parent: string, enfant: string) => (d = ajouterFiliation(d, ids[parent], ids[enfant], 'biologique').donnees);
+    for (const enfant of ['Moi', 'Sœur']) ['Père', 'Mère'].forEach((p) => filiation(p, enfant));
+    filiation('Mère', 'DemiFrère');
+    filiation('BellePère', 'DemiFrère');
+    // L'ex du père, autre parent d'une demi-sœur, est gardée : c'est la belle-mère de Moi.
+    filiation('Père', 'DemiSœur');
+    filiation('BelleMère', 'DemiSœur');
+    filiation('Sœur', 'Neveu');
+    filiation('Moi', 'Fils');
+    filiation('GrandPère', 'Père');
+    filiation('GrandPère', 'Oncle');
+    filiation('Oncle', 'Cousin');
+    filiation('BeauPèreDeMoi', 'Conjointe');
+    d = ajouterUnion(d, ids.Père, ids.Mère, true, 'separee').donnees;
+    d = ajouterUnion(d, ids.Mère, ids.BellePère, false).donnees;
+    d = ajouterUnion(d, ids.Père, ids.BelleMère, false, 'separee').donnees;
+    d = ajouterUnion(d, ids.BelleMère, ids.CompagnonDeBelleMère, false).donnees;
+    d = ajouterUnion(d, ids.Père, ids.ExDuPère, false, 'separee').donnees;
+    d = ajouterUnion(d, ids.Sœur, ids.Beauf, true).donnees;
+    d = ajouterUnion(d, ids.Moi, ids.Ex, false, 'separee').donnees;
+    d = ajouterUnion(d, ids.Moi, ids.Conjointe, true).donnees;
+    const proches = procheDeMoi(d, ids.Moi);
+    const attendus = ['Moi', 'Père', 'Mère', 'BellePère', 'Sœur', 'Beauf', 'Neveu', 'DemiFrère', 'DemiSœur', 'BelleMère', 'Conjointe', 'Fils'];
+    expect([...proches].sort()).toEqual(attendus.map((p) => ids[p]).sort());
   });
 
   it('un groupe inconnu ou absent ne garde personne', () => {

@@ -18,6 +18,7 @@ import { demarrerNavigation, profondeurCourante, remplacer } from './ui/navigati
 import { ecranPersonnes } from './ui/personnes';
 import { quiParent } from './ui/quiParent';
 import { ecranReglages } from './ui/reglages';
+import { ecranSuiviFiches } from './ui/suiviFiches';
 import { ecranUnion } from './ui/union';
 import { ecranVerification } from './ui/verification';
 
@@ -25,6 +26,7 @@ import { ecranVerification } from './ui/verification';
 //   #/                 accueil        #/personnes       toutes les fiches     #/personne/<id>   fiche
 //   #/agenda           dates des 12 prochains mois
 //   #/reglages[/<onglet>]  réglages en onglets : general, suivi, partager, donnees
+//   #/suivi/rappels    rappels fiche par fiche (Réglages › Suivi)      #/suivi/completer   « À compléter » fiche par fiche
 //   #/nouveau          création       #/nouveau/<texte>  création, prénom et nom tirés de la recherche
 //   #/modifier/<id>    modification
 //   #/conjoint/<id>    ajout d'un conjoint à la personne      #/ami/<id>   ajout d'un ami
@@ -46,6 +48,7 @@ function vue(route: string): HTMLElement {
   const [, section, id] = route.split('?')[0].split('/');
   const personne = lireDonnees().personnes.find((p) => p.id === id);
   if (section === 'reglages') return ecranReglages(id);
+  if (section === 'suivi') return ecranSuiviFiches(id);
   if (section === 'arbre') {
     const cle = route.split('/')[3];
     const focus = (id === 'famille' || id === 'groupe') && cle ? { quoi: id as FocusArbre['quoi'], cle: decodeURIComponent(cle) } : undefined;

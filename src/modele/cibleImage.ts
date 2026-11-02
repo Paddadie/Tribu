@@ -1,10 +1,10 @@
 // Cibles de l'export PNG (Réglages → Partager) : qui dessiner, sous quel titre et dans quel fichier.
 // « Tout l'arbre » et la ligne directe viennent de ligneDirecte.ts ; « Toute la famille » est la famille de la liste
 // (filtres.ts : liens de parenté et d'union, ex compris, sans amis) ; un groupe d'amis garde ses membres, la famille
-// de chacun et Moi, d'où part toujours l'arbre.
+// de chacun, et Moi avec sa famille proche (`procheDeMoi`), d'où part toujours l'arbre.
 
 import type { Disposition } from './arbreGlobal';
-import { nomGroupe } from './deductions';
+import { conjoint, fratrie, liensEnfants, liensParents, nomGroupe } from './deductions';
 import { familleDe } from './filtres';
 import { AFFICHAGES, garderPour, type Affichage } from './ligneDirecte';
 import { personnesVisibles } from './modele';
@@ -26,14 +26,34 @@ export const CIBLES: [Cible, string][] = [
 ];
 
 /**
- * Membres du groupe, la famille de chacun et Moi, plus l'id du groupe pour que `restreindre` le garde. Un membre de
- * la famille de Moi vient seul : sinon toute la famille suivrait. Vide si le groupe n'existe pas.
+ * Moi et sa famille proche, pour l'export d'un groupe : ses parents et leurs conjoints, ses frères et sœurs (demis
+ * compris), leurs parents (beau-père, belle-mère : l'ex d'un parent, autre parent d'un demi), leurs conjoints et
+ * leurs enfants, son conjoint et ses enfants. Ni grands-parents, ni cousins, ni la famille du conjoint, ni un ex sans
+ * enfant d'un demi.
+ */
+export function procheDeMoi(d: Donnees, moi: string): Set<string> {
+  const parents = liensParents(d, moi).map((l) => l.personne.id);
+  const { freresSoeurs, demis } = fratrie(d, moi);
+  const freres = [...freresSoeurs, ...demis].map((p) => p.id);
+  const garder = new Set([moi, ...parents, ...freres]);
+  for (const id of freres) for (const l of liensParents(d, id)) garder.add(l.personne.id);
+  for (const id of [moi, ...parents, ...freres]) {
+    const c = conjoint(d, id);
+    if (c) garder.add(c.personne.id);
+  }
+  for (const id of [moi, ...freres]) for (const l of liensEnfants(d, id)) garder.add(l.personne.id);
+  return garder;
+}
+
+/**
+ * Membres du groupe, la famille de chacun, Moi et sa famille proche, plus l'id du groupe pour que `restreindre` le
+ * garde. Un membre de la famille de Moi vient seul : sinon toute la famille suivrait. Vide si le groupe n'existe pas.
  */
 export function personnesDuGroupe(d: Donnees, groupe: string, moi: string): Set<string> {
   const g = d.groupes.find((x) => x.id === groupe);
   if (!g) return new Set();
   const deMoi = familleDe(d, moi);
-  const garder = new Set([moi, groupe]);
+  const garder = new Set([...procheDeMoi(d, moi), groupe]);
   for (const m of g.membres) {
     if (garder.has(m)) continue;
     if (deMoi.has(m)) garder.add(m);

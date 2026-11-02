@@ -324,3 +324,75 @@
   font-weight: var(--gras);
   color: var(--accent-texte);
 }
+
+/* Suivi fiche par fiche (#/suivi/rappels, #/suivi/completer) : fiches par cercle, interrupteur à droite. */
+.resume-suivi {
+  margin: 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.contenu .champ-filtre[hidden] {
+  display: none;
+}
+
+.nombre-puce {
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.liste-suivi {
+  display: grid;
+  gap: 24px;
+}
+
+.titre-cercle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dit-cercle {
+  margin-left: auto;
+  font-weight: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--secondaire);
+}
+
+.ligne-suivi-fiche .ligne-texte {
+  flex: 1;
+}
+
+.exception-suivi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: var(--t1);
+}
+
+.pastille-exception {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--avert-fond);
+  color: var(--avert-texte);
+  font-weight: var(--gras);
+}
+
+.pastille-exception.sans-effet {
+  background: var(--pastille);
+  color: var(--secondaire);
+  font-weight: normal;
+}
+
+.lien-exception {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--gras);
+  color: var(--accent-texte);
+  text-decoration: underline;
+  cursor: pointer;
+}

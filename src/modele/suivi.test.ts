@@ -5,6 +5,7 @@ import { evenementsAVenir } from './evenements';
 import { filtrerListe } from './filtres';
 import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele';
 import {
+  aException,
   avecCran,
   CERCLES,
   CERCLES_HORS,
@@ -12,9 +13,11 @@ import {
   cercleDe,
   cranDe,
   lireCercles,
+  retirerException,
   SUIVI_FAMILLE_PROCHE,
   SUIVI_TOUT,
   suivis,
+  suivreFiche,
   type Cercles,
   type Suivi,
 } from './suivi';
@@ -191,5 +194,76 @@ describe('effet sur les rappels et « À compléter »', () => {
     const signalees = filtrerListe(incompletes, incompletes.personnes, { filtre: 'acompleter' }, ids.Alix, SUIVI_FAMILLE_PROCHE);
     expect(signalees.map((p) => p.prenom)).toEqual(['Alix', 'Bruno', 'Carla', 'Denise', 'Fanny', 'Gaston', 'Hugo', 'Julie']);
     expect(filtrerListe(incompletes, incompletes.personnes, { filtre: 'acompleter' }, ids.Alix)).toHaveLength(d.personnes.length);
+  });
+});
+
+describe('basculer une fiche (Réglages › Suivi, fiche par fiche)', () => {
+  const champs = (p: Personne) => ({
+    avecRappel: p.avecRappel,
+    sansRappel: p.sansRappel,
+    signalerIncomplet: p.signalerIncomplet,
+    ignorerIncomplet: p.ignorerIncomplet,
+  });
+  const aucune = { avecRappel: undefined, sansRappel: undefined, signalerIncomplet: undefined, ignorerIncomplet: undefined };
+
+  it('crée l’exception qui force le choix quand le cercle dit l’inverse', () => {
+    const { d, ids } = famille();
+    const proche = SUIVI_FAMILLE_PROCHE;
+    // Noé (sans lien) n'a pas de rappels ; Karl (belle-famille) n'est pas signalé.
+    let e = suivreFiche(d, ids.Alix, proche, ids.Noe, 'rappels', true);
+    expect(champs(qui(e, ids.Noe))).toEqual({ ...aucune, avecRappel: true });
+    e = suivreFiche(e, ids.Alix, proche, ids.Karl, 'completer', true);
+    expect(champs(qui(e, ids.Karl))).toEqual({ ...aucune, signalerIncomplet: true });
+    // Bruno (parent) suivi partout : l'éteindre crée l'exception contraire.
+    e = suivreFiche(e, ids.Alix, proche, ids.Bruno, 'rappels', false);
+    e = suivreFiche(e, ids.Alix, proche, ids.Bruno, 'completer', false);
+    expect(champs(qui(e, ids.Bruno))).toEqual({ ...aucune, sansRappel: true, ignorerIncomplet: true });
+    const s = suivis(e, ids.Alix, proche);
+    expect([s.rappel(qui(e, ids.Noe)), s.signale(qui(e, ids.Karl)), s.rappel(qui(e, ids.Bruno))]).toEqual([true, true, false]);
+    // Les autres fiches et les cercles ne bougent pas.
+    expect(champs(qui(e, ids.Carla))).toEqual(aucune);
+    expect(proche).toEqual(SUIVI_FAMILLE_PROCHE);
+  });
+
+  it('retire l’exception quand on revient à ce que dit le cercle', () => {
+    const { d, ids } = famille();
+    const depart = avec(avec(d, ids.Fanny, { sansRappel: true }), ids.Noe, { signalerIncomplet: true });
+    let e = suivreFiche(depart, ids.Alix, SUIVI_FAMILLE_PROCHE, ids.Fanny, 'rappels', true);
+    e = suivreFiche(e, ids.Alix, SUIVI_FAMILLE_PROCHE, ids.Noe, 'completer', false);
+    expect(champs(qui(e, ids.Fanny))).toEqual(aucune);
+    expect(champs(qui(e, ids.Noe))).toEqual(aucune);
+    // Aucune clé à false : le stockage n'accepte que true.
+    expect(Object.keys(qui(e, ids.Fanny))).not.toContain('sansRappel');
+  });
+
+  it('ne crée rien quand le choix est déjà celui du cercle', () => {
+    const { d, ids } = famille();
+    const e = suivreFiche(d, ids.Alix, SUIVI_FAMILLE_PROCHE, ids.Hugo, 'rappels', true);
+    expect(champs(qui(e, ids.Hugo))).toEqual(aucune);
+    expect(aException(qui(e, ids.Hugo), 'rappels')).toBe(false);
+    // Le choix contraire d'une exception sans effet la remplace par l'exception utile.
+    const sansEffet = avec(d, ids.Hugo, { avecRappel: true });
+    expect(champs(qui(suivreFiche(sansEffet, ids.Alix, SUIVI_FAMILLE_PROCHE, ids.Hugo, 'rappels', false), ids.Hugo))).toEqual({ ...aucune, sansRappel: true });
+  });
+
+  it('retire une exception, même sans effet, sans toucher à l’autre réglage', () => {
+    const { d, ids } = famille();
+    const depart = avec(d, ids.Hugo, { avecRappel: true, ignorerIncomplet: true });
+    expect(aException(qui(depart, ids.Hugo), 'rappels')).toBe(true);
+    const e = retirerException(depart, ids.Hugo, 'rappels');
+    expect(champs(qui(e, ids.Hugo))).toEqual({ ...aucune, ignorerIncomplet: true });
+    expect(aException(qui(e, ids.Hugo), 'rappels')).toBe(false);
+    expect(aException(qui(e, ids.Hugo), 'completer')).toBe(true);
+  });
+
+  it('sans « Moi » choisi, tout le monde est suivi : éteindre crée l’exception, rallumer la retire', () => {
+    const { d, ids } = famille();
+    for (const moi of [undefined, 'disparu']) {
+      const e = suivreFiche(d, moi, SUIVI_FAMILLE_PROCHE, ids.Noe, 'rappels', false);
+      expect(champs(qui(e, ids.Noe))).toEqual({ ...aucune, sansRappel: true });
+      const f = suivreFiche(e, moi, SUIVI_FAMILLE_PROCHE, ids.Noe, 'rappels', true);
+      expect(champs(qui(f, ids.Noe))).toEqual(aucune);
+      expect(champs(qui(suivreFiche(d, moi, SUIVI_FAMILLE_PROCHE, ids.Noe, 'completer', true), ids.Noe))).toEqual(aucune);
+    }
   });
 });

@@ -69,7 +69,8 @@ export function positions(disp: Disposition): Positions {
   const xs = disp.places.map((p) => p.x);
   const ys = disp.places.map((p) => p.y);
   const ox = MARGE + LARG / 2 - Math.min(...xs) * PAS_X;
-  const oy = MARGE + R - Math.min(...ys) * PAS_Y;
+  // Une bulle tout en haut (export d'un groupe, Moi dans le cadre : pageAmis.ts) garde la place de son en-tête.
+  const oy = MARGE - Math.min(...disp.places.map((p) => p.y * PAS_Y - (p.bulle ? HAUT_CADRE + HAUT_ZONE : R)));
   const px = (p: Point): Point => ({ x: ox + p.x * PAS_X, y: oy + p.y * PAS_Y });
   const centres = new Map(disp.places.map((pl) => [pl.personne.id, px(pl)]));
   return {
@@ -193,7 +194,9 @@ export function traitsArbre(disp: Disposition, p: Positions, bulle: ZoneBulle | 
     return `M ${hi.x} ${hi.y + SOUS_NOM} C ${hi.x} ${hi.y + SOUS_NOM + m}, ${ba.x} ${ba.y - R - m}, ${ba.x} ${ba.y - R - 3}`;
   };
   for (const a of disp.amities) traits.push({ d: courbe(centre(a.a), centre(a.b)), classe: 'trait ami' });
-  if (bulle) traits.push({ d: lisse(versBulle(disp, centres, moi, { x: (bulle.g + bulle.dr) / 2, y: bulle.ha })), classe: 'trait ami' });
+  // Moi dans la bulle (export d'un groupe) : pas de passage à tracer.
+  if (bulle && !disp.places.some((pl) => pl.personne.id === moi && pl.bulle))
+    traits.push({ d: lisse(versBulle(disp, centres, moi, { x: (bulle.g + bulle.dr) / 2, y: bulle.ha })), classe: 'trait ami' });
   return traits;
 }
 

@@ -7,10 +7,13 @@ import { nomGroupe } from '../modele/deductions';
 import { annees } from '../modele/familleProche';
 import { couleurFamille, initiales, mentionNaissance, prenomOuNom } from '../modele/liste';
 import { estDecede } from '../modele/modele';
+import { mettreEnPage } from '../modele/pageAmis';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
 import { calculerCadres, lieuxEtiquettes, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
 import { encoderPng } from './png';
+
+type Positions = ReturnType<typeof positions>;
 
 // Limites des canvas relevées par la bibliothèque canvas-size (jhildenbiddle.github.io/canvas-size, « Test Results ») :
 // Safari iOS 9+ accepte 4 194 303 px de large mais 4096 × 4096 = 16 777 216 px de surface au plus ; Chrome Android,
@@ -119,10 +122,30 @@ export function bandes(pixelsL: number, pixelsH: number, pixelsBande = PIXELS_BA
   return liste;
 }
 
+/**
+ * Page de l'image : le dessin (titre compris) centré dans des marges blanches jusqu'au format `disp.format`, s'il
+ * est donné ; `hauteur` sans la bande du titre, comme pour `dimensionsImage`.
+ */
+function page(disp: Disposition, pos: Positions): { largeur: number; hauteur: number; dx: number; dy: number } {
+  const [l, h] = [pos.largeur, pos.hauteur + ENTETE];
+  const f = disp.format;
+  const dx = f && l / h < f ? (h * f - l) / 2 : 0;
+  const dy = f && l / h > f ? (l / f - h) / 2 : 0;
+  return { largeur: l + 2 * dx, hauteur: pos.hauteur + 2 * dy, dx, dy };
+}
+
 /** Taille annoncée avant l'export, sans rien dessiner. */
 export function dimensionsArbre(disp: Disposition): DimensionsImage {
-  const { largeur, hauteur } = positions(disp);
+  const { largeur, hauteur } = page(disp, positions(disp));
   return dimensionsImage(largeur, hauteur);
+}
+
+/** Export d'un groupe d'amis : en lignes, Moi dans le cadre, au format d'une feuille paysage (pageAmis.ts). */
+export function pageAmis(disp: Disposition, moi: string): Disposition {
+  return mettreEnPage(disp, moi, (d) => {
+    const p = positions(d);
+    return p.largeur / (p.hauteur + ENTETE);
+  });
 }
 
 /** Coupe un nom en deux lignes au plus, dans `max` pixels ; « … » si la fin ne tient pas. */
@@ -234,8 +257,6 @@ function dessinerNoeud(
     }
   }
 }
-
-type Positions = ReturnType<typeof positions>;
 
 /** Peint tout l'arbre, en unités du dessin, sur un contexte déjà mis à l'échelle (et décalé quand on peint une bande). */
 function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, pos: Positions, titre: string): void {
@@ -384,9 +405,17 @@ async function pngUnCanvas(dim: DimensionsImage, peindre: Peindre): Promise<Blob
  */
 export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, titre: string): Promise<Blob> {
   const pos = positions(disp);
-  const dim = dimensionsImage(pos.largeur, pos.hauteur);
+  const pg = page(disp, pos);
+  const dim = dimensionsImage(pg.largeur, pg.hauteur);
   if (!dim.possible) throw new ImageTropGrande();
-  const peindre: Peindre = (ctx) => peindreArbre(ctx, disp, d, moi, aujourdhui, pos, titre);
+  const peindre: Peindre = (ctx) => {
+    if (pg.dx || pg.dy) {
+      ctx.fillStyle = COULEURS.fond;
+      ctx.fillRect(0, 0, pg.largeur, pg.hauteur + ENTETE);
+      ctx.translate(pg.dx, pg.dy);
+    }
+    peindreArbre(ctx, disp, d, moi, aujourdhui, pos, titre);
+  };
   if (typeof CompressionStream === 'function') {
     try {
       return await pngParBandes(dim, peindre);
@@ -394,7 +423,7 @@ export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, auj
       // On retombe sur le canvas unique, plus petit mais accepté partout.
     }
   }
-  const secours = dimensionsImage(pos.largeur, pos.hauteur, PIXELS_CANVAS);
+  const secours = dimensionsImage(pg.largeur, pg.hauteur, PIXELS_CANVAS);
   if (secours.grande) throw new ImageTropGrande();
   return pngUnCanvas(secours, peindre);
 }

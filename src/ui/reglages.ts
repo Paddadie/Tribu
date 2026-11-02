@@ -5,7 +5,7 @@
 
 import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from '../modele/agenda';
 import type { Tri } from '../modele/liste';
-import { filtrerListe } from '../modele/filtres';
+import { filtrerListe, manquesDe } from '../modele/filtres';
 import { CIBLES, garderCible, nomFichierImage, personnesDessinees, titreImage, type Cible } from '../modele/cibleImage';
 import { nomGroupe } from '../modele/deductions';
 import { donneesVides, personnesListees, personnesVisibles } from '../modele/modele';
@@ -13,6 +13,7 @@ import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { FusionAnnulee, fusionner } from '../modele/fusion';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
 import {
+  aException,
   avecCran,
   CERCLES,
   CERCLES_HORS,
@@ -26,6 +27,7 @@ import {
   type Cercle,
   type Suivi,
 } from '../modele/suivi';
+import type { Personne } from '../modele/types';
 import { arbreSouple } from './arbreSouple';
 import { changerAvecAnnulation } from './annulation';
 import { choisir } from './choisir';
@@ -38,7 +40,7 @@ import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { remplacer } from './navigation';
 import { affichageArbre } from './arbreGlobal';
-import { arbrePng, dimensionsArbre, ImageTropGrande } from './arbreImage';
+import { arbrePng, dimensionsArbre, ImageTropGrande, pageAmis } from './arbreImage';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
@@ -179,7 +181,11 @@ function ongletPartager(majTout: () => void): Onglet {
   let cible: Cible = affichageArbre();
   let groupe: string | undefined;
   // Générations souples : les décalages connus de l'écran Arbre (sinon le dessin d'avant, le temps de les chercher).
-  const dessin = (moi: string) => arbreSouple(lireDonnees(), moi, garderCible(lireDonnees(), moi, cible, groupe));
+  // Un groupe d'amis est mis en page pour une feuille paysage, Moi dans son cadre.
+  const dessin = (moi: string) => {
+    const disp = arbreSouple(lireDonnees(), moi, garderCible(lireDonnees(), moi, cible, groupe));
+    return cible === 'groupe' ? pageAmis(disp, moi) : disp;
+  };
   const choixCible = choix(
     'affichage-png',
     'Personnes à dessiner',
@@ -603,8 +609,41 @@ function quiSuivre(majTout: () => void): Onglet {
   return { contenu, maj };
 }
 
-/** Suivi : fêtes du prénom, puis « Qui suivre ». */
+/** Liens vers les écrans « fiche par fiche » (#/suivi/…), avec le nombre d'exceptions de chacun. */
+function ficheParFiche(): Onglet {
+  const details = { rappels: h('span', { class: 'secondaire' }), completer: h('span', { class: 'secondaire' }) };
+  const lien = (quoi: keyof Suivi, titre: string) =>
+    h(
+      'a',
+      { class: 'ligne ligne-lien', href: `#/suivi/${quoi}` },
+      icone(quoi === 'rappels' ? 'cloche' : 'crayon', 20),
+      h('span', { class: 'ligne-texte' }, h('span', { class: 'ligne-nom' }, titre), details[quoi]),
+      icone('chevron', 20),
+    );
+  const maj = () => {
+    const fiches = personnesListees(lireDonnees());
+    const exceptions = (quoi: keyof Suivi, parmi: Personne[]) => {
+      const n = parmi.filter((p) => aException(p, quoi)).length;
+      return n === 0 ? 'aucune exception' : `${n} exception${n > 1 ? 's' : ''}`;
+    };
+    const incompletes = fiches.filter((p) => manquesDe(p).length > 0);
+    details.rappels.textContent = `${pluriel(fiches.length)} · ${exceptions('rappels', fiches)}`;
+    details.completer.textContent = `${incompletes.length} fiche${incompletes.length > 1 ? 's' : ''} incomplète${incompletes.length > 1 ? 's' : ''} · ${exceptions('completer', incompletes)}`;
+  };
+  const contenu = [
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Fiche par fiche'),
+      h('div', { class: 'carte' }, lien('rappels', 'Rappels'), lien('completer', 'À compléter')),
+    ),
+  ];
+  return { contenu, maj };
+}
+
+/** Suivi : fêtes du prénom, fiche par fiche, puis « Qui suivre ». */
 function ongletSuivi(majTout: () => void): Onglet {
+  const parFiche = ficheParFiche();
   const suivi = quiSuivre(majTout);
   const contenu = [
     h(
@@ -617,9 +656,14 @@ function ongletSuivi(majTout: () => void): Onglet {
         bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', lireReglages().fetes, (fetes) => modifierReglages({ fetes })),
       ),
     ),
+    ...parFiche.contenu,
     ...suivi.contenu,
   ];
-  return { contenu, maj: suivi.maj };
+  const maj = () => {
+    parFiche.maj();
+    suivi.maj();
+  };
+  return { contenu, maj };
 }
 
 /** Données : sauvegarde, vérification, effacement (annulable), version. `majTout` : après un export, un import ou un effacement. */

@@ -95,6 +95,42 @@ export function suivis(d: Donnees, moi: string | undefined, suivi: Suivi): Suivi
   };
 }
 
+/** Champs d'exception de la fiche (types.ts), pour chaque réglage : celui qui force le suivi, celui qui l'empêche. */
+export const EXCEPTIONS = {
+  rappels: { oui: 'avecRappel', non: 'sansRappel' },
+  completer: { oui: 'signalerIncomplet', non: 'ignorerIncomplet' },
+} as const;
+
+/** La fiche fait exception pour `quoi`, même si son exception dit comme son cercle (« sans effet »). */
+export function aException(p: Personne, quoi: keyof Suivi): boolean {
+  return !!(p[EXCEPTIONS[quoi].oui] || p[EXCEPTIONS[quoi].non]);
+}
+
+/** Copie de `p` sans exception pour `quoi`, puis avec celle qui force `force` s'il est donné. Jamais de champ à false. */
+function avecException(p: Personne, quoi: keyof Suivi, force?: boolean): Personne {
+  const { oui, non } = EXCEPTIONS[quoi];
+  const copie = { ...p };
+  delete copie[oui];
+  delete copie[non];
+  if (force !== undefined) copie[force ? oui : non] = true;
+  return copie;
+}
+
+/**
+ * Fiche `id` suivie (`voulu`) ou non pour `quoi`, par ses seuls champs d'exception : si `voulu` est ce que dit son
+ * cercle, aucune exception (celle qui existait est retirée) ; sinon, celle qui force `voulu`. Les cercles ne changent pas.
+ */
+export function suivreFiche(d: Donnees, moi: string | undefined, suivi: Suivi, id: string, quoi: keyof Suivi, voulu: boolean): Donnees {
+  const s = suivis(d, moi, suivi);
+  const duCercle = quoi === 'rappels' ? s.rappelDuCercle : s.signaleDuCercle;
+  return { ...d, personnes: d.personnes.map((p) => (p.id === id ? avecException(p, quoi, voulu === duCercle(p) ? undefined : voulu) : p)) };
+}
+
+/** Retire l'exception de la fiche `id` pour `quoi`, même sans effet : elle suit de nouveau son cercle. */
+export function retirerException(d: Donnees, id: string, quoi: keyof Suivi): Donnees {
+  return { ...d, personnes: d.personnes.map((p) => (p.id === id ? avecException(p, quoi) : p)) };
+}
+
 /** Cercles de sang, du plus proche au plus lointain : les crans de la jauge des réglages. */
 export const CERCLES_SANG: Cercle[] = ['parents', 'fratrie', 'grandsParents', 'oncles', 'cousins', 'loin'];
 
