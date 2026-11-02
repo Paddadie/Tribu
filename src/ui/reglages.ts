@@ -6,13 +6,26 @@
 import { bilanAgenda, construireIcs, evenementsAgenda, NOM_FICHIER_AGENDA } from '../modele/agenda';
 import type { Tri } from '../modele/liste';
 import { filtrerListe } from '../modele/filtres';
-import { AFFICHAGES, garderPour, type Affichage } from '../modele/ligneDirecte';
+import { CIBLES, garderCible, nomFichierImage, personnesDessinees, titreImage, type Cible } from '../modele/cibleImage';
+import { nomGroupe } from '../modele/deductions';
 import { donneesVides, personnesListees, personnesVisibles } from '../modele/modele';
-import { estVirtuel } from '../modele/parentSansNom';
 import { ficheMoi, libelleDernierExport, type Theme } from '../modele/reglages';
 import { FusionAnnulee, fusionner } from '../modele/fusion';
 import { exporterJson, importerJson, nomFichierExport } from '../modele/stockage';
-import { CERCLES, cercleDe, memeSuivi, SUIVI_FAMILLE_PROCHE, SUIVI_TOUT, suivis, type Cercle, type Suivi } from '../modele/suivi';
+import {
+  avecCran,
+  CERCLES,
+  CERCLES_HORS,
+  CERCLES_SANG,
+  cercleDe,
+  cranDe,
+  memeSuivi,
+  SUIVI_FAMILLE_PROCHE,
+  SUIVI_TOUT,
+  suivis,
+  type Cercle,
+  type Suivi,
+} from '../modele/suivi';
 import { arbreSouple } from './arbreSouple';
 import { changerAvecAnnulation } from './annulation';
 import { choisir } from './choisir';
@@ -25,7 +38,7 @@ import { messageFusion, messageImport, pluriel } from './import';
 import { contenuLigne } from './lignePersonne';
 import { remplacer } from './navigation';
 import { affichageArbre } from './arbreGlobal';
-import { arbrePng, dimensionsArbre, NOM_FICHIER_ARBRE } from './arbreImage';
+import { arbrePng, dimensionsArbre, ImageTropGrande } from './arbreImage';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
@@ -54,9 +67,9 @@ function bascule(id: string, titre: string, aide: string, coche: boolean, change
 
 export const ONGLETS_REGLAGES = [
   { id: 'general', libelle: 'Général', icone: 'reglages' },
-  { id: 'exports', libelle: 'Exports', icone: 'haut' },
-  { id: 'sauvegarde', libelle: 'Sauvegarde', icone: 'echange' },
-  { id: 'donnees', libelle: 'Données', icone: 'coche' },
+  { id: 'suivi', libelle: 'Suivi', icone: 'cloche' },
+  { id: 'partager', libelle: 'Partager', icone: 'haut' },
+  { id: 'donnees', libelle: 'Données', icone: 'echange' },
 ] as const;
 export type OngletReglages = (typeof ONGLETS_REGLAGES)[number]['id'];
 
@@ -138,29 +151,74 @@ function ongletGeneral(): Onglet {
           reglages.theme,
           (theme) => modifierReglages({ theme }),
         ),
-        bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', reglages.fetes, (fetes) => modifierReglages({ fetes })),
       ),
     ),
   ];
   return { contenu, maj: dessinerMoi };
 }
 
+// Image trop grande pour les plafonds de confort, puis pour les limites techniques (voir ECHELLE_MIN, arbreImage.ts).
+const ALERTE_GRANDE =
+  'Très grande image, pour que les noms restent lisibles : certaines galeries de téléphone ne l’ouvriront pas. Ouvre-la dans un navigateur, ou choisis une cible plus petite.';
+const ALERTE_TROP_GRANDE =
+  'Cet arbre est trop grand pour tenir dans une image où les noms restent lisibles. Choisis toute la famille, ta ligne directe ou un groupe d’amis.';
+const MESSAGE_SECOURS_TROP_GRAND = 'Ce navigateur ne sait pas créer une image aussi grande sans rendre les noms illisibles. Choisis une cible plus petite.';
+
 /** Exports : dates vers un agenda (.ics), arbre en image (PNG). `majTout` : après un changement de réglage. */
-function ongletExports(majTout: () => void): Onglet {
+/** Partager : agenda .ics, arbre en PNG. `majTout` : après « Inclure les fêtes ». */
+function ongletPartager(majTout: () => void): Onglet {
   const reglages = lireReglages();
   const resumeAgenda = h('p', { class: 'secondaire' });
   const messageAgenda = h('p', { class: 'secondaire', role: 'status' });
   const boutonAgenda = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterAgenda() }, 'Exporter vers l’agenda');
   const resumeImage = h('p', { class: 'secondaire' });
+  const alerteImage = h('p', { class: 'avertissement', hidden: true });
   const messageImage = h('p', { class: 'secondaire', role: 'status' });
   const boutonImage = h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => void exporterImage() }, 'Exporter l’arbre en PNG');
   // Personnes à dessiner : le filtre de l'arbre en cours, changeable ici sans toucher à l'écran Arbre.
-  let affichage: Affichage = affichageArbre();
+  let cible: Cible = affichageArbre();
+  let groupe: string | undefined;
   // Générations souples : les décalages connus de l'écran Arbre (sinon le dessin d'avant, le temps de les chercher).
-  const dessin = (moi: string) => arbreSouple(lireDonnees(), moi, garderPour(lireDonnees(), moi, affichage));
+  const dessin = (moi: string) => arbreSouple(lireDonnees(), moi, garderCible(lireDonnees(), moi, cible, groupe));
+  const choixCible = choix(
+    'affichage-png',
+    'Personnes à dessiner',
+    CIBLES,
+    cible,
+    (v) => {
+      cible = v;
+      maj();
+    },
+    true,
+  );
+  const radio = (c: Cible) => choixCible.querySelector<HTMLInputElement>(`input[value="${c}"]`)!;
+  // Choisir un groupe dans la liste coche aussi « Un groupe d'amis ».
+  const listeGroupes = h('select', {
+    id: 'groupe-png',
+    onchange: () => {
+      groupe = listeGroupes.value;
+      cible = 'groupe';
+      radio('groupe').checked = true;
+      maj();
+    },
+  });
+  const majGroupes = () => {
+    const d = lireDonnees();
+    if (!d.groupes.some((g) => g.id === groupe)) groupe = d.groupes[0]?.id;
+    listeGroupes.replaceChildren(
+      ...(d.groupes.length === 0
+        ? [h('option', { value: '' }, 'Aucun groupe d’amis')]
+        : d.groupes.map((g) => h('option', { value: g.id, selected: g.id === groupe }, nomGroupe(d, g)))),
+    );
+    listeGroupes.disabled = radio('groupe').disabled = d.groupes.length === 0;
+    // Le groupe choisi a disparu (import, suppression) et il n'en reste aucun : retour à tout l'arbre.
+    if (cible === 'groupe' && !groupe) {
+      cible = 'tout';
+      radio('tout').checked = true;
+    }
+  };
 
   const maj = () => {
-    const n = personnesVisibles(lireDonnees()).length;
     const bilan = bilanAgenda(evenementsAgenda(lireDonnees(), { fetes: lireReglages().fetesDansIcs, ...suiviCourant() }));
     const total = bilan.naissances + bilan.deces + bilan.unions + bilan.fetes;
     resumeAgenda.textContent =
@@ -168,14 +226,19 @@ function ongletExports(majTout: () => void): Onglet {
         ? 'Aucune date complète pour l’instant : ajoute le jour et le mois d’une naissance, d’un décès ou d’une union.'
         : `${bilan.naissances} ${bilan.naissances > 1 ? 'naissances' : 'naissance'} · ${bilan.deces} ${bilan.deces > 1 ? 'décès' : 'décès'} · ${bilan.unions} ${bilan.unions > 1 ? 'unions' : 'union'}${bilan.fetes > 0 ? ` · ${bilan.fetes} ${bilan.fetes > 1 ? 'fêtes' : 'fête'}` : ''}. Les fiches sans jour ni mois sont ignorées.`;
     boutonAgenda.disabled = total === 0;
+    majGroupes();
     const moi = ficheMoi(lireReglages(), lireDonnees());
-    if (moi) {
-      const disp = dessin(moi.id);
-      const dim = dimensionsArbre(disp);
-      const dessinees = affichage === 'tout' ? n : disp.places.filter((p) => !estVirtuel(p.personne.id) && !p.personne.inconnu).length;
-      resumeImage.textContent = `${pluriel(dessinees)} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
-    } else resumeImage.textContent = 'Choisis ta fiche dans Réglages → Moi.';
-    boutonImage.disabled = !moi;
+    const disp = moi && dessin(moi.id);
+    const dim = disp && dimensionsArbre(disp);
+    if (disp && dim) {
+      resumeImage.textContent = `${pluriel(personnesDessinees(lireDonnees(), cible, disp))} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
+      alerteImage.textContent = !dim.possible ? ALERTE_TROP_GRANDE : dim.grande ? ALERTE_GRANDE : '';
+    } else {
+      resumeImage.textContent = 'Choisis ta fiche dans Réglages → Moi.';
+      alerteImage.textContent = '';
+    }
+    alerteImage.hidden = !alerteImage.textContent;
+    boutonImage.disabled = !dim || !dim.possible;
   };
 
   const exporterAgenda = async () => {
@@ -196,12 +259,13 @@ function ongletExports(majTout: () => void): Onglet {
     if (!moi) return;
     try {
       const maintenant = new Date();
-      const png = await arbrePng(dessin(moi.id), lireDonnees(), moi, maintenant);
-      const issue = await exporterFichier(NOM_FICHIER_ARBRE(maintenant), png, 'image/png');
+      const d = lireDonnees();
+      const png = await arbrePng(dessin(moi.id), d, moi, maintenant, titreImage(d, moi, cible, groupe));
+      const issue = await exporterFichier(nomFichierImage(d, cible, maintenant, groupe), png, 'image/png');
       messageImage.textContent = MESSAGES_EXPORT[issue];
       messageImage.className = issue === 'annule' ? 'secondaire' : 'succes';
-    } catch {
-      messageImage.textContent = MESSAGE_EXPORT_IMPOSSIBLE;
+    } catch (e) {
+      messageImage.textContent = e instanceof ImageTropGrande ? MESSAGE_SECOURS_TROP_GRAND : MESSAGE_EXPORT_IMPOSSIBLE;
       messageImage.className = 'erreur';
     }
   };
@@ -210,7 +274,7 @@ function ongletExports(majTout: () => void): Onglet {
     h(
       'section',
       { class: 'groupe-reglages' },
-      h('h2', { class: 'titre-section' }, 'Exports'),
+      h('h2', { class: 'titre-section' }, 'Partager'),
       h(
         'div',
         { class: 'carte bloc-reglages' },
@@ -255,20 +319,12 @@ function ongletExports(majTout: () => void): Onglet {
           h(
             'p',
             { class: 'secondaire' },
-            'Dessine l’arbre global dans une image PNG, avec les noms : tout l’arbre (famille et amis) ou seulement ta ligne directe. Elle ne dépend ni de ton zoom ni de ta position actuels.',
+            'Dessine l’arbre global dans une image PNG, avec les noms : tout l’arbre, toute ta famille, ta ligne directe ou un groupe d’amis. Elle ne dépend ni de ton zoom ni de ta position actuels.',
           ),
-          choix(
-            'affichage-png',
-            'Personnes à dessiner',
-            AFFICHAGES.map((a): [Affichage, string] => [a.valeur, a.libelle]),
-            affichage,
-            (v) => {
-              affichage = v;
-              maj();
-            },
-            true,
-          ),
+          choixCible,
+          h('div', { class: 'champ' }, h('label', { for: 'groupe-png' }, 'Groupe d’amis'), listeGroupes),
           resumeImage,
+          alerteImage,
           boutonImage,
           messageImage,
         ),
@@ -278,8 +334,8 @@ function ongletExports(majTout: () => void): Onglet {
   return { contenu, maj };
 }
 
-/** Sauvegarde : export JSON, import fusionné (annulable). `majTout` : après un export ou un import. */
-function ongletSauvegarde(majTout: () => void): Onglet {
+/** Sauvegarde (onglet Données) : export JSON, import fusionné (annulable). `majTout` : après un export ou un import. */
+function sauvegarde(majTout: () => void): Onglet {
   const messageExport = h('p', { class: 'secondaire', role: 'status' });
   const erreurImport = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const resumeExport = h('p', { class: 'secondaire' });
@@ -364,10 +420,21 @@ function ongletSauvegarde(majTout: () => void): Onglet {
   return { contenu, maj };
 }
 
-/** Données : vérification, effacement (annulable), version. `majTout` : après un effacement. */
+/** Résumé de chaque cran de la jauge (0 : aucun cercle de sang). */
+const JUSQUA = [
+  'toi et ton conjoint seulement',
+  'jusqu’aux parents et enfants',
+  'jusqu’aux frères et sœurs',
+  'jusqu’aux grands-parents',
+  'jusqu’aux oncles et tantes',
+  'jusqu’aux cousins germains',
+  'toute la famille',
+];
+
 /**
- * « Qui suivre » : une ligne par cercle (lien avec « Moi »), une case pour les rappels et une pour « À compléter » ;
- * préréglages au-dessus, bilan dessous. Sans « Moi », pas de cercle : tout le monde est suivi.
+ * « Qui suivre » : une jauge de proximité par usage (rappels, « À compléter »), en deux rails côte à côte sur les cercles
+ * de sang ; toucher un cran suit ce cercle et tous les plus proches. Belle-famille, amis et sans lien : un interrupteur
+ * chacun. Préréglages au-dessus, bilan dessous. Sans « Moi », pas de cercle : tout le monde est suivi.
  */
 function quiSuivre(majTout: () => void): Onglet {
   const prereglages: [string, Suivi | undefined][] = [
@@ -375,33 +442,74 @@ function quiSuivre(majTout: () => void): Onglet {
     ['Famille proche', SUIVI_FAMILLE_PROCHE],
     ['Sur mesure', undefined],
   ];
-  const cases: { quoi: keyof Suivi; cercle: Cercle; boite: HTMLInputElement }[] = [];
+  const quois: (keyof Suivi)[] = ['rappels', 'completer'];
+  const titres: Record<keyof Suivi, string> = { rappels: 'Rappels', completer: 'À compléter' };
+  const crans: { quoi: keyof Suivi; cran: number; bouton: HTMLButtonElement; rail: HTMLElement }[] = [];
+  const bascules: { quoi: keyof Suivi; cercle: Cercle; boite: HTMLInputElement }[] = [];
   const nombres = new Map<Cercle, HTMLElement>();
   const changer = (suivi: Suivi) => {
     modifierReglages({ suivi });
     etat();
   };
-  const caseSuivi = (quoi: keyof Suivi, cercle: Cercle, libelle: string) => {
+  const cellule = (quoi: keyof Suivi, cran: number) => {
+    const bout = cran === 0 ? ' premier' : cran === CERCLES_SANG.length ? ' dernier' : '';
+    const rail = h('span', { class: `rail-suivi${bout}` }, h('span', { class: 'point-suivi' }));
+    const bouton = h(
+      'button',
+      {
+        type: 'button',
+        class: 'cran-suivi',
+        'aria-label': `${titres[quoi]} : ${JUSQUA[cran]}`,
+        onclick: () => {
+          const suivi = lireReglages().suivi;
+          changer({ ...suivi, [quoi]: avecCran(suivi[quoi], cran) });
+        },
+      },
+      rail,
+    );
+    crans.push({ quoi, cran, bouton, rail });
+    return bouton;
+  };
+  const bascule = (quoi: keyof Suivi, cercle: Cercle, libelle: string) => {
     const boite = h('input', {
       type: 'checkbox',
-      class: 'case-suivi',
-      'aria-label': `${quoi === 'rappels' ? 'Rappels' : 'À compléter'} : ${libelle}`,
+      class: 'bascule',
+      'aria-label': `${titres[quoi]} : ${libelle}`,
       onchange: () => {
         const suivi = lireReglages().suivi;
         changer({ ...suivi, [quoi]: { ...suivi[quoi], [cercle]: boite.checked } });
       },
     });
-    cases.push({ quoi, cercle, boite });
-    return boite;
+    bascules.push({ quoi, cercle, boite });
+    return h('label', { class: 'case-bascule' }, boite);
   };
-  // « Sur mesure » n'est qu'un état (aucun préréglage ne correspond) : le toucher mène aux cases.
+  const texte = (libelle: string, detail?: string, cercle?: Cercle) => {
+    const nombre = cercle && h('span', { class: 'secondaire' });
+    if (cercle && nombre) nombres.set(cercle, nombre);
+    return h(
+      'span',
+      { class: 'ligne-texte' },
+      h('span', {}, h('span', { class: 'ligne-nom' }, libelle), nombre ? ' ' : '', nombre),
+      detail && h('span', { class: 'secondaire' }, detail),
+    );
+  };
+  const infos = new Map(CERCLES.map((c) => [c.cercle, c]));
+  // « Sur mesure » n'est qu'un état (aucun préréglage ne correspond) : le toucher mène à la jauge.
   const puces = prereglages.map(([libelle, suivi]) =>
-    h('button', { type: 'button', class: 'puce', onclick: () => (suivi ? changer(suivi) : cases[0]?.boite.focus()) }, libelle),
+    h('button', { type: 'button', class: 'puce', onclick: () => (suivi ? changer(suivi) : crans[0]?.bouton.focus()) }, libelle),
   );
   const colonne = (nom: 'cloche' | 'crayon', libelle: string) => h('span', { class: 'colonne-suivi' }, icone(nom, 18), libelle);
+  const resumes = quois.map(() => h('b', {}));
+  const trous = h('p', { class: 'avertissement', hidden: true });
   const grille = h(
     'div',
     { class: 'carte grille-suivi' },
+    h(
+      'div',
+      { class: 'resumes-suivi' },
+      ...quois.map((quoi, i) => h('span', {}, icone(quoi === 'rappels' ? 'cloche' : 'crayon', 16), `${titres[quoi]} : `, resumes[i])),
+    ),
+    trous,
     h(
       'div',
       { class: 'ligne-suivi entete-suivi' },
@@ -409,21 +517,19 @@ function quiSuivre(majTout: () => void): Onglet {
       colonne('cloche', 'Rappels'),
       colonne('crayon', 'À compléter'),
     ),
-    ...CERCLES.map(({ cercle, libelle, detail }) => {
-      const nombre = h('span', { class: 'secondaire' });
-      nombres.set(cercle, nombre);
+    ...JUSQUA.map((_, cran) => {
+      const info = cran === 0 ? undefined : infos.get(CERCLES_SANG[cran - 1]!);
       return h(
         'div',
         { class: 'ligne-suivi' },
-        h(
-          'span',
-          { class: 'ligne-texte' },
-          h('span', {}, h('span', { class: 'ligne-nom' }, libelle), ' ', nombre),
-          detail && h('span', { class: 'secondaire' }, detail),
-        ),
-        caseSuivi('rappels', cercle, libelle),
-        caseSuivi('completer', cercle, libelle),
+        info ? texte(info.libelle, info.detail, info.cercle) : texte('Toi et ton conjoint', 'personne d’autre de ta famille'),
+        ...quois.map((quoi) => cellule(quoi, cran)),
       );
+    }),
+    h('p', { class: 'sous-titre-suivi' }, 'Hors de la famille de sang'),
+    ...CERCLES_HORS.map((cercle) => {
+      const { libelle, detail } = infos.get(cercle)!;
+      return h('div', { class: 'ligne-suivi' }, texte(libelle, detail, cercle), ...quois.map((quoi) => bascule(quoi, cercle, libelle)));
     }),
   );
   const bilan = h('p', { class: 'bilan-suivi', 'aria-live': 'polite' });
@@ -435,11 +541,11 @@ function quiSuivre(majTout: () => void): Onglet {
     h(
       'p',
       { class: 'secondaire aide-section' },
-      'Toi et ton conjoint : toujours suivis. ',
+      'Toi et ton conjoint : toujours suivis. Toucher un cran suit ce cercle et tous les plus proches. ',
       h('b', {}, 'Rappels'),
       ' : anniversaires, fêtes et unions sur l’accueil, l’agenda et l’export .ics. ',
       h('b', {}, 'À compléter'),
-      ' : fiche signalée s’il manque un nom ou une date ; décochée, elle compte comme complète. Chaque fiche peut faire exception (Modifier).',
+      ' : fiche signalée s’il manque un nom ou une date ; hors suivi, elle compte comme complète. Chaque fiche peut faire exception (Modifier).',
     ),
     bilan,
   );
@@ -450,11 +556,28 @@ function quiSuivre(majTout: () => void): Onglet {
     h('button', { type: 'button', class: 'bouton bouton-plein', onclick: () => ouvrirChoixMoi(majTout) }, 'Choisir ma fiche'),
   );
 
-  /** Cases, préréglage actif et bilan, d'après les réglages et les données du moment. */
+  /** Rails, interrupteurs, résumés, préréglage actif et bilan, d'après les réglages et les données du moment. */
   const etat = () => {
     const d = lireDonnees();
     const { moi, suivi } = suiviCourant(d);
-    for (const c of cases) c.boite.checked = suivi[c.quoi][c.cercle];
+    // Le rail se dessine cercle par cercle : un choix à trous reste visible tel quel. Cran 0 (toi) : toujours plein.
+    for (const { quoi, cran, bouton, rail } of crans) {
+      const plein = (k: number) => k === 0 || (k <= CERCLES_SANG.length && suivi[quoi][CERCLES_SANG[k - 1]!]);
+      const choisi = cranDe(suivi[quoi]) === cran;
+      rail.classList.toggle('plein', plein(cran));
+      rail.classList.toggle('haut', cran > 0 && plein(cran) && plein(cran - 1));
+      rail.classList.toggle('bas', cran < CERCLES_SANG.length && plein(cran) && plein(cran + 1));
+      rail.classList.toggle('choisi', choisi);
+      bouton.setAttribute('aria-pressed', String(choisi));
+    }
+    for (const b of bascules) b.boite.checked = suivi[b.quoi][b.cercle];
+    quois.forEach((quoi, i) => {
+      const cran = cranDe(suivi[quoi]);
+      resumes[i]!.textContent = cran === undefined ? 'choix à trous' : JUSQUA[cran]!;
+    });
+    const aTrous = quois.filter((quoi) => cranDe(suivi[quoi]) === undefined).map((quoi) => titres[quoi]);
+    trous.hidden = aTrous.length === 0;
+    trous.textContent = `${aTrous.join(' et ')} : choix à trous, repris d’un ancien réglage. Touche un cran pour simplifier.`;
     const actif = prereglages.findIndex(([, s]) => !s || memeSuivi(s, suivi));
     puces.forEach((p, i) => p.setAttribute('aria-pressed', String(i === actif)));
     const autres = personnesListees(d).filter((p) => p.id !== moi);
@@ -480,8 +603,28 @@ function quiSuivre(majTout: () => void): Onglet {
   return { contenu, maj };
 }
 
-function ongletDonnees(majTout: () => void): Onglet {
+/** Suivi : fêtes du prénom, puis « Qui suivre ». */
+function ongletSuivi(majTout: () => void): Onglet {
   const suivi = quiSuivre(majTout);
+  const contenu = [
+    h(
+      'section',
+      { class: 'groupe-reglages' },
+      h('h2', { class: 'titre-section' }, 'Fêtes'),
+      h(
+        'div',
+        { class: 'carte bloc-reglages' },
+        bascule('fetes', 'Fêtes du prénom', 'Sur l’accueil et dans l’agenda', lireReglages().fetes, (fetes) => modifierReglages({ fetes })),
+      ),
+    ),
+    ...suivi.contenu,
+  ];
+  return { contenu, maj: suivi.maj };
+}
+
+/** Données : sauvegarde, vérification, effacement (annulable), version. `majTout` : après un export, un import ou un effacement. */
+function ongletDonnees(majTout: () => void): Onglet {
+  const copie = sauvegarde(majTout);
   const erreurEffacement = h('p', { class: 'erreur', role: 'alert', hidden: true });
   const boutonEffacer = h('button', { type: 'button', class: 'bouton bouton-danger', onclick: () => void effacer() }, 'Effacer toutes les données');
   const aideEffacer = h('p', { class: 'secondaire', hidden: true }, 'Aucune donnée à effacer sur cet appareil.');
@@ -490,7 +633,7 @@ function ongletDonnees(majTout: () => void): Onglet {
     const n = personnesVisibles(lireDonnees()).length;
     boutonEffacer.disabled = n === 0;
     aideEffacer.hidden = n > 0;
-    suivi.maj();
+    copie.maj();
   };
 
   const effacer = async () => {
@@ -511,11 +654,11 @@ function ongletDonnees(majTout: () => void): Onglet {
   const date = new Date(__BUILD_DATE__).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
   const contenu = [
-    ...suivi.contenu,
+    ...copie.contenu,
     h(
       'section',
       { class: 'groupe-reglages' },
-      h('h2', { class: 'titre-section' }, 'Données'),
+      h('h2', { class: 'titre-section' }, 'Vérifier et effacer'),
       h(
         'div',
         { class: 'carte' },
@@ -550,8 +693,8 @@ export function ecranReglages(onglet?: string): HTMLElement {
   };
   const contenus: Record<OngletReglages, Onglet> = {
     general: ongletGeneral(),
-    exports: ongletExports(maj),
-    sauvegarde: ongletSauvegarde(maj),
+    suivi: ongletSuivi(maj),
+    partager: ongletPartager(maj),
     donnees: ongletDonnees(maj),
   };
   maj();

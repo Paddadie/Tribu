@@ -4,7 +4,20 @@ import { evenementsAgenda } from './agenda';
 import { evenementsAVenir } from './evenements';
 import { filtrerListe } from './filtres';
 import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVides } from './modele';
-import { CERCLES, cercleDe, lireCercles, SUIVI_FAMILLE_PROCHE, SUIVI_TOUT, suivis, type Suivi } from './suivi';
+import {
+  avecCran,
+  CERCLES,
+  CERCLES_HORS,
+  CERCLES_SANG,
+  cercleDe,
+  cranDe,
+  lireCercles,
+  SUIVI_FAMILLE_PROCHE,
+  SUIVI_TOUT,
+  suivis,
+  type Cercles,
+  type Suivi,
+} from './suivi';
 import type { Donnees, Personne } from './types';
 
 /**
@@ -94,6 +107,47 @@ describe('cercles depuis « Moi »', () => {
   it('lireCercles garde chaque valeur valide et complète le reste', () => {
     const lus = lireCercles({ loin: false, amis: 'non', inconnu: true }, SUIVI_TOUT.rappels);
     expect(lus).toEqual({ ...SUIVI_TOUT.rappels, loin: false });
+  });
+});
+
+describe('jauge de proximité', () => {
+  const rien = Object.fromEntries(CERCLES.map((c) => [c.cercle, false])) as Cercles;
+
+  it('les crans suivent les cercles de sang, du plus proche au plus lointain, sans les trois autres', () => {
+    expect(CERCLES_SANG).toEqual(['parents', 'fratrie', 'grandsParents', 'oncles', 'cousins', 'loin']);
+    expect([...CERCLES_SANG, ...CERCLES_HORS].sort()).toEqual(CERCLES.map((c) => c.cercle).sort());
+  });
+
+  it('cranDe : préréglages, tout éteint, choix à trous', () => {
+    expect(cranDe(SUIVI_TOUT.rappels)).toBe(6);
+    expect(cranDe(SUIVI_FAMILLE_PROCHE.rappels)).toBe(5);
+    expect(cranDe(SUIVI_FAMILLE_PROCHE.completer)).toBe(5);
+    expect(cranDe(rien)).toBe(0);
+    expect(cranDe({ ...rien, parents: true, fratrie: true })).toBe(2);
+    // Grands-parents sans la fratrie, ou plus loin sans les cousins : à trous.
+    expect(cranDe({ ...rien, parents: true, grandsParents: true })).toBeUndefined();
+    expect(cranDe({ ...SUIVI_TOUT.rappels, cousins: false })).toBeUndefined();
+  });
+
+  it('cranDe ignore belle-famille, amis et sans lien', () => {
+    expect(cranDe({ ...rien, alliance: true, amis: true, sansLien: true })).toBe(0);
+    expect(cranDe({ ...SUIVI_TOUT.rappels, alliance: false, amis: false })).toBe(6);
+  });
+
+  it('avecCran réécrit les cercles de sang et garde les trois autres', () => {
+    for (let cran = 0; cran <= CERCLES_SANG.length; cran++) {
+      const c = avecCran(SUIVI_FAMILLE_PROCHE.rappels, cran);
+      expect(cranDe(c)).toBe(cran);
+      for (const h of CERCLES_HORS) expect(c[h]).toBe(SUIVI_FAMILLE_PROCHE.rappels[h]);
+    }
+    expect(avecCran(SUIVI_FAMILLE_PROCHE.rappels, 5)).toEqual(SUIVI_FAMILLE_PROCHE.rappels);
+    expect(avecCran(SUIVI_TOUT.completer, 6)).toEqual(SUIVI_TOUT.completer);
+  });
+
+  it('un choix à trous ne change qu’au cran touché, sans toucher aux autres cercles', () => {
+    const trous: Cercles = { ...rien, parents: true, grandsParents: true, amis: true };
+    expect(avecCran(trous, 3)).toEqual({ ...rien, parents: true, fratrie: true, grandsParents: true, amis: true });
+    expect(avecCran(trous, 1)).toEqual({ ...rien, parents: true, amis: true });
   });
 });
 

@@ -617,6 +617,7 @@ Aucune question ouverte.
 - [x] « Famille proche » fiabilisé (21/10) : 22 cas fictifs (tests/fixtures/famille-proche), test de référence, rapport et 3 maquettes (claude.ai/artifact/2JMCd1nRBCtLXRPY8jBt6U), stratégie S2 « rangées repliées » choisie par Paul ; correction de `fratrie()` (`freresComplets`) ; placement pur `modele/familleProche.ts`
 - [x] Veuvage (21/10) : nouvelle union possible après le décès du conjoint ; règle « une union actuelle avec un vivant » à la création, à l'import et à la fusion ; section « Conjoint décédé » sur la fiche.
 - [x] Filtre « Ligne directe » de l'arbre global (30/10) : trois niveaux + Tout l'arbre, pastille, loupe sur les cachés, même choix dans l'export PNG ; maquette validée le 30/10 (claude.ai/artifact/3sFMJK2gbDhR1cjd1zVR73)
+- [x] Export PNG par cible (02/11) : « Toute la famille » et « Un groupe d’amis » (liste des groupes) en plus de Tout l'arbre et de la ligne directe, titre et nom de fichier propres à chaque cible, échelle jamais sous ×1,5 (alerte si l'image devient très grande, bouton grisé au-delà des limites des navigateurs) ; maquette validée le 02/11 (claude.ai/artifact/J9j1BWxAEWyfucxxkANX95)
 - Plusieurs groupes par personne (règle « un seul » levée dans les écrans)
 - Photos (IndexedDB nécessaire)
 - Import et export GEDCOM

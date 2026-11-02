@@ -26,7 +26,7 @@ import { h, icone } from './dom';
 import { lireDonnees, lireReglages, suiviCourant } from './etat';
 import { messageImport } from './import';
 import { disposerArbre } from '../modele/arbreGlobal';
-import { nomGroupe } from '../modele/deductions';
+import { filtresFamillesAmis } from '../modele/famillesAmis';
 import { couleur, resumesFamilles } from './arbreGlobal';
 import { ouvrirListe, type LigneListe } from './fenetreListe';
 import { avatarPersonne, contenuLigne } from './lignePersonne';
@@ -262,41 +262,34 @@ function famillesDe(d: Donnees, moi: Personne | undefined): { famille: Familles;
   return { famille: toutes.filter((f) => !f.amis), amis: toutes.filter((f) => f.amis) };
 }
 
-/** Lignes de pop-up : une par famille, comptée sur `ids` si on en donne (filtre par groupe), sinon sur tous les porteurs. */
-function lignesFamilles(familles: Familles, ids?: Set<string>): LigneListe[] {
-  return familles.flatMap((f) => {
-    const n = ids ? f.ids.filter((id) => ids.has(id)).length : f.n;
-    if (n === 0) return [];
-    const pastille = h('span', { class: 'pastille-feuille' });
-    if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
-    return [{ href: `#/arbre/famille/${encodeURIComponent(f.cle)}`, pastille, nom: f.nom, detail: `${n} pers.` }];
-  });
+/** Ligne de pop-up : une famille, comptée sur `n` de ses porteurs (tous, ou ceux d'un groupe). */
+function ligneFamille(f: Familles[number], n: number): LigneListe {
+  const pastille = h('span', { class: 'pastille-feuille' });
+  if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
+  return { href: `#/arbre/famille/${encodeURIComponent(f.cle)}`, pastille, nom: f.nom, detail: `${n} pers.` };
 }
 
 /** Pop-up « Ma famille » : chaque famille de l'arbre ouvre l'arbre zoomé dessus. */
 function listeFamilles(d: Donnees, moi: Personne | undefined): void {
   ouvrirListe(
     'Ma famille',
-    lignesFamilles(famillesDe(d, moi).famille),
+    famillesDe(d, moi).famille.map((f) => ligneFamille(f, f.n)),
     moi ? 'Aucune famille dans l’arbre.' : 'Choisis d’abord ta fiche dans les réglages : les familles se lisent autour de toi.',
   );
 }
 
 /** Pop-up « Mes amis » : les familles des amis, filtrables par groupe d'amis. */
 function listeAmis(d: Donnees, moi: Personne | undefined): void {
-  const amis = famillesDe(d, moi).amis;
-  const tout = lignesFamilles(amis);
-  const groupes = [...d.groupes].sort((a, b) => nomGroupe(d, a).localeCompare(nomGroupe(d, b), 'fr'));
-  const filtres = groupes.flatMap((g) => {
-    const lignes = lignesFamilles(amis, new Set(g.membres));
-    return lignes.length === 0 ? [] : [{ texte: nomGroupe(d, g), lignes }];
-  });
+  const filtres = filtresFamillesAmis(d, famillesDe(d, moi).amis).map((f) => ({
+    texte: f.nom,
+    lignes: f.familles.map((x) => ligneFamille(x.famille, x.n)),
+  }));
   ouvrirListe(
     'Mes amis',
-    tout,
+    filtres[0].lignes,
     moi ? 'Aucune famille d’amis pour l’instant.' : 'Choisis d’abord ta fiche dans les réglages : les familles se lisent autour de toi.',
     { href: '#/groupes', texte: 'Gérer les groupes' },
-    filtres.length === 0 ? [] : [{ texte: 'Tout', lignes: tout }, ...filtres],
+    filtres.length > 1 ? filtres : [],
   );
 }
 

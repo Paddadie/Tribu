@@ -362,6 +362,11 @@ fieldset.champ legend {
   outline-offset: 2px;
 }
 
+.choix input:disabled + span {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .date-groupe {
   display: grid;
   grid-template-columns: 1fr 2fr 1.4fr;

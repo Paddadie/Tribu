@@ -72,13 +72,16 @@ export function garderPour(d: Donnees, moi: string, affichage: Affichage): Set<s
   return affichage === 'tout' ? undefined : ligneDirecte(d, moi, affichage);
 }
 
-/** Les données réduites aux personnes de `garder`, avec les seuls liens entre elles ; sans groupes d'amis. */
+/**
+ * Les données réduites aux personnes de `garder`, avec les seuls liens entre elles. Sans groupes d'amis, sauf ceux
+ * dont `garder` contient l'id (export PNG d'un groupe, cibleImage.ts), réduits à leurs membres gardés.
+ */
 export function restreindre(d: Donnees, garder: Set<string>): Donnees {
   return {
     ...d,
     personnes: d.personnes.filter((p) => garder.has(p.id)),
     unions: d.unions.filter((u) => garder.has(u.personneA) && garder.has(u.personneB)),
     filiations: d.filiations.filter((f) => garder.has(f.parent) && garder.has(f.enfant)),
-    groupes: [],
+    groupes: d.groupes.filter((g) => garder.has(g.id)).map((g) => ({ ...g, membres: g.membres.filter((m) => garder.has(m)) })),
   };
 }

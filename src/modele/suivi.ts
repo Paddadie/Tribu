@@ -1,4 +1,4 @@
-// « Qui suivre » (Réglages › Données) : chaque fiche est rangée dans un cercle selon son lien avec « Moi » ; chaque
+// « Qui suivre » (Réglages › Suivi) : chaque fiche est rangée dans un cercle selon son lien avec « Moi » ; chaque
 // cercle est suivi ou non pour les rappels et pour « À compléter ». Une fiche peut faire exception (types.ts).
 
 import { relation } from './deductions';
@@ -93,6 +93,27 @@ export function suivis(d: Donnees, moi: string | undefined, suivi: Suivi): Suivi
     rappel: (p) => !p.sansRappel && (!!p.avecRappel || rappelDuCercle(p)),
     signale: (p) => !p.ignorerIncomplet && (!!p.signalerIncomplet || signaleDuCercle(p)),
   };
+}
+
+/** Cercles de sang, du plus proche au plus lointain : les crans de la jauge des réglages. */
+export const CERCLES_SANG: Cercle[] = ['parents', 'fratrie', 'grandsParents', 'oncles', 'cousins', 'loin'];
+
+/** Hors de l'échelle de proximité (pas de distance) : un interrupteur chacun. */
+export const CERCLES_HORS: Cercle[] = ['alliance', 'amis', 'sansLien'];
+
+/**
+ * Cran de la jauge : 0 (aucun cercle de sang) à 6 (tous), quand les cercles suivis sont tous plus proches que les
+ * autres ; undefined pour un choix à trous (grands-parents sans la fratrie…), laissé tel quel jusqu'au toucher d'un cran.
+ */
+export function cranDe(cercles: Cercles): number | undefined {
+  const premierEteint = CERCLES_SANG.findIndex((c) => !cercles[c]);
+  const cran = premierEteint === -1 ? CERCLES_SANG.length : premierEteint;
+  return CERCLES_SANG.slice(cran).every((c) => !cercles[c]) ? cran : undefined;
+}
+
+/** Suit les `cran` cercles de sang les plus proches et aucun autre ; belle-famille, amis et sans lien inchangés. */
+export function avecCran(cercles: Cercles, cran: number): Cercles {
+  return { ...cercles, ...Object.fromEntries(CERCLES_SANG.map((c, i) => [c, i < cran])) };
 }
 
 /** Lit des cercles enregistrés ; chaque valeur absente ou invalide vaut `defaut` (un cercle ajouté plus tard reste suivi). */

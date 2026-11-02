@@ -319,6 +319,10 @@ try {
           // Filtre « Ligne directe », niveau « + leurs frères et sœurs », puis « Tout » pour voir tout ce qui reste.
           const fratries = `document.querySelector('.filtre-arbre').click(); document.querySelector('input[name=affichage][value=fratries]').click()`;
           await capture(`${fam}-${nom}-14-ligne-directe`, '#/arbre', theme, `${fratries}; setTimeout(() => ${clic('Tout')}, 300)`, hauteur, o);
+          // Feuilles « Familles » et « Amis » de la barre du bas.
+          const liste = (texte) => `[...document.querySelectorAll('.commandes-arbre button')].find((b) => b.textContent.trim() === '${texte}')?.click()`;
+          await capture(`${fam}-${nom}-18-arbre-familles`, '#/arbre', theme, liste('Familles'), hauteur, o);
+          await capture(`${fam}-${nom}-19-arbre-amis`, '#/arbre', theme, liste('Amis'), hauteur, o);
           // Écrans de saisie (V4, lot 2) : sur téléphone seulement, en pleine hauteur.
           if (nom !== 'telephone') continue;
           const union = JSON.parse(json).unions.find((u) => u.personneA === f.moi || u.personneB === f.moi);
@@ -337,14 +341,17 @@ try {
           })()`;
           await capture(`${fam}-${nom}-11-arbre-pres`, '#/arbre', theme, pres, hauteur, o);
           // « Qui suivre » : la grille des cercles, et les interrupteurs d'une fiche qui suit son cercle.
-          await capture(`${fam}-${nom}-12-qui-suivre`, '#/reglages/donnees', theme, '', 1700, o);
+          await capture(`${fam}-${nom}-12-qui-suivre`, '#/reglages/suivi', theme, '', 1700, o);
           if (loin) await capture(`${fam}-${nom}-13-modifier-loin`, `#/modifier/${loin}`, theme, '', 1700, o);
           // Feuille « Afficher » ouverte, et le choix des personnes de l'export PNG.
           await capture(`${fam}-${nom}-15-afficher`, '#/arbre', theme, `document.querySelector('.filtre-arbre').click()`, hauteur, o);
-          await capture(`${fam}-${nom}-16-export-png`, '#/reglages/exports', theme, '', 1700, o);
+          await capture(`${fam}-${nom}-16-export-png`, '#/reglages/partager', theme, '', 1700, o);
           // Fenêtre « Mes amis » de l'accueil, avec ses filtres par groupe.
           const mesAmis = `[...document.querySelectorAll('.raccourcis button')].find((b) => b.textContent.includes('Mes amis'))?.click()`;
           await capture(`${fam}-${nom}-17-mes-amis`, '#/', theme, mesAmis, hauteur, o);
+          // Chaque onglet des Réglages.
+          for (const onglet of ['general', 'suivi', 'partager', 'donnees'])
+            await capture(`${fam}-${nom}-20-reglages-${onglet}`, `#/reglages/${onglet}`, theme, '', 1700, o);
         }
     }
   } else if (mode === 'maquettes') {

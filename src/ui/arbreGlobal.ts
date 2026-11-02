@@ -4,6 +4,7 @@
 
 import type { Disposition, Point } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
+import { filtresFamillesAmis, type FiltreFamilles } from '../modele/famillesAmis';
 import { prochesDeFamille } from '../modele/filtres';
 import { AFFICHAGES, garderPour, type Affichage } from '../modele/ligneDirecte';
 import { couleurFamille, filtrerParNom, nomComplet, simplifier } from '../modele/liste';
@@ -135,6 +136,11 @@ const couleurTrait = (k: number) => `color-mix(in srgb, ${couleur(k)} 62%, var(-
 const couleurGroupe = (i: number) => couleurTrait(i + 5);
 
 const borne = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+/** Bouton de la barre du bas, icône au-dessus du libellé : même aspect pour les vues (Toi, Tout) et les listes. */
+function boutonBarre(trace: Parameters<typeof icone>[0], texte: string, attributs: Parameters<typeof h>[1]): HTMLElement {
+  return h('button', { type: 'button', class: 'bouton-arbre', ...attributs }, icone(trace, 22), texte);
+}
 
 /** `feuille` : liste ouverte d'emblée (raccourci « Familles » de l'accueil, route #/arbre/familles). */
 export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElement {
@@ -289,8 +295,8 @@ class Carte {
     this.calque.style.width = `${this.largeur}px`;
     this.calque.style.height = `${this.hauteur}px`;
     const astuce = !astuceMontree && h('div', { class: 'astuce-arbre', 'aria-hidden': 'true' }, 'Glisse pour te déplacer, pince pour zoomer');
-    this.puceToi = h('button', { type: 'button', class: 'puce-arbre', onclick: () => this.sauter(this.surPersonne(moi.id, 1), 'toi', [moi.id]) }, 'Toi');
-    this.puceTout = h('button', { type: 'button', class: 'puce-arbre', onclick: () => this.sauter(this.toutVoir(), 'tout') }, 'Tout');
+    this.puceToi = boutonBarre('personne', 'Toi', { onclick: () => this.sauter(this.surPersonne(moi.id, 1), 'toi', [moi.id]) });
+    this.puceTout = boutonBarre('arbre', 'Tout', { onclick: () => this.sauter(this.toutVoir(), 'tout') });
     this.revenir = h(
       'button',
       { type: 'button', class: 'rond-arbre revenir', 'aria-label': 'Revenir à la vue d’avant', hidden: true, onclick: () => this.revenirEnArriere() },
@@ -299,11 +305,15 @@ class Carte {
     this.barreBas = h(
       'div',
       { class: 'commandes-arbre gauche' },
-      // Segment « Toi | Tout » (les vues), puis un filet et les deux listes (les outils).
-      h('div', { class: 'segment-arbre', role: 'group', 'aria-label': 'Vue' }, this.puceToi, this.puceTout),
-      (this.familles.some((f) => !f.amis) || this.cadres.length > 0) && h('span', { class: 'filet-arbre', 'aria-hidden': 'true' }),
-      this.familles.some((f) => !f.amis) && this.puceListe('familles', 'Familles', 'famille'),
-      this.cadres.length > 0 && this.puceListe('amis', 'Amis', 'ami'),
+      // Une seule barre de boutons identiques : les vues (Toi, Tout), puis les listes (Familles, Amis), absentes sans contenu.
+      h(
+        'div',
+        { class: 'boutons-arbre', role: 'group', 'aria-label': 'Vues et listes' },
+        this.puceToi,
+        this.puceTout,
+        this.familles.some((f) => !f.amis) && this.puceListe('familles', 'Familles', 'famille'),
+        (this.familles.some((f) => f.amis) || this.cadres.length > 0) && this.puceListe('amis', 'Amis', 'ami'),
+      ),
     );
     const libelle = AFFICHAGES.find((a) => a.valeur === o.affichage)?.pastille;
     // Filtre actif : rappelé en haut de la carte ; un toucher revient à tout l'arbre.
@@ -432,12 +442,7 @@ class Carte {
   // ——— Listes « Familles » et « Amis » ———
 
   private puceListe(quoi: 'familles' | 'amis', texte: string, trace: Parameters<typeof icone>[0]): HTMLElement {
-    const b = h(
-      'button',
-      { type: 'button', class: 'puce-arbre outil-arbre', 'aria-expanded': 'false', onclick: () => this.basculerFeuille(quoi) },
-      icone(trace, 20),
-      texte,
-    );
+    const b = boutonBarre(trace, texte, { 'aria-expanded': 'false', onclick: () => this.basculerFeuille(quoi) });
     this.puces.set(quoi, b);
     return b;
   }
@@ -486,40 +491,73 @@ class Carte {
       this.feuille.classList.add('ouverte');
       return;
     }
-    const ligne = (pastille: HTMLElement, nom: string, detail: string, zone: Zone, cibles: string[]) =>
+    if (quoi === 'familles')
+      this.feuille.replaceChildren(h('h2', {}, 'Familles'), ...this.familles.filter((f) => !f.amis).map((f) => this.ligneFamille(f, f.n)));
+    else this.feuille.replaceChildren(...this.contenuAmis());
+    this.feuille.classList.add('ouverte');
+  }
+
+  /** Ligne de feuille : la toucher amène la vue sur la zone et fait pulser les cibles. */
+  private ligneFeuille(pastille: HTMLElement, nom: string, detail: string, zone: Zone, cibles: string[]): HTMLElement {
+    return h(
+      'button',
+      { type: 'button', class: 'ligne-feuille', onclick: () => this.sauter(this.surZone(zone), undefined, cibles) },
+      pastille,
+      h('span', { class: 'nom-feuille' }, nom),
+      h('small', {}, detail),
+    );
+  }
+
+  /** Une famille, comptée sur `n` de ses porteurs ; le saut englobe toujours toute la famille. */
+  private ligneFamille(f: FamilleListee, n: number): HTMLElement {
+    const pastille = h('span', { class: 'pastille-feuille' });
+    if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
+    return this.ligneFeuille(pastille, f.nom, `${n} pers.`, f.zone, f.cibles);
+  }
+
+  /**
+   * Feuille « Amis », comme « Mes amis » de l'accueil : les familles des amis, filtrées par groupe en puces
+   * (famillesAmis.ts). Un groupe choisi s'ouvre sur « Tout le groupe », qui montre son cadre en entier.
+   */
+  private contenuAmis(): HTMLElement[] {
+    const filtres = filtresFamillesAmis(
+      lireDonnees(),
+      this.familles.filter((f) => f.amis),
+    );
+    const corps = h('div');
+    const montrer = (f: FiltreFamilles<FamilleListee>) => {
+      const i = this.cadres.findIndex((c) => c.groupe.id === f.groupe?.id);
+      const lignes = f.familles.map((x) => this.ligneFamille(x.famille, x.n));
+      if (i >= 0) {
+        const c = this.cadres[i];
+        const pastille = h('span', { class: 'pastille-feuille anneau' });
+        pastille.style.borderColor = couleurGroupe(i);
+        lignes.unshift(this.ligneFeuille(pastille, 'Tout le groupe', `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`, c, c.groupe.membres));
+      }
+      corps.replaceChildren(...(lignes.length > 0 ? lignes : [h('p', { class: 'note-feuille' }, 'Aucune famille d’amis pour l’instant.')]));
+    };
+    const puces: HTMLElement[] = filtres.map((f, i) =>
       h(
         'button',
-        { type: 'button', class: 'ligne-feuille', onclick: () => this.sauter(this.surZone(zone), undefined, cibles) },
-        pastille,
-        h('span', { class: 'nom-feuille' }, nom),
-        h('small', {}, detail),
-      );
-    const lignes =
-      quoi === 'familles'
-        ? this.familles
-            .filter((f) => !f.amis)
-            .map((f) => {
-              const pastille = h('span', { class: 'pastille-feuille' });
-              if (f.couleur !== undefined) pastille.style.background = couleur(f.couleur);
-              return ligne(pastille, f.nom, `${f.n} pers.`, f.zone, f.cibles);
-            })
-        : this.cadres.map((c, i) => {
-            const d = lireDonnees();
-            const pastille = h('span', { class: 'pastille-feuille anneau' });
-            pastille.style.borderColor = couleurGroupe(i);
-            return ligne(
-              pastille,
-              nomGroupe(
-                d,
-                d.groupes.find((g) => g.id === c.groupe.id)!,
-              ),
-              `${c.groupe.amis} ami${c.groupe.amis > 1 ? 's' : ''}`,
-              c,
-              c.groupe.membres,
-            );
-          });
-    this.feuille.replaceChildren(h('h2', {}, quoi === 'familles' ? 'Familles' : 'Groupes d’amis'), ...lignes);
-    this.feuille.classList.add('ouverte');
+        {
+          type: 'button',
+          class: 'puce',
+          'aria-pressed': String(i === 0),
+          onclick: () => {
+            puces.forEach((p, j) => p.setAttribute('aria-pressed', String(j === i)));
+            montrer(f);
+          },
+        },
+        f.nom,
+      ),
+    );
+    montrer(filtres[0]);
+    return [
+      h('h2', {}, 'Amis'),
+      ...(puces.length > 1 ? [h('div', { class: 'puces puces-feuille' }, ...puces)] : []),
+      corps,
+      h('a', { class: 'pied-feuille', href: '#/groupes' }, 'Gérer les groupes'),
+    ];
   }
 
   private zoneDe(focus?: FocusArbre): { zone: Zone; cibles: string[] } | undefined {
@@ -695,7 +733,6 @@ class Carte {
       [this.puceToi, 'toi'],
       [this.puceTout, 'tout'],
     ] as const) {
-      puce.classList.toggle('accent', active === quoi);
       puce.setAttribute('aria-pressed', String(active === quoi));
     }
     this.revenir.hidden = pile.length === 0;

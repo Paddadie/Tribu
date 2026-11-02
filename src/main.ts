@@ -24,7 +24,7 @@ import { ecranVerification } from './ui/verification';
 // Routage par hash (compatible GitHub Pages) :
 //   #/                 accueil        #/personnes       toutes les fiches     #/personne/<id>   fiche
 //   #/agenda           dates des 12 prochains mois
-//   #/reglages[/<onglet>]  réglages en onglets : general, exports, sauvegarde, donnees
+//   #/reglages[/<onglet>]  réglages en onglets : general, suivi, partager, donnees
 //   #/nouveau          création       #/nouveau/<texte>  création, prénom et nom tirés de la recherche
 //   #/modifier/<id>    modification
 //   #/conjoint/<id>    ajout d'un conjoint à la personne      #/ami/<id>   ajout d'un ami

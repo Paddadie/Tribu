@@ -52,6 +52,7 @@ const TRACES = {
     '<circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 13.6c2.9.2 5 2.2 5 5.4"/>',
   alerte: '<path d="M12 3L2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/>',
   cote: '<path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/>',
+  personne: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5"/>',
   ami: '<circle cx="9" cy="8.5" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><path d="M15.5 14.1c2.4.1 4.2 1.7 4.8 4.4"/>',
   croix: '<path d="M6 6l12 12M18 6L6 18"/>',
   moins: '<path d="M5 12h14"/>',

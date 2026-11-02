@@ -8,7 +8,7 @@ import { ajouterFiliation, ajouterUnion, creerGroupe, creerPersonne, donneesVide
 import { charger, exporterJson, sauvegarder } from './modele/stockage';
 import { entreesCalendrier } from './modele/fetes';
 import type { Donnees, Sexe } from './modele/types';
-import { SUIVI_FAMILLE_PROCHE, type Suivi } from './modele/suivi';
+import { SUIVI_FAMILLE_PROCHE, SUIVI_TOUT, type Suivi } from './modele/suivi';
 import { dupontel, extremes } from './modele/test/familles';
 import { couleurFamille } from './modele/liste';
 import { chemin } from './modele/deductions';
@@ -670,16 +670,31 @@ describe('import', () => {
   it('découpe les réglages en onglets : Général par défaut, onglet choisi par l’adresse ou au toucher', async () => {
     await demarrer(famille().donnees, '#/reglages');
     const panneau = (id: string) => ecran().querySelector<HTMLElement>(`#panneau-${id}`)!;
+    expect([...ecran().querySelectorAll('.onglet')].map((o) => o.textContent)).toEqual(['Général', 'Suivi', 'Partager', 'Données']);
     expect(panneau('general').hidden).toBe(false);
-    expect(panneau('exports').hidden).toBe(true);
-    (ecran().querySelector('#onglet-sauvegarde') as HTMLElement).click();
-    expect(panneau('sauvegarde').hidden).toBe(false);
-    expect(panneau('general').hidden).toBe(true);
-    expect(location.hash).toBe('#/reglages/sauvegarde');
-    await demarrer(famille().donnees, '#/reglages/donnees');
+    expect(panneau('partager').hidden).toBe(true);
+    (ecran().querySelector('#onglet-donnees') as HTMLElement).click();
     expect(panneau('donnees').hidden).toBe(false);
-    await demarrer(famille().donnees, '#/reglages/inconnu');
-    expect(panneau('general').hidden).toBe(false);
+    expect(panneau('general').hidden).toBe(true);
+    expect(location.hash).toBe('#/reglages/donnees');
+    await demarrer(famille().donnees, '#/reglages/suivi');
+    expect(panneau('suivi').hidden).toBe(false);
+    // Anciennes adresses (exports, sauvegarde) : comme un onglet inconnu.
+    for (const ancien of ['inconnu', 'exports', 'sauvegarde']) {
+      await demarrer(famille().donnees, `#/reglages/${ancien}`);
+      expect(panneau('general').hidden).toBe(false);
+    }
+  });
+
+  it('range chaque réglage dans l’onglet de son intention', async () => {
+    await demarrer(famille().donnees, '#/reglages');
+    const titres = (id: string) => [...ecran().querySelectorAll(`#panneau-${id} h2, #panneau-${id} h3`)].map((t) => t.textContent);
+    expect(titres('general')).toEqual(['Moi', 'Amis', 'Affichage']);
+    expect(titres('suivi')).toEqual(['Fêtes', 'Qui suivre']);
+    expect(titres('partager')).toEqual(['Partager', 'Exporter les dates vers un agenda', 'Exporter l’arbre en image']);
+    expect(titres('donnees')).toEqual(['Sauvegarde', 'Exporter', 'Importer', 'Vérifier et effacer']);
+    expect(ecran().querySelector('#panneau-suivi #fetes')).not.toBeNull();
+    expect(ecran().querySelector('#panneau-donnees')!.textContent).toContain('Effacer toutes les données');
   });
 
   it('prévient que l’export contient les notes en clair', async () => {
@@ -1333,6 +1348,37 @@ describe('arbre global', () => {
     expect(trouver('.commandes-arbre button', 'Familles', ecran()).getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('la feuille Amis liste les familles des amis, filtrées par groupe, et amène l’arbre sur celle qu’on touche', async () => {
+    const { donnees, ids } = famille();
+    let d = donnees;
+    const ami = (prenom: string, nom: string) => {
+      const r = creerPersonne(d, { prenom, nom });
+      d = r.donnees;
+      return r.personne.id;
+    };
+    const [ulysse, vera, zelie, bob] = [ami('Ulysse', 'Voisin'), ami('Véra', 'Voisin'), ami('Zélie', 'Rivière'), ami('Bob', 'Perrichon')];
+    d = creerGroupe(d, [ulysse, zelie], 'Rando', ids.Chloé).donnees;
+    d = creerGroupe(d, [vera, bob], 'Bureau', ids.Chloé).donnees;
+    await demarrer(d, '#/arbre', { moi: ids.Chloé });
+    const lignes = () => [...ecran().querySelectorAll('.feuille-arbre .ligne-feuille')].map((b) => b.textContent);
+    const bouton = trouver('.commandes-arbre button', 'Amis', ecran());
+
+    await toucher(bouton);
+    expect(bouton.getAttribute('aria-expanded')).toBe('true');
+    expect(ecran().querySelector('.feuille-arbre h2')?.textContent).toBe('Amis');
+    expect(lignes()).toEqual(['Famille Perrichon1 pers.', 'Famille Rivière1 pers.', 'Famille Voisin2 pers.']);
+    expect([...ecran().querySelectorAll('.feuille-arbre .puce')].map((p) => p.textContent)).toEqual(['Tout', 'Bureau', 'Rando']);
+    expect(ecran().querySelector('.feuille-arbre a.pied-feuille')?.getAttribute('href')).toBe('#/groupes');
+
+    await toucher(trouver('.feuille-arbre .puce', 'Rando', ecran()));
+    expect(trouver('.feuille-arbre .puce', 'Rando', ecran()).getAttribute('aria-pressed')).toBe('true');
+    expect(lignes()).toEqual(['Tout le groupe2 amis', 'Famille Rivière1 pers.', 'Famille Voisin1 pers.']);
+
+    await toucher(trouver('.feuille-arbre .ligne-feuille', 'Famille Voisin', ecran()));
+    expect(ecran().querySelector('.feuille-arbre.ouverte')).toBeNull();
+    expect(ecran().querySelector<HTMLElement>('button[aria-label="Revenir à la vue d’avant"]')!.hidden).toBe(false);
+  });
+
   it('un membre de la famille dans un groupe d’amis porte un petit anneau', async () => {
     const { donnees, ids } = famille();
     const d = creerGroupe(donnees, [ids.Bruno, ids.Denis], 'Le foot').donnees;
@@ -1448,7 +1494,7 @@ describe('arbre : filtre « Ligne directe »', () => {
     const { donnees, ids } = lignee();
     await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
     await choisirAffichage('+ leurs frères et sœurs');
-    location.hash = '#/reglages/exports';
+    location.hash = '#/reglages/partager';
     await pause();
     const coche = () => ecran().querySelector<HTMLInputElement>('input[name="affichage-png"]:checked')?.value;
     const resume = () => trouver('p.secondaire', 'image d’environ', ecran()).textContent;
@@ -1458,6 +1504,31 @@ describe('arbre : filtre « Ligne directe »', () => {
     tout.checked = true;
     tout.dispatchEvent(new Event('change'));
     expect(resume()).toMatch(/^9 personnes · /);
+  });
+
+  it('l’export PNG dessine toute la famille sans amis, ou un groupe choisi dans la liste', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer(donnees, '#/reglages/partager', { moi: ids.Chloé });
+    const coche = () => ecran().querySelector<HTMLInputElement>('input[name="affichage-png"]:checked')?.value;
+    const resume = () => trouver('p.secondaire', 'image d’environ', ecran()).textContent;
+    const famille = trouver('label.choix', 'Toute la famille', ecran()).querySelector<HTMLInputElement>('input')!;
+    famille.checked = true;
+    famille.dispatchEvent(new Event('change'));
+    // Sans Karim (ami) ni Denis (sans lien avec Chloé).
+    expect(resume()).toMatch(/^7 personnes · /);
+    const liste = ecran().querySelector<HTMLSelectElement>('select#groupe-png')!;
+    expect(liste.disabled).toBe(false);
+    liste.dispatchEvent(new Event('change'));
+    expect(coche()).toBe('groupe');
+    // Karim et Chloé : le groupe sans la famille de Chloé.
+    expect(resume()).toMatch(/^2 personnes · /);
+  });
+
+  it('sans groupe d’amis, l’export PNG grise le choix du groupe', async () => {
+    const { donnees, ids } = lignee();
+    await demarrer({ ...donnees, groupes: [] }, '#/reglages/partager', { moi: ids.Chloé });
+    expect(ecran().querySelector<HTMLSelectElement>('select#groupe-png')!.disabled).toBe(true);
+    expect(trouver('label.choix', 'Un groupe d’amis', ecran()).querySelector<HTMLInputElement>('input')!.disabled).toBe(true);
   });
 });
 
@@ -1579,7 +1650,7 @@ describe('accueil, agenda et dates', () => {
   });
 
   it('le réglage « Fêtes du prénom » s’enregistre', async () => {
-    await demarrer(agenda(), '#/reglages');
+    await demarrer(agenda(), '#/reglages/suivi');
     const bascule = ecran().querySelector<HTMLInputElement>('#fetes')!;
     expect(bascule.checked).toBe(true);
     await toucher(bascule);
@@ -1810,35 +1881,74 @@ describe('couleurs des familles (V4, point 16)', () => {
   });
 });
 
-describe('« Qui suivre » (Réglages › Données)', () => {
+describe('« Qui suivre » (Réglages › Suivi)', () => {
   const caseSuivi = (libelle: string) => ecran().querySelector<HTMLInputElement>(`input[aria-label="${libelle}"]`)!;
   const presse = () => [...ecran().querySelectorAll('.puces-suivi .puce[aria-pressed="true"]')].map((b) => b.textContent);
   const suiviEnregistre = () => (JSON.parse(localStorage.getItem('tribu:reglages')!) as { suivi: Suivi }).suivi;
 
-  it('préréglage, case par cercle et bilan ; « Sur mesure » dès qu’on s’écarte', async () => {
+  const cran = (libelle: string) => ecran().querySelector<HTMLButtonElement>(`.cran-suivi[aria-label="${libelle}"]`)!;
+  const choisis = () => [...ecran().querySelectorAll('.cran-suivi[aria-pressed="true"]')].map((b) => b.getAttribute('aria-label'));
+
+  it('préréglage, jauge, interrupteurs et bilan ; « Sur mesure » dès qu’on s’écarte', async () => {
     const { donnees, ids } = famille();
-    await demarrer(donnees, '#/reglages/donnees', { moi: ids.Chloé });
+    await demarrer(donnees, '#/reglages/suivi', { moi: ids.Chloé });
+    expect(ecran().querySelector<HTMLElement>('#panneau-suivi')!.hidden).toBe(false);
     expect(presse()).toEqual(['Tout le monde']);
+    expect(choisis()).toEqual(['Rappels : toute la famille', 'À compléter : toute la famille']);
     expect(ecran().querySelector('.grille-suivi')!.textContent).toContain('Parents et enfants · 2');
     expect(ecran().querySelector('.bilan-suivi')!.textContent).toBe('Suivis : 3 sur 3 · à compléter : 3 fiches');
 
     await toucher(trouver('.puces-suivi button', 'Famille proche'));
     expect(presse()).toEqual(['Famille proche']);
+    expect(choisis()).toEqual(['Rappels : jusqu’aux cousins germains', 'À compléter : jusqu’aux cousins germains']);
     expect(caseSuivi('Rappels : Sans lien connu').checked).toBe(false);
+    expect(caseSuivi('Rappels : Belle-famille').checked).toBe(true);
     expect(suiviEnregistre()).toEqual(SUIVI_FAMILLE_PROCHE);
     expect(ecran().querySelector('.bilan-suivi')!.textContent).toBe('Suivis : 2 sur 3 · à compléter : 2 fiches');
 
-    const parents = caseSuivi('Rappels : Parents et enfants');
-    parents.checked = false;
-    parents.dispatchEvent(new Event('change'));
+    // Le cran 0 éteint tous les cercles de sang, et eux seuls.
+    await toucher(cran('Rappels : toi et ton conjoint seulement'));
     expect(presse()).toEqual(['Sur mesure']);
-    expect(suiviEnregistre().rappels.parents).toBe(false);
+    expect(ecran().querySelector('.resumes-suivi')!.textContent).toContain('Rappels : toi et ton conjoint seulement');
+    expect(suiviEnregistre().rappels).toEqual({
+      ...SUIVI_FAMILLE_PROCHE.rappels,
+      parents: false,
+      fratrie: false,
+      grandsParents: false,
+      oncles: false,
+      cousins: false,
+    });
+    expect(ecran().querySelector('.bilan-suivi')!.textContent).toBe('Suivis : 0 sur 3 · à compléter : 2 fiches');
+
+    const sansLien = caseSuivi('Rappels : Sans lien connu');
+    sansLien.checked = true;
+    sansLien.dispatchEvent(new Event('change'));
+    expect(suiviEnregistre().rappels.sansLien).toBe(true);
+    expect(ecran().querySelector('.bilan-suivi')!.textContent).toBe('Suivis : 1 sur 3 · à compléter : 2 fiches');
+  });
+
+  it('un ancien réglage à trous s’affiche tel quel et ne change qu’au toucher d’un cran', async () => {
+    const { donnees, ids } = famille();
+    const trous: Suivi = { ...SUIVI_TOUT, rappels: { ...SUIVI_TOUT.rappels, fratrie: false } };
+    await demarrer(donnees, '#/reglages/suivi', { moi: ids.Chloé, suivi: trous });
+    const avis = ecran().querySelector<HTMLElement>('.grille-suivi .avertissement')!;
+    const plein = (libelle: string) => cran(libelle).querySelector('.rail-suivi')!.classList.contains('plein');
+    expect(avis.hidden).toBe(false);
+    expect(avis.textContent).toContain('Rappels : choix à trous');
+    expect(choisis()).toEqual(['À compléter : toute la famille']);
+    expect([plein('Rappels : jusqu’aux frères et sœurs'), plein('Rappels : jusqu’aux grands-parents')]).toEqual([false, true]);
+    expect(presse()).toEqual(['Sur mesure']);
+
+    await toucher(cran('Rappels : jusqu’aux grands-parents'));
+    expect(avis.hidden).toBe(true);
+    expect(choisis()).toEqual(['Rappels : jusqu’aux grands-parents', 'À compléter : toute la famille']);
+    expect(suiviEnregistre().rappels).toEqual({ ...SUIVI_TOUT.rappels, oncles: false, cousins: false, loin: false });
   });
 
   it('sans « Moi » : pas de cercles, tout le monde est suivi', async () => {
-    await demarrer(famille().donnees, '#/reglages/donnees');
+    await demarrer(famille().donnees, '#/reglages/suivi');
     expect(ecran().querySelector<HTMLElement>('.grille-suivi')!.closest<HTMLElement>('.qui-suivre')!.hidden).toBe(true);
-    expect(ecran().querySelector('#panneau-donnees')!.textContent).toContain('tout le monde est suivi');
+    expect(ecran().querySelector('#panneau-suivi')!.textContent).toContain('tout le monde est suivi');
   });
 
   it('fiche : suit son cercle, fait exception une fois changée, revient au réglage du cercle', async () => {

@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { bandes, COTE_MAX, dimensionsImage, ECHELLE_VISEE, melanger, PIXELS_BANDE, PIXELS_CANVAS, PIXELS_MAX } from './arbreImage';
+import { disposerArbre } from '../modele/arbreGlobal';
+import { ajouterFiliation, ajouterUnion, creerPersonne, donneesVides } from '../modele/modele';
+import {
+  bandes,
+  COTE_LIMITE,
+  COTE_MAX,
+  dimensionsArbre,
+  dimensionsImage,
+  ECHELLE_MIN,
+  ECHELLE_VISEE,
+  melanger,
+  PIXELS_BANDE,
+  PIXELS_CANVAS,
+  PIXELS_LIMITE,
+  PIXELS_MAX,
+} from './arbreImage';
 
 describe('dimensionsImage', () => {
   it('triple la netteté quand l’arbre est petit', () => {
@@ -16,18 +31,63 @@ describe('dimensionsImage', () => {
     expect(d.echelle).toBeGreaterThan(2.5);
   });
 
-  it('plafonne le plus grand côté à COTE_MAX', () => {
-    const large = dimensionsImage(12000, 300);
+  it('plafonne le plus grand côté à COTE_MAX tant que l’échelle reste au-dessus d’ECHELLE_MIN', () => {
+    const large = dimensionsImage(7000, 300);
     expect(large.pixelsL).toBeLessThanOrEqual(COTE_MAX);
-    expect(large.echelle).toBeLessThan(2);
+    expect(large.echelle).toBeLessThan(ECHELLE_VISEE);
+    expect(large.grande).toBe(false);
     const haut = dimensionsImage(300, 9000);
     expect(haut.pixelsH).toBeLessThanOrEqual(COTE_MAX);
+    expect(haut.echelle).toBeGreaterThanOrEqual(ECHELLE_MIN);
+  });
+
+  it('ne descend jamais sous ECHELLE_MIN : dépasse COTE_MAX ou PIXELS_MAX et le signale', () => {
+    const large = dimensionsImage(12000, 300);
+    expect(large.echelle).toBe(ECHELLE_MIN);
+    expect(large.pixelsL).toBeGreaterThan(COTE_MAX);
+    expect(large).toMatchObject({ grande: true, possible: true });
+    const vaste = dimensionsImage(6000, 5000);
+    expect(vaste.echelle).toBe(ECHELLE_MIN);
+    expect(vaste.pixelsL * vaste.pixelsH).toBeGreaterThan(PIXELS_MAX);
+    expect(vaste).toMatchObject({ grande: true, possible: true });
+  });
+
+  it('n’est plus possible au-delà de COTE_LIMITE ou de PIXELS_LIMITE à ECHELLE_MIN', () => {
+    expect(dimensionsImage(22000, 300).pixelsL).toBeGreaterThan(COTE_LIMITE);
+    expect(dimensionsImage(22000, 300).possible).toBe(false);
+    const carre = dimensionsImage(9000, 9000);
+    expect(carre.pixelsL * carre.pixelsH).toBeGreaterThan(PIXELS_LIMITE);
+    expect(carre.possible).toBe(false);
   });
 
   it('le secours sur un seul canvas reste dans la surface de Safari iOS', () => {
     const d = dimensionsImage(3908, 1696, PIXELS_CANVAS);
     expect(d.pixelsL * d.pixelsH).toBeLessThanOrEqual(PIXELS_CANVAS);
-    expect(d.echelle).toBeGreaterThan(1.5);
+    expect(d.echelle).toBeGreaterThan(ECHELLE_MIN);
+    expect(d.grande).toBe(false);
+    // Plus grand, le secours ne tiendrait plus ECHELLE_MIN : arbrePng le refuse (ImageTropGrande).
+    expect(dimensionsImage(4500, 2000, PIXELS_CANVAS).grande).toBe(true);
+  });
+});
+
+describe('dimensionsArbre d’un très grand arbre', () => {
+  it('garde le texte à ECHELLE_MIN au moins pour une fratrie de 150 enfants', () => {
+    let d = donneesVides();
+    const parents = ['Anselme', 'Berthe'].map((prenom) => {
+      const r = creerPersonne(d, { prenom, nom: 'Dupontel' });
+      d = r.donnees;
+      return r.personne.id;
+    });
+    d = ajouterUnion(d, parents[0], parents[1], true).donnees;
+    for (let i = 0; i < 150; i++) {
+      const r = creerPersonne(d, { prenom: `Enfant ${i}`, nom: 'Dupontel' });
+      d = r.donnees;
+      for (const p of parents) d = ajouterFiliation(d, p, r.personne.id, 'biologique').donnees;
+    }
+    const dim = dimensionsArbre(disposerArbre(d, parents[0]));
+    expect(dim.largeur).toBeGreaterThan(COTE_MAX / ECHELLE_MIN);
+    expect(dim.echelle).toBe(ECHELLE_MIN);
+    expect(dim).toMatchObject({ grande: true, possible: true });
   });
 });
 

@@ -1,5 +1,5 @@
-// Export de l'arbre global en image PNG (Réglages → Exporter l'arbre en image) : tout l'arbre est redessiné sur un
-// canvas, fond blanc, couleurs du thème clair, années de naissance et de décès sous le nom. La géométrie vient de geometrieArbre.ts, la même
+// Export de l'arbre global en image PNG (Réglages → Exporter l'arbre en image) : l'arbre de la cible choisie
+// (cibleImage.ts) est redessiné sur un canvas, fond blanc, couleurs du thème clair, années de naissance et de décès sous le nom. La géométrie vient de geometrieArbre.ts, la même
 // que celle de l'écran ; seuls le pinceau et les couleurs sont propres à l'image.
 
 import type { Disposition } from '../modele/arbreGlobal';
@@ -19,10 +19,19 @@ import { encoderPng } from './png';
 
 /** Netteté visée (pixels de l'image par pixel du dessin) : les noms restent nets quand on zoome. */
 export const ECHELLE_VISEE = 3;
-/** Plus grand côté de l'image : moins que le côté maximal du canvas de Chrome, et lisible par les visionneuses. */
+/**
+ * Netteté minimale, jamais réduite en silence : le plus petit texte (noms de famille, 10,5) y fait encore 16 px.
+ * Pas ×2 : le secours sur un seul canvas (PIXELS_CANVAS) ne tient que ×1,56 pour la fixture.
+ */
+export const ECHELLE_MIN = 1.5;
+/** Plus grand côté confortable : moins que le côté maximal du canvas de Chrome, et lisible par les visionneuses. */
 export const COTE_MAX = 16384;
-/** Pixels de l'image au plus : 48 Mpx, la taille des photos des téléphones récents, que leur galerie sait ouvrir. */
+/** Pixels confortables au plus : 48 Mpx, la taille des photos des téléphones récents, que leur galerie sait ouvrir. */
 export const PIXELS_MAX = 48_000_000;
+/** Plus grand côté possible : celui du canvas de Chrome et de Firefox, une bande étant aussi large que l'image. */
+export const COTE_LIMITE = 32767;
+/** Pixels possibles au plus, pour un export raisonnable en temps et en mémoire sur téléphone. */
+export const PIXELS_LIMITE = 100_000_000;
 /** Surface d'une bande : bien sous la limite de Safari iOS, pour ménager la mémoire. */
 export const PIXELS_BANDE = 4_000_000;
 /** Secours sans bandes (CompressionStream absent ou en échec) : un seul canvas, dans la limite de Safari iOS. */
@@ -80,14 +89,27 @@ export interface DimensionsImage {
   /** Taille de l'image en pixels. */
   pixelsL: number;
   pixelsH: number;
+  /** Plus grande que COTE_MAX ou `pixelsMax`, pour ne pas descendre sous ECHELLE_MIN. */
+  grande: boolean;
+  /** Dans COTE_LIMITE et PIXELS_LIMITE : sinon, pas d'export (les noms ne resteraient pas lisibles). */
+  possible: boolean;
 }
 
-/** Taille de l'image : ×3 si possible, réduite pour tenir dans COTE_MAX de côté et `pixelsMax` de surface. */
+/**
+ * Taille de l'image : ×3 si possible, réduite pour tenir dans COTE_MAX de côté et `pixelsMax` de surface, mais
+ * jamais sous ECHELLE_MIN : l'image dépasse alors ces plafonds (`grande`), jusqu'aux limites techniques (`possible`).
+ */
 export function dimensionsImage(largeur: number, hauteurArbre: number, pixelsMax = PIXELS_MAX): DimensionsImage {
   const hauteur = hauteurArbre + ENTETE;
-  const echelle = Math.min(ECHELLE_VISEE, COTE_MAX / Math.max(largeur, hauteur), Math.sqrt(pixelsMax / (largeur * hauteur)));
-  return { largeur, hauteur, echelle, pixelsL: Math.floor(largeur * echelle), pixelsH: Math.floor(hauteur * echelle) };
+  const confort = Math.min(ECHELLE_VISEE, COTE_MAX / Math.max(largeur, hauteur), Math.sqrt(pixelsMax / (largeur * hauteur)));
+  const echelle = Math.max(confort, ECHELLE_MIN);
+  const [pixelsL, pixelsH] = [Math.floor(largeur * echelle), Math.floor(hauteur * echelle)];
+  const possible = Math.max(pixelsL, pixelsH) <= COTE_LIMITE && pixelsL * pixelsH <= PIXELS_LIMITE;
+  return { largeur, hauteur, echelle, pixelsL, pixelsH, grande: confort < ECHELLE_MIN, possible };
 }
+
+/** Image trop grande pour rester lisible (voir ECHELLE_MIN) : l'export est refusé plutôt que flou. */
+export class ImageTropGrande extends Error {}
 
 /** Bandes horizontales (en pixels de l'image) de `pixelsBande` au plus, qui couvrent toute la hauteur sans se chevaucher. */
 export function bandes(pixelsL: number, pixelsH: number, pixelsBande = PIXELS_BANDE): { y: number; h: number }[] {
@@ -216,18 +238,17 @@ function dessinerNoeud(
 type Positions = ReturnType<typeof positions>;
 
 /** Peint tout l'arbre, en unités du dessin, sur un contexte déjà mis à l'échelle (et décalé quand on peint une bande). */
-function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, pos: Positions): void {
+function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, pos: Positions, titre: string): void {
   const largeur = pos.largeur;
   ctx.fillStyle = COULEURS.fond;
   ctx.fillRect(0, 0, largeur, pos.hauteur + ENTETE);
 
   // Titre et date.
-  const titre = [moi.prenom, moi.nom].filter(Boolean).join(' ');
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
   ctx.fillStyle = COULEURS.encre;
   ctx.font = `700 20px ${POLICE}`;
-  ctx.fillText(`Arbre de ${titre}`, 24, ENTETE / 2 + 4);
+  ctx.fillText(titre, 24, ENTETE / 2 + 4);
   ctx.textAlign = 'right';
   ctx.fillStyle = COULEURS.secondaire;
   ctx.font = `14px ${POLICE}`;
@@ -357,18 +378,23 @@ async function pngUnCanvas(dim: DimensionsImage, peindre: Peindre): Promise<Blob
   return blob;
 }
 
-/** PNG de l'arbre autour de `moi`, à la taille de `dimensionsArbre` ; plus petit (PIXELS_CANVAS) si le navigateur ne sait pas l'assembler par bandes. */
-export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date): Promise<Blob> {
+/**
+ * PNG de l'arbre autour de `moi`, à la taille de `dimensionsArbre` ; plus petit (PIXELS_CANVAS) si le navigateur ne sait
+ * pas l'assembler par bandes. ImageTropGrande si l'une ou l'autre taille passerait sous ECHELLE_MIN.
+ */
+export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, titre: string): Promise<Blob> {
   const pos = positions(disp);
-  const peindre: Peindre = (ctx) => peindreArbre(ctx, disp, d, moi, aujourdhui, pos);
+  const dim = dimensionsImage(pos.largeur, pos.hauteur);
+  if (!dim.possible) throw new ImageTropGrande();
+  const peindre: Peindre = (ctx) => peindreArbre(ctx, disp, d, moi, aujourdhui, pos, titre);
   if (typeof CompressionStream === 'function') {
     try {
-      return await pngParBandes(dimensionsImage(pos.largeur, pos.hauteur), peindre);
+      return await pngParBandes(dim, peindre);
     } catch {
       // On retombe sur le canvas unique, plus petit mais accepté partout.
     }
   }
-  return pngUnCanvas(dimensionsImage(pos.largeur, pos.hauteur, PIXELS_CANVAS), peindre);
+  const secours = dimensionsImage(pos.largeur, pos.hauteur, PIXELS_CANVAS);
+  if (secours.grande) throw new ImageTropGrande();
+  return pngUnCanvas(secours, peindre);
 }
-
-export const NOM_FICHIER_ARBRE = (jour: Date) => `tribu-arbre-${jour.toISOString().slice(0, 10)}.png`;
