@@ -887,6 +887,20 @@ button.raccourci {
   font-size: var(--t3);
 }
 
+/* Filtres d'une fenêtre-liste (groupes de « Mes amis ») : puces à la taille du doigt, qui passent à la ligne. */
+.puces.puces-fenetre {
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 4px 12px;
+}
+
+.puces-fenetre .puce {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: var(--t3);
+}
+
 .fenetre-liste a.ligne-feuille {
   box-sizing: border-box;
   text-decoration: none;

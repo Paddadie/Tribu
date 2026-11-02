@@ -53,7 +53,7 @@ export function ouvrirListe(titre: string, lignes: LigneListe[], vide: string, p
     'dialog',
     { class: 'fenetre-liste', 'aria-label': titre, oncancel: fermer, onclick: (e: Event) => e.target === dialogue && fermer() },
     h('h2', {}, titre),
-    puces.length > 1 && h('div', { class: 'puces puces-liste' }, ...puces),
+    puces.length > 1 && h('div', { class: 'puces puces-fenetre' }, ...puces),
     corps,
     pied && h('a', { class: 'ligne-pied', href: pied.href, onclick: fermer }, pied.texte),
   );

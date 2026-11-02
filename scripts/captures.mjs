@@ -342,6 +342,9 @@ try {
           // Feuille « Afficher » ouverte, et le choix des personnes de l'export PNG.
           await capture(`${fam}-${nom}-15-afficher`, '#/arbre', theme, `document.querySelector('.filtre-arbre').click()`, hauteur, o);
           await capture(`${fam}-${nom}-16-export-png`, '#/reglages/exports', theme, '', 1700, o);
+          // Fenêtre « Mes amis » de l'accueil, avec ses filtres par groupe.
+          const mesAmis = `[...document.querySelectorAll('.raccourcis button')].find((b) => b.textContent.includes('Mes amis'))?.click()`;
+          await capture(`${fam}-${nom}-17-mes-amis`, '#/', theme, mesAmis, hauteur, o);
         }
     }
   } else if (mode === 'maquettes') {
