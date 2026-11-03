@@ -209,13 +209,17 @@ export const boiteLigne = (l: LigneMention): Boite => {
   return { g: l.x - demi, h: l.y - 0.78 * l.taille, d: l.x + demi, b: l.y + 0.22 * l.taille };
 };
 
-function libre(b: Boite, c: CoupleTrace, obs: Obstacles): boolean {
-  if (b.g < c.g.x || b.d > c.d.x) return false;
+/** La boîte ne touche aucun avatar, aucun trait ni aucune autre boîte, gardes comprises. */
+export function horsObstacles(b: Boite, obs: Obstacles): boolean {
   if (obs.cercles.some((x) => touche(x, b))) return false;
   const t = elargir(b, GARDE_TRAIT);
   if (obs.segments.some((s) => coupe(s, t))) return false;
   const e = elargir(b, GARDE_BOITE);
   return !obs.boites.some((x) => recouvre(x, e));
+}
+
+function libre(b: Boite, c: CoupleTrace, obs: Obstacles): boolean {
+  return b.g >= c.g.x && b.d <= c.d.x && horsObstacles(b, obs);
 }
 
 /** Les lignes du candidat, posées au-dessus du trait (la dernière au plus près) et montées de `leve` lignes. */
@@ -239,8 +243,9 @@ function poser(c: CoupleTrace, candidat: LigneTexte[], taille: number, leve: num
 /**
  * Place une mention par couple, dans l'ordre : le premier candidat qui tient au ras du trait, sinon une ligne
  * plus haut (texte d'une ligne seulement). Chaque mention posée devient un obstacle pour les suivantes.
+ * `anneeEnGrand` (image PNG) : l'année seule, quand rien de plus ne tient, garde le corps du palier « annee ».
  */
-export function placerMentions(couples: CoupleTrace[], palier: Palier, obstacles: Obstacles, aujourdhui = new Date()): MentionUnion[] {
+export function placerMentions(couples: CoupleTrace[], palier: Palier, obstacles: Obstacles, aujourdhui = new Date(), anneeEnGrand = false): MentionUnion[] {
   const taille = TAILLE_MENTION[palier];
   const obs: Obstacles = { ...obstacles, boites: [...obstacles.boites] };
   const mentions: MentionUnion[] = [];
@@ -248,8 +253,12 @@ export function placerMentions(couples: CoupleTrace[], palier: Palier, obstacles
     if (c.d.x <= c.g.x) continue;
     let lignes: LigneMention[] | undefined;
     for (const candidat of textesUnion(c.union, palier, aujourdhui)) {
-      for (const leve of candidat.length === 1 ? [0, 1] : [0]) {
-        lignes = poser(c, candidat, taille, leve, obs);
+      const seuleAnnee = anneeEnGrand && candidat.length === 1 && /^\d{4}$/.test(candidat[0].texte);
+      for (const corps of seuleAnnee ? [TAILLE_MENTION.annee, taille] : [taille]) {
+        for (const leve of candidat.length === 1 ? [0, 1] : [0]) {
+          lignes = poser(c, candidat, corps, leve, obs);
+          if (lignes) break;
+        }
         if (lignes) break;
       }
       if (lignes) break;

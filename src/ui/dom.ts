@@ -35,7 +35,6 @@ export const SVG = 'http://www.w3.org/2000/svg';
 /** Icônes (tracés SVG statiques, couleur héritée du texte). */
 const TRACES = {
   recherche: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
-  lignee: '<circle cx="12" cy="4.5" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="19.5" r="2.5"/><path d="M12 7v2.5M12 14.5V17"/>',
   chevron: '<path d="M9 6l6 6-6 6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   retour: '<path d="M15 5l-7 7 7 7"/>',

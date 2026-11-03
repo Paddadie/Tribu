@@ -17,14 +17,18 @@
 // npm run captures -- --familles <dossier-familles> <dossier-sortie> [préfixe-de-fichier…]
 // Familles fictives écrites par `npm run familles` : écrans clés de chaque famille (Moi de la famille) en
 // téléphone, tablette et ordinateur, clair et sombre. Données fictives : la sortie peut aller dans captures/.
+//
+// npm run captures -- --export-png <export.json> <dossier-sortie> [id-de-Moi]
+// L'image de Réglages › Partager (tout l'arbre, sans générations souples) aux niveaux Base et Détaillé, telle que
+// l'export l'écrit : <export>-base.png et <export>-detail.png. Une version sans niveau de détail rend deux fois Base.
 import { spawn, execSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const args = process.argv.slice(2);
-const MODES = { '--famille-proche': 'famille-proche', '--maquettes': 'maquettes', '--familles': 'familles' };
+const MODES = { '--famille-proche': 'famille-proche', '--maquettes': 'maquettes', '--familles': 'familles', '--export-png': 'export-png' };
 const mode = MODES[args[0]] ?? 'ecrans';
 const positionnels =
   mode === 'ecrans'
@@ -33,7 +37,8 @@ const positionnels =
         [...args, '--'].findIndex((a) => a.startsWith('--')),
       )
     : args;
-const [exportPath, sortie, moiArg] = mode === 'ecrans' ? positionnels : mode === 'famille-proche' ? [undefined, args[1]] : [args[1], args[2]];
+const [exportPath, sortie, moiArg] =
+  mode === 'ecrans' ? positionnels : mode === 'famille-proche' ? [undefined, args[1]] : mode === 'export-png' ? args.slice(1, 4) : [args[1], args[2]];
 const entier = mode === 'ecrans' && args.includes('--entier');
 const autour = mode === 'ecrans' && args.includes('--autour') ? (args[args.indexOf('--autour') + 1] ?? '').split(',').filter(Boolean) : [];
 const prefixes = mode === 'famille-proche' ? args.slice(2) : mode === 'familles' ? args.slice(3) : [];
@@ -42,6 +47,7 @@ if (!sortie || (mode !== 'famille-proche' && !exportPath)) {
   console.error('        npm run captures -- --famille-proche <dossier-sortie> [préfixe-de-cas…]');
   console.error('        npm run captures -- --maquettes <dossier-html> <dossier-sortie>');
   console.error('        npm run captures -- --familles <dossier-familles> <dossier-sortie> [préfixe-de-fichier…]');
+  console.error('        npm run captures -- --export-png <export.json> <dossier-sortie> [id-de-Moi]');
   process.exit(1);
 }
 
@@ -50,8 +56,9 @@ const PORT_CDP = 9333;
 const BASE = `http://localhost:${PORT_VITE}/Tribu/`;
 const NAVIGATEUR = process.env.NAVIGATEUR ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 
-const donnees = mode === 'ecrans' ? readFileSync(exportPath, 'utf-8') : '';
-const MOI = mode === 'ecrans' ? (moiArg ?? JSON.parse(donnees).personnes[0]?.id) : undefined;
+const avecExport = mode === 'ecrans' || mode === 'export-png';
+const donnees = avecExport ? readFileSync(exportPath, 'utf-8') : '';
+const MOI = avecExport ? (moiArg ?? JSON.parse(donnees).personnes[0]?.id) : undefined;
 const dossier = resolve(sortie);
 mkdirSync(dossier, { recursive: true });
 
@@ -196,6 +203,9 @@ try {
     });
   const evaluer = (expression) => cdp('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
   const clic = (texte) => `[...document.querySelectorAll('button, a')].find((b) => b.textContent.trim().startsWith(${JSON.stringify(texte)}))?.click()`;
+  // « Tout » ouvre la feuille « Afficher » : un choix y redessine l'arbre et le cadre en entier (l'option cochée aussi).
+  const afficher = (valeur) => `${clic('Tout')}; document.querySelector('input[name=affichage][value=${valeur}]')?.click()`;
+  const toutVoir = afficher('tout');
 
   await cdp('Page.enable');
   await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
@@ -229,7 +239,7 @@ try {
    */
   async function echelleUn() {
     const o = { largeur: 1440, mobile: false };
-    if (entier) await capture('05-arbre-tout-ordinateur', '#/arbre', 'clair', clic('Tout'), 900, o);
+    if (entier) await capture('05-arbre-tout-ordinateur', '#/arbre', 'clair', toutVoir, 900, o);
     await capture('08-arbre-charge', '#/arbre', 'clair', '', 900, o);
     // Recherche des générations souples en Worker (quelques secondes en dev) : on attend le redessin.
     await pause(6000);
@@ -315,10 +325,9 @@ try {
           await capture(`${fam}-${nom}-02-fiche`, `#/personne/${f.moi}`, theme, '', Math.max(hauteur, 1600), o);
           await capture(`${fam}-${nom}-03-personnes`, '#/personnes', theme, '', hauteur, o);
           await capture(`${fam}-${nom}-04-arbre-toi`, '#/arbre', theme, '', hauteur, o);
-          await capture(`${fam}-${nom}-05-arbre-tout`, '#/arbre', theme, clic('Tout'), hauteur, o);
-          // Filtre « Ligne directe », niveau « + leurs frères et sœurs », puis « Tout » pour voir tout ce qui reste.
-          const fratries = `document.querySelector('.filtre-arbre').click(); document.querySelector('input[name=affichage][value=fratries]').click()`;
-          await capture(`${fam}-${nom}-14-ligne-directe`, '#/arbre', theme, `${fratries}; setTimeout(() => ${clic('Tout')}, 300)`, hauteur, o);
+          await capture(`${fam}-${nom}-05-arbre-tout`, '#/arbre', theme, toutVoir, hauteur, o);
+          // Filtre « Ligne directe + frères et sœurs » : l'arbre filtré, cadré en entier.
+          await capture(`${fam}-${nom}-14-ligne-directe`, '#/arbre', theme, afficher('fratries'), hauteur, o);
           // Feuilles « Familles » et « Amis » de la barre du bas.
           const liste = (texte) => `[...document.querySelectorAll('.commandes-arbre button')].find((b) => b.textContent.trim() === '${texte}')?.click()`;
           await capture(`${fam}-${nom}-18-arbre-familles`, '#/arbre', theme, liste('Familles'), hauteur, o);
@@ -346,8 +355,8 @@ try {
           await capture(`${fam}-${nom}-12b-suivi-rappels`, '#/suivi/rappels', theme, '', 1700, o);
           await capture(`${fam}-${nom}-12c-suivi-completer`, '#/suivi/completer', theme, '', 1700, o);
           if (loin) await capture(`${fam}-${nom}-13-modifier-loin`, `#/modifier/${loin}`, theme, '', 1700, o);
-          // Feuille « Afficher » ouverte, et le choix des personnes de l'export PNG.
-          await capture(`${fam}-${nom}-15-afficher`, '#/arbre', theme, `document.querySelector('.filtre-arbre').click()`, hauteur, o);
+          // Feuille « Afficher » ouverte (pastille « Tout »), et le choix des personnes de l'export PNG.
+          await capture(`${fam}-${nom}-15-afficher`, '#/arbre', theme, clic('Tout'), hauteur, o);
           await capture(`${fam}-${nom}-16-export-png`, '#/reglages/partager', theme, '', 1700, o);
           // Fenêtre « Mes amis » de l'accueil, avec ses filtres par groupe.
           const mesAmis = `[...document.querySelectorAll('.raccourcis button')].find((b) => b.textContent.includes('Mes amis'))?.click()`;
@@ -356,6 +365,27 @@ try {
           for (const onglet of ['general', 'suivi', 'partager', 'donnees'])
             await capture(`${fam}-${nom}-20-reglages-${onglet}`, `#/reglages/${onglet}`, theme, '', 1700, o);
         }
+    }
+  } else if (mode === 'export-png') {
+    // Les modules du serveur de dev, appelés dans la page : le même code que le bouton d'export.
+    const nom = basename(exportPath, '.json');
+    for (const niveau of ['base', 'detail']) {
+      const r = await evaluer(`(async () => {
+        const { migrer } = await import('/Tribu/src/modele/migration.ts');
+        const { disposerArbre } = await import('/Tribu/src/modele/arbreGlobal.ts');
+        const { arbrePng } = await import('/Tribu/src/ui/arbreImage.ts');
+        const d = migrer(${donnees});
+        const moi = d.personnes.find((p) => p.id === ${JSON.stringify(MOI)});
+        const blob = await arbrePng(disposerArbre(d, moi.id), d, moi, new Date(), 'Arbre de ' + moi.prenom, ${JSON.stringify(niveau)});
+        const octets = new Uint8Array(await blob.arrayBuffer());
+        let s = '';
+        for (let i = 0; i < octets.length; i += 0x8000) s += String.fromCharCode(...octets.subarray(i, i + 0x8000));
+        return btoa(s);
+      })()`);
+      const valeur = r.result?.result?.value;
+      if (typeof valeur !== 'string') throw new Error(JSON.stringify(r.error ?? r.result?.exceptionDetails ?? r.result).slice(0, 600));
+      writeFileSync(join(dossier, `${nom}-${niveau}.png`), Buffer.from(valeur, 'base64'));
+      console.log('ok', `${nom}-${niveau}`);
     }
   } else if (mode === 'maquettes') {
     const source = resolve(exportPath);
@@ -379,7 +409,7 @@ try {
       await capture('02-fiche', `#/personne/${MOI}`, theme, '', 1600);
       await capture('03-proche', `#/personne/${MOI}`, theme, clic('Ajouter un proche'));
       await capture('04-arbre-toi', '#/arbre', theme);
-      await capture('05-arbre-tout', '#/arbre', theme, clic('Tout'));
+      await capture('05-arbre-tout', '#/arbre', theme, toutVoir);
       await capture('06-arbre-familles', '#/arbre', theme, clic('Familles'));
       await capture('07-reglages', '#/reglages', theme, '', 1200);
     }

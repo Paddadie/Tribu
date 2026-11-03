@@ -15,11 +15,17 @@ export const AFFICHAGES: { valeur: Affichage; libelle: string; detail: string; p
   { valeur: 'directe', libelle: 'Ligne directe', detail: 'Tes ancêtres, toi et tes descendants', pastille: 'Ligne directe' },
   {
     valeur: 'fratries',
-    libelle: '+ leurs frères et sœurs',
+    libelle: 'Ligne directe + frères et sœurs',
     detail: 'Oncles, tantes, grands-oncles… et tes frères et sœurs',
     pastille: 'Ligne directe + frères et sœurs',
   },
-  { valeur: 'conjoints', libelle: '+ leurs conjoints', detail: 'Avec aussi les conjoints et les ex de chacun', pastille: 'Ligne directe + conjoints' },
+  // Pastille plus courte que le libellé : sur téléphone, le rappel tient sur une ligne.
+  {
+    valeur: 'conjoints',
+    libelle: 'Ligne directe + frères et sœurs + leurs conjoints',
+    detail: 'Avec aussi les conjoints et les ex de chacun',
+    pastille: 'Ligne directe + conjoints',
+  },
 ];
 
 /** Parcours depuis `depart` (exclu) en suivant `suivants`, sans repasser par une même personne. */

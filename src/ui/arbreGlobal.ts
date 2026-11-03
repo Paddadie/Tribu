@@ -56,11 +56,11 @@ interface Vue {
   s: number;
 }
 
-/** Liste ouverte au-dessus des puces : Familles, Amis, ou le choix du filtre (bouton « Afficher » du haut). */
+/** Liste ouverte au-dessus des puces : Familles, Amis, ou le choix du filtre (puce « Tout »). */
 type Feuille = 'familles' | 'amis' | 'afficher';
 
 /** Vue choisie par sa puce (pleine tant qu'on ne s'en écarte pas) ; aucune après un déplacement ou un autre saut. */
-type VueActive = 'toi' | 'tout' | undefined;
+type VueActive = 'toi' | undefined;
 
 /** Une famille = un nom de famille et tous les placés qui le portent : clé (nom simplifié), nom affiché, couleur, effectif. */
 export interface ResumeFamille {
@@ -112,11 +112,11 @@ interface OptionsCarte {
   focus?: FocusArbre;
   /** Personne à montrer dès l'arrivée (recherche d'une personne hors du filtre). */
   cible?: string;
+  /** Arrivée sur l'arbre en entier plutôt que sur Moi (juste après un choix de filtre). */
+  cadrer?: boolean;
   affichage: Affichage;
   /** Moi sans parent : la feuille « Afficher » invite à en ajouter. */
   sansParents: boolean;
-  /** Bouton « Afficher » de la barre du haut : il ouvre la feuille du filtre. */
-  bouton: HTMLElement;
   /** Tout l'arbre, calculé au premier besoin : la recherche y trouve les personnes cachées par le filtre. */
   toutLArbre: () => Disposition;
   /** Change de filtre et redessine ; `cible` : personne à montrer ensuite. */
@@ -147,9 +147,8 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
   const d = lireDonnees();
   const moi = ficheMoi(lireReglages(), d);
   const loupe = h('button', { type: 'button', class: 'bouton-icone', 'aria-label': 'Chercher une personne' }, icone('recherche', 24));
-  const filtre = h('button', { type: 'button', class: 'bouton-icone filtre-arbre', 'aria-expanded': 'false' }, icone('lignee', 24));
   const barre = barreEcran('#/', 'Arbre');
-  if (moi) barre.append(filtre, loupe);
+  if (moi) barre.append(loupe);
   if (!moi) {
     return h(
       'div',
@@ -184,20 +183,15 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
   }
   let toute = affichageGarde === 'tout' ? disp : undefined;
   const sansParents = !d.filiations.some((f) => f.enfant === moi.id);
-  const creer = (o: Pick<OptionsCarte, 'focus' | 'cible'>) => {
-    const choix = AFFICHAGES.find((a) => a.valeur === affichageGarde)!;
-    filtre.classList.toggle('actif', affichageGarde !== 'tout');
-    filtre.setAttribute('aria-label', `Afficher : ${(choix.pastille ?? choix.libelle).toLowerCase()}`);
-    return new Carte(disp, moi, {
+  const creer = (o: Pick<OptionsCarte, 'focus' | 'cible' | 'cadrer'>) =>
+    new Carte(disp, moi, {
       ...o,
       affichage: affichageGarde,
       sansParents,
-      bouton: filtre,
       toutLArbre: () => (toute ??= arbreSouple(d, moi.id)),
       choisir,
     });
-  };
-  // Nouveau filtre : nouveau dessin, recentré sur Moi (ou sur la personne cherchée) ; l'ancienne vue n'a plus de sens.
+  // Nouveau filtre : nouveau dessin, cadré en entier (ou sur la personne cherchée) ; l'ancienne vue n'a plus de sens.
   const choisir = (a: Affichage, cible?: string) => {
     affichageGarde = a;
     vueGardee = undefined;
@@ -205,13 +199,12 @@ export function ecranArbre(feuille?: 'familles', focus?: FocusArbre): HTMLElemen
     pile.length = 0;
     disp = dessiner();
     if (a === 'tout') toute = disp;
-    const nouvelle = creer({ cible });
+    const nouvelle = creer({ cible, cadrer: !cible });
     carte.vue.replaceWith(nouvelle.vue);
     carte = nouvelle;
   };
   let carte = creer({ focus });
   loupe.addEventListener('click', () => carte.basculerRecherche());
-  filtre.addEventListener('click', () => carte.basculerAffichage());
   if (feuille) carte.ouvrirFeuille(feuille);
   return h('div', { class: 'ecran ecran-arbre' }, barre, carte.vue);
 }
@@ -244,7 +237,7 @@ class Carte {
   private readonly puceTout: HTMLElement;
   private readonly revenir: HTMLElement;
   private active: VueActive;
-  /** Barre des puces, en bas : le dessin passe dessous, « Tout » cadre l'arbre au-dessus. */
+  /** Barre des puces, en bas : le dessin passe dessous, l'arbre en entier se cadre au-dessus. */
   private readonly barreBas: HTMLElement;
   private readonly o: OptionsCarte;
 
@@ -252,7 +245,6 @@ class Carte {
     this.disp = disp;
     this.moi = moi;
     this.o = o;
-    this.puces.set('afficher', o.bouton);
     const pos = positions(disp);
     this.largeur = pos.largeur;
     this.hauteur = pos.hauteur;
@@ -296,7 +288,15 @@ class Carte {
     this.calque.style.height = `${this.hauteur}px`;
     const astuce = !astuceMontree && h('div', { class: 'astuce-arbre', 'aria-hidden': 'true' }, 'Glisse pour te déplacer, pince pour zoomer');
     this.puceToi = boutonBarre('personne', 'Toi', { onclick: () => this.sauter(this.surPersonne(moi.id, 1), 'toi', [moi.id]) });
-    this.puceTout = boutonBarre('arbre', 'Tout', { onclick: () => this.sauter(this.toutVoir(), 'tout') });
+    // « Tout » ouvre le choix du filtre ; un point le signale quand il tient.
+    const choix = AFFICHAGES.find((a) => a.valeur === o.affichage)!;
+    this.puceTout = boutonBarre('arbre', 'Tout', {
+      'aria-expanded': 'false',
+      'aria-label': `Tout, afficher : ${(choix.pastille ?? choix.libelle).toLowerCase()}`,
+      onclick: () => this.basculerFeuille('afficher'),
+    });
+    this.puceTout.classList.toggle('filtre-en-cours', o.affichage !== 'tout');
+    this.puces.set('afficher', this.puceTout);
     this.revenir = h(
       'button',
       { type: 'button', class: 'rond-arbre revenir', 'aria-label': 'Revenir à la vue d’avant', hidden: true, onclick: () => this.revenirEnArriere() },
@@ -315,7 +315,7 @@ class Carte {
         (this.familles.some((f) => f.amis) || this.cadres.length > 0) && this.puceListe('amis', 'Amis', 'ami'),
       ),
     );
-    const libelle = AFFICHAGES.find((a) => a.valeur === o.affichage)?.pastille;
+    const libelle = choix.pastille;
     // Filtre actif : rappelé en haut de la carte ; un toucher revient à tout l'arbre.
     const pastille =
       libelle &&
@@ -341,13 +341,14 @@ class Carte {
         h('button', { type: 'button', class: 'rond-arbre', 'aria-label': 'Dézoomer', onclick: () => this.zoomCentre(1 / 1.5) }, icone('moins', 22)),
       ),
     );
-    this.marquer(vueGardee ? activeGardee : 'toi');
+    this.marquer(vueGardee ? activeGardee : o.cadrer ? undefined : 'toi');
     if (astuce) {
       astuceMontree = true;
       setTimeout(() => astuce.classList.add('cachee'), 3500);
     }
     this.gestes();
-    // Taille connue une fois l'écran dans la page : première vue (gardée, sinon centrée sur Moi), puis bornes
+    // Taille connue une fois l'écran dans la page : première vue (gardée, sinon l'arbre en entier juste après un
+    // choix de filtre, sinon centrée sur Moi), puis bornes
     // à chaque changement de taille (rotation). Rien à taille nulle (tests).
     const observateur = new ResizeObserver(() => {
       // Écran quitté : l'observateur se déconnecte (l'écran suivant ne le garde pas en vie).
@@ -355,7 +356,7 @@ class Carte {
       if (this.vue.clientWidth === 0) return;
       if (!this.pret) {
         this.pret = true;
-        this.v = vueGardee ? { ...vueGardee } : this.surPersonne(moi.id, 1);
+        this.v = vueGardee ? { ...vueGardee } : o.cadrer ? this.toutVoir() : this.surPersonne(moi.id, 1);
         this.appliquer();
         // Arrivée depuis une pop-up de l'accueil : saut sur la zone (la vue de départ va sur la pile de « Revenir »).
         const cap = this.zoneDe(o.focus);
@@ -458,17 +459,25 @@ class Carte {
     if (this.puces.has(quoi) && this.feuilleOuverte !== quoi) this.basculerFeuille(quoi);
   }
 
-  basculerAffichage(): void {
-    this.basculerFeuille('afficher');
-  }
-
-  /** Feuille « Afficher » : tout l'arbre, ou la ligne directe de Moi à trois niveaux (ligneDirecte.ts). */
+  /**
+   * Feuille « Afficher » (puce « Tout ») : tout l'arbre, ou la ligne directe de Moi à trois niveaux (ligneDirecte.ts).
+   * Un autre choix redessine l'arbre (cadré en entier) ; l'option déjà cochée, sans `change`, cadre l'arbre tel quel.
+   */
   private choixAffichage(): HTMLElement[] {
     const lignes = AFFICHAGES.map((a) =>
       h(
         'label',
         { class: 'ligne-choix' },
-        h('input', { type: 'radio', name: 'affichage', value: a.valeur, checked: a.valeur === this.o.affichage, onchange: () => this.o.choisir(a.valeur) }),
+        h('input', {
+          type: 'radio',
+          name: 'affichage',
+          value: a.valeur,
+          checked: a.valeur === this.o.affichage,
+          onchange: () => this.o.choisir(a.valeur),
+          onclick: () => {
+            if (a.valeur === this.o.affichage) this.sauter(this.toutVoir());
+          },
+        }),
         h('span', {}, h('strong', {}, a.libelle), h('small', {}, a.detail)),
       ),
     );
@@ -729,12 +738,7 @@ class Carte {
   /** Puce pleine pour la vue active ; « Revenir » n'apparaît que s'il y a une vue où revenir. */
   private marquer(active: VueActive): void {
     this.active = activeGardee = active;
-    for (const [puce, quoi] of [
-      [this.puceToi, 'toi'],
-      [this.puceTout, 'tout'],
-    ] as const) {
-      puce.setAttribute('aria-pressed', String(active === quoi));
-    }
+    this.puceToi.setAttribute('aria-pressed', String(active === 'toi'));
     this.revenir.hidden = pile.length === 0;
   }
 

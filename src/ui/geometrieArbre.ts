@@ -3,7 +3,17 @@
 
 import type { Disposition, GroupeDessine, Point } from '../modele/arbreGlobal';
 import { LARG, PAS_X, PAS_Y, R, SOUS_NOM } from '../modele/geometrie';
-import { placerMentions, sansVoisinEntre, segmentsDe, unionEntre, type Boite, type MentionUnion, type Obstacles, type Palier } from '../modele/mentionsUnion';
+import {
+  placerMentions,
+  sansVoisinEntre,
+  segmentsDe,
+  unionEntre,
+  type Boite,
+  type Cercle,
+  type MentionUnion,
+  type Obstacles,
+  type Palier,
+} from '../modele/mentionsUnion';
 import type { Union } from '../modele/types';
 
 export { LARG, LIGNE_EN_PLUS, LIGNE_NAISSANCE, PAS_X, PAS_Y, R, SOUS_NOM } from '../modele/geometrie';
@@ -290,6 +300,32 @@ export function boiteEtiquette(disp: Disposition, px: (p: Point) => Point, e: Et
   return { g, h, d: g + l, b: h + HAUT_ETIQUETTE };
 }
 
+/** Avatar de chaque personne : Moi et les membres d'un groupe ont un anneau autour (arbre.css), 5 px de plus. */
+export function cerclesArbre(disp: Disposition, p: Positions, moi: string): Map<string, Cercle> {
+  const anneau = new Set([moi, ...disp.groupes.flatMap((g) => g.membres)]);
+  return new Map([...p.centres].map(([id, c]) => [id, { x: c.x, y: c.y, r: anneau.has(id) ? R + ANNEAU : R }]));
+}
+
+/** Boîte réservée sous l'avatar : nom, « née X » et dates (SOUS_NOM). */
+export const boiteNom = (c: Point): Boite => ({ g: c.x - LARG / 2, h: c.y + R, d: c.x + LARG / 2, b: c.y + SOUS_NOM });
+
+/**
+ * Ce qu'un texte ajouté ne doit pas recouvrir : avatars, traits, bords des cadres, noms de famille, titres de
+ * groupe et, sauf `sansNoms`, les boîtes des noms de personne (les notes les gèrent elles-mêmes, detailArbre.ts).
+ */
+export function obstaclesArbre(disp: Disposition, p: Positions, traits: Trait[], cadres: Cadre[], cercles: Map<string, Cercle>, sansNoms = false): Obstacles {
+  const lieux = lieuxEtiquettes(disp, p, traits);
+  return {
+    cercles: [...cercles.values()],
+    segments: [...traits.flatMap((t) => segmentsDe(t.d)), ...cadres.flatMap((c) => segmentsDe(`M ${c.x} ${c.y} H ${c.x + c.l} V ${c.y + c.ha} H ${c.x} Z`))],
+    boites: [
+      ...(sansNoms ? [] : [...p.centres.values()].map(boiteNom)),
+      ...disp.etiquettes.map((e) => boiteEtiquette(disp, p.px, e, lieux.get(e))),
+      ...cadres.map((c) => ({ g: c.x + 12, h: c.y + 8, d: c.x + c.l - 12, b: c.y + 8 + HAUT_ETIQUETTE })),
+    ],
+  };
+}
+
 /**
  * Dates d'union de l'arbre global, au palier voulu : seulement entre deux partenaires côte à côte sur la même
  * ligne, sans personne entre eux. Rien ne recouvre un trait (lignes, amitiés, bords des cadres), un avatar, un nom
@@ -304,24 +340,14 @@ export function mentionsArbre(
   palier: Palier,
   moi: string,
   aujourdhui = new Date(),
+  anneeEnGrand = false,
 ): MentionUnion[] {
-  // Moi et les membres d'un groupe ont un anneau autour de l'avatar (arbre.css) : 5 px de plus.
-  const anneau = new Set([moi, ...disp.groupes.flatMap((g) => g.membres)]);
-  const cercles = new Map([...p.centres].map(([id, c]) => [id, { x: c.x, y: c.y, r: anneau.has(id) ? R + ANNEAU : R }]));
-  const lieux = lieuxEtiquettes(disp, p, traits);
-  const obstacles: Obstacles = {
-    cercles: [...cercles.values()],
-    segments: [...traits.flatMap((t) => segmentsDe(t.d)), ...cadres.flatMap((c) => segmentsDe(`M ${c.x} ${c.y} H ${c.x + c.l} V ${c.y + c.ha} H ${c.x} Z`))],
-    boites: [
-      ...[...p.centres.values()].map((c) => ({ g: c.x - LARG / 2, h: c.y + R, d: c.x + LARG / 2, b: c.y + SOUS_NOM })),
-      ...disp.etiquettes.map((e) => boiteEtiquette(disp, p.px, e, lieux.get(e))),
-      ...cadres.map((c) => ({ g: c.x + 12, h: c.y + 8, d: c.x + c.l - 12, b: c.y + 8 + HAUT_ETIQUETTE })),
-    ],
-  };
+  const cercles = cerclesArbre(disp, p, moi);
+  const obstacles = obstaclesArbre(disp, p, traits, cadres, cercles);
   const couples = disp.couples.flatMap((c) => {
     const u = unionEntre(unions, c.a, c.b);
     const [g, d] = [cercles.get(c.a)!, cercles.get(c.b)!].sort((a, b) => a.x - b.x);
     return u && g.y === d.y && sansVoisinEntre(g, d, obstacles.cercles) ? [{ g, d, y: g.y, union: u, ex: c.separe }] : [];
   });
-  return placerMentions(couples, palier, obstacles, aujourdhui);
+  return placerMentions(couples, palier, obstacles, aujourdhui, anneeEnGrand);
 }

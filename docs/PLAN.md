@@ -619,6 +619,8 @@ Aucune question ouverte.
 - [x] Filtre « Ligne directe » de l'arbre global (30/10) : trois niveaux + Tout l'arbre, pastille, loupe sur les cachés, même choix dans l'export PNG ; maquette validée le 30/10 (claude.ai/artifact/3sFMJK2gbDhR1cjd1zVR73)
 - [x] Export PNG par cible (02/11) : « Toute la famille » et « Un groupe d’amis » (liste des groupes) en plus de Tout l'arbre et de la ligne directe, titre et nom de fichier propres à chaque cible, échelle jamais sous ×1,5 (alerte si l'image devient très grande, bouton grisé au-delà des limites des navigateurs) ; maquette validée le 02/11 (claude.ai/artifact/J9j1BWxAEWyfucxxkANX95)
 - [x] Export PNG d'un groupe d'amis au format A4 / A3 paysage (03/11) : Moi et sa famille proche dans le cadre, familles en lignes, marges jusqu'au rapport √2 (`pageAmis.ts`) ; maquette validée le 03/11 ; captures/export-amis
+- [x] Niveau de détail de l'export PNG (03/11) : Base (dates en clair, unions, légende) et Détaillé (notes sous la personne ou en carte reliée dans une marge, `detailArbre.ts`) ; maquette validée le 03/11 (claude.ai/artifact/Vk3VPo6s6fSdXNrNBT1YxC) ; captures/detail-png-avant, captures/detail-png-apres
+- [ ] Afficher / masquer les notes dans l'arbre principal (demande de Paul, 03/11) : maquette d'abord
 - [x] Suivi fiche par fiche (03/11) : Réglages › Suivi, « Fiche par fiche » au-dessus de « Qui suivre », écrans Rappels et À compléter (un interrupteur par fiche, rangées par cercle) ; maquette validée le 02/11 (claude.ai/artifact/J6ZqSTVG5iNXmin39VNYxJ)
 - Plusieurs groupes par personne (règle « un seul » levée dans les écrans)
 - Photos (IndexedDB nécessaire)

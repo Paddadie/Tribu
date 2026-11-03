@@ -368,6 +368,23 @@ button.bouton-icone {
   color: var(--accent-texte);
 }
 
+/* Filtre actif : un point sur « Tout », qui en ouvre le choix. */
+.bouton-arbre.filtre-en-cours {
+  position: relative;
+}
+
+.bouton-arbre.filtre-en-cours::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 19px);
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--carte);
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 /* La feuille glisse depuis les puces et s'y replie, aussi dès qu'on se déplace (ANIM-07). */
 .feuille-arbre {
   position: absolute;
@@ -539,13 +556,7 @@ button.bouton-icone {
   font-size: var(--t1);
 }
 
-/* Filtre actif : le bouton du haut sur fond clair, et un rappel en haut de la carte dont le ✕ revient à tout l'arbre. */
-.ecran-arbre button.bouton-icone.actif {
-  border-radius: 50%;
-  background: var(--accent-clair);
-  color: var(--accent-texte);
-}
-
+/* Filtre actif : un rappel en haut de la carte, dont le ✕ revient à tout l'arbre. */
 .pastille-filtre {
   position: absolute;
   top: 8px;

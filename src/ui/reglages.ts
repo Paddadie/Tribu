@@ -41,6 +41,7 @@ import { contenuLigne } from './lignePersonne';
 import { remplacer } from './navigation';
 import { affichageArbre } from './arbreGlobal';
 import { arbrePng, dimensionsArbre, ImageTropGrande, pageAmis } from './arbreImage';
+import { NIVEAUX, type NiveauDetail } from './detailArbre';
 import { exporterFichier, MESSAGE_EXPORT_IMPOSSIBLE, MESSAGES_EXPORT } from './fichier';
 
 /** Groupe de boutons radio « un seul choix », appliqué dès qu'on touche une option. */
@@ -197,6 +198,19 @@ function ongletPartager(majTout: () => void): Onglet {
     },
     true,
   );
+  // Niveau de détail : Base à chaque ouverture ; les notes sont privées, Détaillé n'est pas mémorisé.
+  let niveau: NiveauDetail = 'base';
+  const choixNiveau = choix(
+    'niveau-png',
+    'Niveau de détail',
+    NIVEAUX,
+    niveau,
+    (v) => {
+      niveau = v;
+      maj();
+    },
+    false,
+  );
   const radio = (c: Cible) => choixCible.querySelector<HTMLInputElement>(`input[value="${c}"]`)!;
   // Choisir un groupe dans la liste coche aussi « Un groupe d'amis ».
   const listeGroupes = h('select', {
@@ -235,7 +249,7 @@ function ongletPartager(majTout: () => void): Onglet {
     majGroupes();
     const moi = ficheMoi(lireReglages(), lireDonnees());
     const disp = moi && dessin(moi.id);
-    const dim = disp && dimensionsArbre(disp);
+    const dim = disp && dimensionsArbre(disp, lireDonnees(), moi.id, niveau);
     if (disp && dim) {
       resumeImage.textContent = `${pluriel(personnesDessinees(lireDonnees(), cible, disp))} · image d’environ ${dim.pixelsL} × ${dim.pixelsH} px`;
       alerteImage.textContent = !dim.possible ? ALERTE_TROP_GRANDE : dim.grande ? ALERTE_GRANDE : '';
@@ -266,7 +280,7 @@ function ongletPartager(majTout: () => void): Onglet {
     try {
       const maintenant = new Date();
       const d = lireDonnees();
-      const png = await arbrePng(dessin(moi.id), d, moi, maintenant, titreImage(d, moi, cible, groupe));
+      const png = await arbrePng(dessin(moi.id), d, moi, maintenant, titreImage(d, moi, cible, groupe), niveau);
       const issue = await exporterFichier(nomFichierImage(d, cible, maintenant, groupe), png, 'image/png');
       messageImage.textContent = MESSAGES_EXPORT[issue];
       messageImage.className = issue === 'annule' ? 'secondaire' : 'succes';
@@ -329,6 +343,8 @@ function ongletPartager(majTout: () => void): Onglet {
           ),
           choixCible,
           h('div', { class: 'champ' }, h('label', { for: 'groupe-png' }, 'Groupe d’amis'), listeGroupes),
+          choixNiveau,
+          h('p', { class: 'secondaire' }, 'Les notes sont privées : Détaillé n’est pas mémorisé.'),
           resumeImage,
           alerteImage,
           boutonImage,

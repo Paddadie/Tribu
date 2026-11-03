@@ -1,16 +1,45 @@
 // Export de l'arbre global en image PNG (Réglages → Exporter l'arbre en image) : l'arbre de la cible choisie
-// (cibleImage.ts) est redessiné sur un canvas, fond blanc, couleurs du thème clair, années de naissance et de décès sous le nom. La géométrie vient de geometrieArbre.ts, la même
-// que celle de l'écran ; seuls le pinceau et les couleurs sont propres à l'image.
+// (cibleImage.ts) est redessiné sur un canvas, fond blanc, couleurs du thème clair. Niveau de détail (detailArbre.ts) :
+// Base, dates en clair sous le nom, dates et lieux des unions, légende des traits ; Détaillé, les notes en plus, sous
+// la personne ou en carte dans une marge. La géométrie vient de geometrieArbre.ts, la même que celle de l'écran, et
+// tout le placement de detailArbre.ts ; seuls le pinceau et les couleurs sont propres à l'image.
 
 import type { Disposition } from '../modele/arbreGlobal';
 import { nomGroupe } from '../modele/deductions';
-import { annees } from '../modele/familleProche';
-import { couleurFamille, initiales, mentionNaissance, prenomOuNom } from '../modele/liste';
+import { couleurFamille, initiales, nomComplet } from '../modele/liste';
+import { boiteLigne, type MentionUnion } from '../modele/mentionsUnion';
 import { estDecede } from '../modele/modele';
 import { mettreEnPage } from '../modele/pageAmis';
 import { estParentSansNom } from '../modele/parentSansNom';
 import type { Donnees, Personne } from '../modele/types';
-import { calculerCadres, lieuxEtiquettes, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
+import {
+  LIBELLES_REPERES,
+  legende,
+  LIGNE_DATE,
+  PAD,
+  placerNotes,
+  TAILLE_NOTE,
+  TAILLE_TITRE,
+  texteNoeud,
+  type NiveauDetail,
+  type NotesPlacees,
+  type Repere,
+  type TexteNoeud,
+} from './detailArbre';
+import {
+  calculerCadres,
+  cerclesArbre,
+  lieuxEtiquettes,
+  mentionsArbre,
+  obstaclesArbre,
+  positions,
+  R,
+  traitsArbre,
+  zoneBulle,
+  type Cadre,
+  type Trait,
+  type ZoneBulle,
+} from './geometrieArbre';
 import { encoderPng } from './png';
 
 type Positions = ReturnType<typeof positions>;
@@ -54,6 +83,11 @@ const COULEURS = {
   carte: '#ffffff',
   trait: '#aebcb7',
   traitEx: '#9aa4a0',
+  /** Notes : ocre, pour ne se confondre avec aucun trait de parenté. */
+  lien: '#b5822b',
+  note: '#6e4c14',
+  fondNote: '#fdf8ee',
+  bordNote: '#ead9b6',
   pastels: ['#8fcfb8', '#f2b98a', '#aab0f0', '#f0a8c8', '#8fc3ec', '#f0a99c', '#d6c16f', '#b79de0', '#9ed67f', '#7fd0d6', '#e2a0e0', '#c8b48f'],
 };
 
@@ -122,21 +156,78 @@ export function bandes(pixelsL: number, pixelsH: number, pixelsBande = PIXELS_BA
   return liste;
 }
 
+/** Tout ce que l'image peint, calculé sans canvas : la taille annoncée et le dessin partent du même calcul. */
+export interface MiseEnPage {
+  pos: Positions;
+  cadres: Cadre[];
+  bulle: ZoneBulle | undefined;
+  traits: Trait[];
+  mentions: MentionUnion[];
+  textes: Map<string, TexteNoeud>;
+  notes: NotesPlacees;
+  reperes: Repere[];
+  /** Dessin entier, marges des notes comprises, sans la bande du titre. */
+  largeur: number;
+  hauteur: number;
+}
+
+export function miseEnPage(disp: Disposition, d: Donnees | undefined, moi: string, niveau: NiveauDetail, aujourdhui: Date): MiseEnPage {
+  const pos = positions(disp);
+  const cadres = calculerCadres(disp, pos.centres);
+  const bulle = zoneBulle(disp, pos.centres, cadres);
+  const traits = traitsArbre(disp, pos, bulle, moi);
+  const mentions = d ? mentionsArbre(disp, pos, traits, cadres, d.unions, 'detail', moi, aujourdhui, true) : [];
+  const textes = new Map(disp.places.map((pl) => [pl.personne.id, texteNoeud(pl.personne, pl.naissance === true)]));
+  let notes: NotesPlacees = { sous: [], cartes: [], gauche: 0, droite: 0, hauteur: pos.hauteur };
+  if (niveau === 'detail' && d) {
+    const cercles = cerclesArbre(disp, pos, moi);
+    const obstacles = obstaclesArbre(disp, pos, traits, cadres, cercles, true);
+    obstacles.boites.push(...mentions.flatMap((m) => m.lignes.map(boiteLigne)));
+    // La note se lit dans les données : la disposition peut dater d'avant (décalages gardés des générations souples).
+    const fiches = new Map(d.personnes.map((p) => [p.id, p]));
+    const aPlacer = disp.places
+      .map((pl) => fiches.get(pl.personne.id) ?? pl.personne)
+      .filter((p) => p.note?.trim() && !estParentSansNom(p))
+      .map((p) => {
+        const c = pos.centres.get(p.id)!;
+        return { id: p.id, titre: nomComplet(p), texte: p.note, x: c.x, y: c.y, r: cercles.get(p.id)!.r, bas: c.y + textes.get(p.id)!.bas };
+      });
+    notes = placerNotes(aPlacer, [...pos.centres.values()], obstacles, pos.largeur, pos.hauteur);
+  }
+  const reperes = legende(traits, notes.cartes.length > 0);
+  return {
+    pos,
+    cadres,
+    bulle,
+    traits,
+    mentions,
+    textes,
+    notes,
+    reperes,
+    largeur: notes.gauche + pos.largeur + notes.droite,
+    hauteur: Math.max(pos.hauteur, notes.hauteur),
+  };
+}
+
 /**
  * Page de l'image : le dessin (titre compris) centré dans des marges blanches jusqu'au format `disp.format`, s'il
  * est donné ; `hauteur` sans la bande du titre, comme pour `dimensionsImage`.
  */
-function page(disp: Disposition, pos: Positions): { largeur: number; hauteur: number; dx: number; dy: number } {
-  const [l, h] = [pos.largeur, pos.hauteur + ENTETE];
+function page(disp: Disposition, mp: Pick<MiseEnPage, 'largeur' | 'hauteur'>): { largeur: number; hauteur: number; dx: number; dy: number } {
+  const [l, h] = [mp.largeur, mp.hauteur + ENTETE];
   const f = disp.format;
   const dx = f && l / h < f ? (h * f - l) / 2 : 0;
   const dy = f && l / h > f ? (l / f - h) / 2 : 0;
-  return { largeur: l + 2 * dx, hauteur: pos.hauteur + 2 * dy, dx, dy };
+  return { largeur: l + 2 * dx, hauteur: mp.hauteur + 2 * dy, dx, dy };
 }
 
-/** Taille annoncée avant l'export, sans rien dessiner. */
-export function dimensionsArbre(disp: Disposition): DimensionsImage {
-  const { largeur, hauteur } = page(disp, positions(disp));
+/**
+ * Taille annoncée avant l'export, sans rien dessiner. Seul le niveau Détaillé l'agrandit (marges des notes) : il
+ * demande alors les données et Moi.
+ */
+export function dimensionsArbre(disp: Disposition, d?: Donnees, moi = '', niveau: NiveauDetail = 'base', aujourdhui = new Date()): DimensionsImage {
+  const mp = niveau === 'detail' && d ? miseEnPage(disp, d, moi, niveau, aujourdhui) : positions(disp);
+  const { largeur, hauteur } = page(disp, mp);
   return dimensionsImage(largeur, hauteur);
 }
 
@@ -198,7 +289,7 @@ function dessinerNoeud(
   couleur: string | undefined,
   moi: boolean,
   anneau: string | undefined,
-  avecNaissance: boolean,
+  texte: TexteNoeud,
 ): void {
   const decede = estDecede(p);
   const sansNom = estParentSansNom(p);
@@ -239,45 +330,114 @@ function dessinerNoeud(
     ctx.fillStyle = COULEURS.encre;
     ctx.font = `13px ${POLICE}`;
     ctx.textBaseline = 'top';
-    const lignes = lignesNom(ctx, prenomOuNom(p), 104);
+    const lignes = lignesNom(ctx, texte.nom, 104);
     lignes.forEach((l, i) => ctx.fillText(l, x, y + R + 8 + i * 16));
-    // « née X » puis les années sous le nom : la place existe déjà (SOUS_NOM la réserve, comme à l'écran).
+    // « née X » puis les dates sous le nom, choisies par texteNoeud dans la place que SOUS_NOM réserve.
     let bas = y + R + 8 + lignes.length * 16 + 1;
-    const naissance = avecNaissance ? mentionNaissance(p) : undefined;
     ctx.fillStyle = COULEURS.secondaire;
-    if (naissance) {
+    if (texte.naissance) {
       ctx.font = `italic 11px ${POLICE}`;
-      ctx.fillText(lignesNom(ctx, naissance, 104)[0], x, bas);
+      ctx.fillText(lignesNom(ctx, texte.naissance, 104)[0], x, bas);
       bas += 14;
     }
-    const an = annees(p);
-    if (an) {
-      ctx.font = `11px ${POLICE}`;
-      ctx.fillText(an, x, bas);
-    }
+    ctx.font = `${texte.dates.taille}px ${POLICE}`;
+    texte.dates.lignes.forEach((l, i) => ctx.fillText(l, x, bas + i * LIGNE_DATE));
+  }
+}
+
+/** Échantillon de chaque style de trait, puis son nom : à droite de `fin`, de droite à gauche ; largeur prise. */
+function peindreLegende(ctx: CanvasRenderingContext2D, reperes: Repere[], fin: number, y: number): number {
+  ctx.font = `12px ${POLICE}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  let x = fin;
+  for (const r of [...reperes].reverse()) {
+    const l = ctx.measureText(LIBELLES_REPERES[r]).width;
+    x -= l;
+    ctx.fillStyle = COULEURS.secondaire;
+    ctx.fillText(LIBELLES_REPERES[r], x, y);
+    x -= 28;
+    const trait = `M ${x} ${y} H ${x + 22}`;
+    if (r === 'note')
+      peindreLien(ctx, [
+        { x, y },
+        { x: x + 22, y },
+      ]);
+    else dessinerTrait(ctx, trait, r === 'marie' ? 'couple' : r === 'libre' ? 'couple libre' : r === 'ex' ? 'couple ex' : 'adoption', undefined);
+    x -= 18;
+  }
+  return fin - x;
+}
+
+/** Largeur de la légende, sans la peindre. */
+function largeurLegende(ctx: CanvasRenderingContext2D, reperes: Repere[]): number {
+  ctx.font = `12px ${POLICE}`;
+  return reperes.reduce((s, r) => s + ctx.measureText(LIBELLES_REPERES[r]).width + 46, 0);
+}
+
+/** Trait de liaison d'une note, ocre, avec un point côté personne. */
+function peindreLien(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[]): void {
+  ctx.save();
+  ctx.strokeStyle = ctx.fillStyle = COULEURS.lien;
+  ctx.lineWidth = 1.2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(points[0].x, points[0].y, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function peindreNotes(ctx: CanvasRenderingContext2D, notes: NotesPlacees): void {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = COULEURS.note;
+  ctx.font = `${TAILLE_NOTE}px ${POLICE}`;
+  for (const n of notes.sous) for (const l of n.lignes) ctx.fillText(l.texte, l.x, l.y);
+  for (const c of notes.cartes) {
+    peindreLien(ctx, c.lien);
+    ctx.beginPath();
+    ctx.roundRect(c.x, c.y, c.l, c.h, 8);
+    ctx.fillStyle = COULEURS.fondNote;
+    ctx.fill();
+    ctx.strokeStyle = COULEURS.bordNote;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COULEURS.encre;
+    ctx.font = `600 ${TAILLE_TITRE}px ${POLICE}`;
+    ctx.fillText(c.titre, c.x + PAD, c.y + PAD + 10);
+    ctx.fillStyle = COULEURS.note;
+    ctx.font = `${TAILLE_NOTE}px ${POLICE}`;
+    c.lignes.forEach((l, k) => ctx.fillText(l, c.x + PAD, c.y + PAD + 14 + 10 + k * LIGNE_DATE));
   }
 }
 
 /** Peint tout l'arbre, en unités du dessin, sur un contexte déjà mis à l'échelle (et décalé quand on peint une bande). */
-function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, pos: Positions, titre: string): void {
-  const largeur = pos.largeur;
+function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, mp: MiseEnPage, titre: string): void {
+  const { pos, cadres, bulle, traits } = mp;
+  const largeur = mp.largeur;
   ctx.fillStyle = COULEURS.fond;
-  ctx.fillRect(0, 0, largeur, pos.hauteur + ENTETE);
+  ctx.fillRect(0, 0, largeur, mp.hauteur + ENTETE);
 
-  // Titre et date.
+  // Titre, légende des traits si elle tient entre les deux, et date.
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
   ctx.fillStyle = COULEURS.encre;
   ctx.font = `700 20px ${POLICE}`;
   ctx.fillText(titre, 24, ENTETE / 2 + 4);
+  const finTitre = 24 + ctx.measureText(titre).width;
   ctx.textAlign = 'right';
   ctx.fillStyle = COULEURS.secondaire;
   ctx.font = `14px ${POLICE}`;
-  ctx.fillText(aujourdhui.toLocaleDateString('fr-FR'), largeur - 24, ENTETE / 2 + 4);
-  ctx.translate(0, ENTETE);
+  const date = aujourdhui.toLocaleDateString('fr-FR');
+  ctx.fillText(date, largeur - 24, ENTETE / 2 + 4);
+  const debutDate = largeur - 24 - ctx.measureText(date).width;
+  if (mp.reperes.length && finTitre + 32 + largeurLegende(ctx, mp.reperes) <= debutDate - 24) peindreLegende(ctx, mp.reperes, debutDate - 24, ENTETE / 2 + 4);
+  ctx.translate(mp.notes.gauche, ENTETE);
 
-  const cadres = calculerCadres(disp, pos.centres);
-  const bulle = zoneBulle(disp, pos.centres, cadres);
   if (bulle) {
     ctx.beginPath();
     ctx.roundRect(bulle.g, bulle.ha, bulle.dr - bulle.g, bulle.ba - bulle.ha, 28);
@@ -314,12 +474,11 @@ function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donne
     }
   });
 
-  // Traits et années des unions, puis noms de famille, puis personnes.
-  const traits = traitsArbre(disp, pos, bulle, moi.id);
+  // Traits et dates des unions, puis noms de famille, puis personnes, puis notes.
   for (const t of traits) dessinerTrait(ctx, t.dessin ?? t.d, t.classe, t.lignee);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  for (const m of mentionsArbre(disp, pos, traits, cadres, d.unions, 'annee', moi.id, aujourdhui))
+  for (const m of mp.mentions)
     for (const l of m.lignes) {
       ctx.fillStyle = m.ex ? COULEURS.traitEx : COULEURS.secondaire;
       ctx.font = `italic 600 ${l.taille}px ${POLICE}`;
@@ -346,8 +505,9 @@ function peindreArbre(ctx: CanvasRenderingContext2D, disp: Disposition, d: Donne
     const k = pl.lignee !== undefined ? pl.lignee : anneaux.has(pl.personne.id) ? undefined : couleurFamille(pl.personne, d);
     const couleur =
       pl.lignee !== undefined ? pastel(pl.lignee) : anneaux.has(pl.personne.id) ? anneaux.get(pl.personne.id) : k !== undefined ? pastel(k) : undefined;
-    dessinerNoeud(ctx, pl.personne, c.x, c.y, couleur, pl.personne.id === moi.id, anneaux.get(pl.personne.id), pl.naissance === true);
+    dessinerNoeud(ctx, pl.personne, c.x, c.y, couleur, pl.personne.id === moi.id, anneaux.get(pl.personne.id), mp.textes.get(pl.personne.id)!);
   }
+  peindreNotes(ctx, mp.notes);
 }
 
 type Peindre = (ctx: CanvasRenderingContext2D) => void;
@@ -403,9 +563,9 @@ async function pngUnCanvas(dim: DimensionsImage, peindre: Peindre): Promise<Blob
  * PNG de l'arbre autour de `moi`, à la taille de `dimensionsArbre` ; plus petit (PIXELS_CANVAS) si le navigateur ne sait
  * pas l'assembler par bandes. ImageTropGrande si l'une ou l'autre taille passerait sous ECHELLE_MIN.
  */
-export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, titre: string): Promise<Blob> {
-  const pos = positions(disp);
-  const pg = page(disp, pos);
+export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, aujourdhui: Date, titre: string, niveau: NiveauDetail = 'base'): Promise<Blob> {
+  const mp = miseEnPage(disp, d, moi.id, niveau, aujourdhui);
+  const pg = page(disp, mp);
   const dim = dimensionsImage(pg.largeur, pg.hauteur);
   if (!dim.possible) throw new ImageTropGrande();
   const peindre: Peindre = (ctx) => {
@@ -414,7 +574,7 @@ export async function arbrePng(disp: Disposition, d: Donnees, moi: Personne, auj
       ctx.fillRect(0, 0, pg.largeur, pg.hauteur + ENTETE);
       ctx.translate(pg.dx, pg.dy);
     }
-    peindreArbre(ctx, disp, d, moi, aujourdhui, pos, titre);
+    peindreArbre(ctx, disp, d, moi, aujourdhui, mp, titre);
   };
   if (typeof CompressionStream === 'function') {
     try {

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { ID_MOI } from '../modele/anonymiser';
 import { disposerArbre } from '../modele/arbreGlobal';
 import { disposerFoyer, familleProche } from '../modele/familleProche';
-import { boiteLigne, coupe, mentionsFoyer, segmentsDe, type Boite, type Cercle, type MentionUnion } from '../modele/mentionsUnion';
+import { boiteLigne, coupe, mentionsFoyer, segmentsDe, TAILLE_MENTION, type Boite, type Cercle, type MentionUnion } from '../modele/mentionsUnion';
 import { dupontel, famillesDeReference } from '../modele/test/familles';
 import type { Donnees } from '../modele/types';
 import { boiteEtiquette, calculerCadres, lieuxEtiquettes, mentionsArbre, positions, R, traitsArbre, zoneBulle } from './geometrieArbre';
@@ -76,6 +76,19 @@ describe('arbre global', () => {
     );
     expect(detail.flat().find((t) => t.startsWith('Saint-'))).toMatch(/…$/);
     expect(annees.find((m) => m.lignes[0].texte === '1998')?.ex).toBe(true);
+  });
+
+  it('image PNG : l’année seule garde le corps du palier « annee », le reste celui du détail', () => {
+    const f = dupontel();
+    const disp = disposerArbre(f.donnees, f.moi);
+    const pos = positions(disp);
+    const cadres = calculerCadres(disp, pos.centres);
+    const traits = traitsArbre(disp, pos, zoneBulle(disp, pos.centres, cadres), f.moi);
+    const lignes = (enGrand: boolean) => mentionsArbre(disp, pos, traits, cadres, f.donnees.unions, 'detail', f.moi, auj, enGrand).flatMap((m) => m.lignes);
+    const image = lignes(true);
+    expect(image.find((l) => l.texte === '1998')?.taille).toBe(TAILLE_MENTION.annee);
+    expect(image.find((l) => l.texte === 'Dinard')?.taille).toBe(TAILLE_MENTION.detail);
+    expect(lignes(false).find((l) => l.texte === '1998')?.taille).toBe(TAILLE_MENTION.detail);
   });
 });
 

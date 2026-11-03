@@ -1318,7 +1318,7 @@ describe('arbre global', () => {
     expect(ecran().querySelectorAll('.recherche-arbre li')).toHaveLength(0);
   });
 
-  it('« Toi » plein au départ, puis « Tout » ; « Revenir » ramène à la vue d’avant', async () => {
+  it('« Toi » plein au départ ; « Tout › Tout l’arbre » cadre l’arbre ; « Revenir » ramène à la vue d’avant', async () => {
     const { donnees, ids } = famille();
     await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
     const puce = (texte: string) => trouver('.commandes-arbre button', texte, ecran());
@@ -1326,8 +1326,13 @@ describe('arbre global', () => {
     expect(puce('Toi').getAttribute('aria-pressed')).toBe('true');
     expect(revenir.hidden).toBe(true);
     await toucher(puce('Tout'));
+    expect(puce('Tout').getAttribute('aria-expanded')).toBe('true');
+    expect(revenir.hidden).toBe(true);
+    // L'option déjà cochée : pas de nouveau dessin, la feuille se replie sur l'arbre en entier.
+    await toucher(trouver('.feuille-arbre label.ligne-choix', 'Tout l’arbre', ecran()).querySelector<HTMLInputElement>('input')!);
+    expect(puce('Tout').getAttribute('aria-expanded')).toBe('false');
+    expect(ecran().querySelector('.feuille-arbre.ouverte')).toBeNull();
     expect(puce('Toi').getAttribute('aria-pressed')).toBe('false');
-    expect(puce('Tout').getAttribute('aria-pressed')).toBe('true');
     expect(revenir.hidden).toBe(false);
     await toucher(revenir);
     expect(puce('Toi').getAttribute('aria-pressed')).toBe('true');
@@ -1418,7 +1423,7 @@ describe('arbre : filtre « Ligne directe »', () => {
   }
   const places = () =>
     [...ecran().querySelectorAll<HTMLAnchorElement>('.calque a.noeud')].map((a) => a.getAttribute('href')!).filter((h) => h.startsWith('#/personne/'));
-  const afficher = () => ecran().querySelector<HTMLElement>('.barre button.filtre-arbre')!;
+  const afficher = () => trouver('.boutons-arbre button', 'Tout', ecran());
   const choisirAffichage = async (libelle: string) => {
     await toucher(afficher());
     const radio = trouver('.feuille-arbre label.ligne-choix', libelle, ecran()).querySelector<HTMLInputElement>('input')!;
@@ -1428,25 +1433,36 @@ describe('arbre : filtre « Ligne directe »', () => {
   };
   const pastille = () => ecran().querySelector<HTMLElement>('.pastille-filtre');
 
-  it('la feuille « Afficher » propose quatre choix ; « + leurs frères et sœurs » garde oncles et sœur, sans cousins ni amis', async () => {
+  it('« Tout », en bas, ouvre la feuille « Afficher » : quatre choix ; « Ligne directe + frères et sœurs » garde oncles et sœur, sans cousins ni amis', async () => {
     const { donnees, ids } = lignee();
     await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
-    expect(afficher().classList.contains('actif')).toBe(false);
+    // En haut, plus que la loupe.
+    expect([...ecran().querySelectorAll('.barre button')].map((b) => b.getAttribute('aria-label'))).toEqual(['Chercher une personne']);
+    expect(afficher().classList.contains('filtre-en-cours')).toBe(false);
+    expect(afficher().getAttribute('aria-label')).toBe('Tout, afficher : tout l’arbre');
     expect(pastille()).toBeNull();
     await toucher(afficher());
     expect(afficher().getAttribute('aria-expanded')).toBe('true');
     expect([...ecran().querySelectorAll('.feuille-arbre label.ligne-choix strong')].map((e) => e.textContent)).toEqual([
       'Tout l’arbre',
       'Ligne directe',
-      '+ leurs frères et sœurs',
-      '+ leurs conjoints',
+      'Ligne directe + frères et sœurs',
+      'Ligne directe + frères et sœurs + leurs conjoints',
     ]);
+    expect(ecran().querySelector<HTMLInputElement>('.feuille-arbre input:checked')?.value).toBe('tout');
     expect(ecran().querySelector('.feuille-arbre .note-feuille')?.textContent).toBe('Les personnes cachées restent trouvables avec la loupe.');
     await toucher(afficher());
-    await choisirAffichage('+ leurs frères et sœurs');
+    expect(afficher().getAttribute('aria-expanded')).toBe('false');
+    await choisirAffichage('Ligne directe + frères et sœurs');
     expect(places().sort()).toEqual(['Anne', 'Bruno', 'Chloé', 'Emma', 'Gilles', 'Lancelot'].map((n) => `#/personne/${ids[n]}`).sort());
     expect(pastille()?.textContent).toBe('Ligne directe + frères et sœurs');
-    expect(afficher().classList.contains('actif')).toBe(true);
+    expect(afficher().classList.contains('filtre-en-cours')).toBe(true);
+    expect(afficher().getAttribute('aria-label')).toBe('Tout, afficher : ligne directe + frères et sœurs');
+    expect(ecran().querySelector('.feuille-arbre.ouverte')).toBeNull();
+    // Après un choix, aucune vue pleine : l'arbre filtré est cadré en entier, pas centré sur Moi.
+    expect(trouver('.boutons-arbre button', 'Toi', ecran()).getAttribute('aria-pressed')).toBe('false');
+    await toucher(afficher());
+    expect(ecran().querySelector<HTMLInputElement>('.feuille-arbre input:checked')?.value).toBe('fratries');
     expect(ecran().querySelector('.zone-amis')).toBeNull();
     expect(() => trouver('.commandes-arbre button', 'Amis', ecran())).toThrow();
   });
@@ -1465,7 +1481,7 @@ describe('arbre : filtre « Ligne directe »', () => {
     await toucher(pastille()!);
     expect(pastille()).toBeNull();
     expect(places()).toContain(`#/personne/${ids.Iris}`);
-    expect(afficher().classList.contains('actif')).toBe(false);
+    expect(afficher().classList.contains('filtre-en-cours')).toBe(false);
   });
 
   it('la loupe trouve aussi les personnes cachées ; en toucher une revient à tout l’arbre', async () => {
@@ -1493,7 +1509,7 @@ describe('arbre : filtre « Ligne directe »', () => {
   it('l’export PNG reprend le filtre de l’arbre et peut en changer', async () => {
     const { donnees, ids } = lignee();
     await demarrer(donnees, '#/arbre', { moi: ids.Chloé });
-    await choisirAffichage('+ leurs frères et sœurs');
+    await choisirAffichage('Ligne directe + frères et sœurs');
     location.hash = '#/reglages/partager';
     await pause();
     const coche = () => ecran().querySelector<HTMLInputElement>('input[name="affichage-png"]:checked')?.value;
@@ -1522,6 +1538,26 @@ describe('arbre : filtre « Ligne directe »', () => {
     expect(coche()).toBe('groupe');
     // Karim, Chloé et sa famille proche (ses parents et sa sœur), sans grand-père, oncle ni cousine.
     expect(resume()).toMatch(/^5 personnes · /);
+  });
+
+  it('l’export PNG part en Base ; Détaillé élargit l’image pour une longue note, sans être mémorisé', async () => {
+    const { donnees, ids } = lignee();
+    const note = 'A tenu la quincaillerie du bourg pendant trente ans ; garde les albums de photos de toute la famille et la recette du far.';
+    const avecNote = { ...donnees, personnes: donnees.personnes.map((p) => (p.id === ids.Chloé ? { ...p, note } : p)) };
+    await demarrer(avecNote, '#/reglages/partager', { moi: ids.Chloé });
+    const coche = () => ecran().querySelector<HTMLInputElement>('input[name="niveau-png"]:checked')?.value;
+    const largeur = () => Number(trouver('p.secondaire', 'image d’environ', ecran()).textContent!.match(/(\d+) × /)![1]);
+    expect(coche()).toBe('base');
+    const base = largeur();
+    const detail = trouver('label.choix', 'Détaillé', ecran()).querySelector<HTMLInputElement>('input')!;
+    detail.checked = true;
+    detail.dispatchEvent(new Event('change'));
+    expect(largeur()).toBeGreaterThan(base);
+    location.hash = '#/reglages/moi';
+    await pause();
+    location.hash = '#/reglages/partager';
+    await pause();
+    expect(coche()).toBe('base');
   });
 
   it('sans groupe d’amis, l’export PNG grise le choix du groupe', async () => {
